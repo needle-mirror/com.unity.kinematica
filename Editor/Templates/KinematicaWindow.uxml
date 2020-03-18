@@ -1,0 +1,7 @@
+<UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Template path="packages/com.unity.kinematica/Editor/Templates/Toolbar.uxml" name="Toolbar"/>
+    <ui:VisualElement name="kinematica">
+        <ui:Instance template="Toolbar" name="toolbar"/>
+        <ui:VisualElement name="windowContent"/>
+    </ui:VisualElement>
+</UXML>

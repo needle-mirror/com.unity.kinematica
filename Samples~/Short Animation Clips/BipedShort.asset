@@ -1,0 +1,541 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67ddb658bcc363b4bbf299214cfbe711, type: 3}
+  m_Name: BipedShort
+  m_EditorClassIdentifier: 
+  animationLibrary: []
+  destinationAvatar: {fileID: 0}
+  timeHorizon: 1
+  sampleRate: 30
+  m_Data:
+    animationLibrary:
+    - m_PreBoundaryClip: {fileID: 7400000, guid: d4f1b26cad783ab489da3e37fe830cb8,
+        type: 2}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 40e6a2716a67e4a4f9172a9708c79f2e,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: 6e5296191cb1e614eaf67931b4f0ed48,
+        type: 2}
+      m_CachedClipName: HalfSteps2Idle_PasingLongStepTOIdle
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 4.3
+        payload:
+          serializedData: '{}'
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 40e6a2716a67e4a4f9172a9708c79f2e,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: 9c98d552d87ee4b4db0f44a589800edc,
+        type: 2}
+      m_CachedClipName: HalfSteps2Idle_PasingLongStepTOIdle_Right
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 4.3
+        payload:
+          serializedData: '{}'
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: 40e6a2716a67e4a4f9172a9708c79f2e,
+        type: 2}
+      m_CachedClipName: Idle2Run45L
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 3.1333334
+        payload:
+          serializedData: '{}'
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      - startTime: 0
+        duration: 1
+        payload:
+          serializedData: '{}'
+          assemblyQualifiedTypeName: IdleTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers:
+      - timeInSeconds: 0.96666664
+        payload:
+          serializedData: '{"test":0}'
+          assemblyQualifiedTypeName: LoopMarker, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: dcb6b2fd7245a8543916bbc8f55c5c38,
+        type: 2}
+      m_CachedClipName: Idle2Run45R
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 3.1333334
+        payload:
+          serializedData: '{}'
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: 7a4eb58a752b5094c8a18b63f9673487,
+        type: 2}
+      m_CachedClipName: Idle2Run90L
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 3.266667
+        payload:
+          serializedData: '{}'
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: 686d2785f265f884989c89f5a9134e1f,
+        type: 2}
+      m_CachedClipName: Idle2Run90R
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 3.266667
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: d3bb0524986d8794f91db8f24f6a52d6,
+        type: 2}
+      m_CachedClipName: Idle2Run135L
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 3.266667
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: 10dcb0dbd2c0b8041968312ded119848,
+        type: 2}
+      m_CachedClipName: Idle2Run135R
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 3.266667
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: 1b83d8883213b744fbc1d8c06cd22976,
+        type: 2}
+      m_CachedClipName: Idle2Run180L
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 3.2333336
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: cf8b9d4d8bb65c3419b66d9cd80ab1b9,
+        type: 2}
+      m_CachedClipName: Idle2Run180R
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 3.2333336
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
+      m_AnimationClipReference: {fileID: 7400000, guid: 610f77ed58856ad4384b11a74d43eb93,
+        type: 2}
+      m_CachedClipName: Idle2walk_AllAngles
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 35.333336
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
+      m_AnimationClipReference: {fileID: 7400000, guid: 55253c09e203fd845872ee610fef1540,
+        type: 2}
+      m_CachedClipName: Idle2walk_AllAngles_Right
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 35.333336
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
+      m_AnimationClipReference: {fileID: 7400000, guid: e8af08b06ca8d4246a6ce9101af10d24,
+        type: 2}
+      m_CachedClipName: JogForwardTurnLeft_NtrlMedium
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 5.166667
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
+      m_AnimationClipReference: {fileID: 7400000, guid: 931a38ac7b8d63c459b7da6b8f95a9d4,
+        type: 2}
+      m_CachedClipName: JogForwardTurnRight_NtrlMedium
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 5.166667
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: e506158843446d244a56efb1406efb9f,
+        type: 2}
+      m_CachedClipName: PlantNTurn90_Run_L
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 4.3
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: 08baa0f368e7fa645a86631e719ceb90,
+        type: 2}
+      m_CachedClipName: PlantNTurn90_Run_R
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 4.3
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
+      m_AnimationClipReference: {fileID: 7400000, guid: b6a1ffc3877e7f742bf40ce19b71c51e,
+        type: 2}
+      m_CachedClipName: PlantNTurn135_Run_L
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 5.766667
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
+      m_AnimationClipReference: {fileID: 7400000, guid: f4215669e7b6d43458538dc9f3ba1a44,
+        type: 2}
+      m_CachedClipName: PlantNTurn135_Run_R
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 5.6666665
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
+      m_AnimationClipReference: {fileID: 7400000, guid: ff6d0d259f512704f9a2794022816d50,
+        type: 2}
+      m_CachedClipName: PlantNTurn180_Run_L_2
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 6.666667
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
+      m_AnimationClipReference: {fileID: 7400000, guid: 59ee5693bb37b1e4795ebcd5053c735b,
+        type: 2}
+      m_CachedClipName: PlantNTurn180_Run_R_2
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 6.666667
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_CachedClipName: RunForward_NtrlFaceFwd
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 1.1
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: d4f1b26cad783ab489da3e37fe830cb8,
+        type: 2}
+      m_CachedClipName: RunForwardStart
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 2.6333334
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: f29b67a3e16a8fd449b2d35aedcbe79d,
+        type: 2}
+      m_CachedClipName: RunForwardTurnLeft_NtrlShort_2
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 9.400001
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: 21c2f85f33819df4ba13c7d7f625b835,
+        type: 2}
+      m_CachedClipName: RunForwardTurnLeft_NtrlWide
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 7.6333337
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 62dd539617f324f40820608e19e696b0,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: 8f57f957f415b5a4cb2352a04cd7a8c1,
+        type: 2}
+      m_CachedClipName: RunForwardTurnRight_NtrlShort_2
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 9.400001
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 40e6a2716a67e4a4f9172a9708c79f2e,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: 5b504ee5f3718c747bb018fbe8376716,
+        type: 2}
+      m_CachedClipName: RunForwardTurnRight_NtrlWide 1
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 7.6333337
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 7400000, guid: 40e6a2716a67e4a4f9172a9708c79f2e,
+        type: 2}
+      m_AnimationClipReference: {fileID: 7400000, guid: 3a37e89af21565046b60a73bb2e8f218,
+        type: 2}
+      m_CachedClipName: RunForwardTurnRight_NtrlWide
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 7.6333337
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
+      m_AnimationClipReference: {fileID: 7400000, guid: 1bf278da788b4be40bd49743f3effde5,
+        type: 2}
+      m_CachedClipName: RunFwdStop
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 2.2333333
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
+      m_AnimationClipReference: {fileID: 7400000, guid: 30b048b940b73744db2fdbb633b8e7bd,
+        type: 2}
+      m_CachedClipName: SmallStep
+      m_RetargetSourceAvatar: {fileID: 0}
+      tags:
+      - startTime: 0
+        duration: 3.2000003
+        payload:
+          serializedData: 
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    destinationAvatar: {fileID: 9000000, guid: 74cebad771d996c4cb5b49a97f4a567a, type: 3}
+    metrics:
+    - name: Default
+      tagTypes:
+        m_TagTypeNames:
+        - LocomotionTag
+        - IdleTag
+      numPoses: 2
+      poseSampleRatio: 0.3333
+      joints:
+      - Foot_L
+      - Foot_R
+      - Neck
+      trajectorySampleRatio: 1
+      trajectorySampleRange: 0
+      trajectoryDisplacements: 1
+      numAttempts: 1
+      numIterations: 25
+      minimumNumberSamples: 32
+      maximumNumberSamples: 256
+    timeHorizon: 1
+    sampleRate: 30
+  m_SerializeVersion: 1

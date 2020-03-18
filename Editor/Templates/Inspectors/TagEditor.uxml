@@ -1,0 +1,8 @@
+<UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:TextField name="tagType" label="Tag Type"/>
+    <ui:TextField name="name" label="Name"/>
+    <ui:TextField name="metricLabel" label="Metric" tooltip="Metric applied to this tag type."/>
+    <uie:FloatField name="startTime" label="Start Time" tooltip="Start time in seconds."/>
+    <uie:FloatField name="duration" label="Duration" tooltip="Duration in seconds."/>
+    <ui:VisualElement name="payloadInspector"/>
+</UXML>

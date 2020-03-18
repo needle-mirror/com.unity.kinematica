@@ -1,0 +1,295 @@
+.timeline {
+    flex: 1 0 0;
+    align-items:stretch;
+}
+
+.timelineToolbar {
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-direction: row;
+    border-bottom-width : 1px;
+    padding-bottom: 4px;
+    min-height: 24px;
+}
+
+.viewMode {
+    height: 16px;
+    width: 16px;
+    background-image: resource("d_Settings");
+}
+
+.track Label {
+    padding-top: 4px;
+    padding-bottom: 2px;
+}
+
+.track {
+    border-width: 1px;
+}
+
+.trackElement {
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+#trackLabels {
+    flex-direction: column;
+    flex: 1;
+    border-right-width : 2px;
+}
+
+.markerContainer {
+    position : absolute;
+}
+
+.tagNameLabel {
+    height: 18px;
+    max-height: 18px;
+    flex: 1;
+}
+
+#previewToggle {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    padding-bottom: 1px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+#previewTarget {
+    flex: 1;
+    max-width: 200px;
+}
+
+
+#frameField {
+    flex-shrink: 1;
+    height: 18px;
+    max-width: 100px;
+    min-width: 100px;
+}
+
+#addTagRow {
+    min-height: 22px;
+    height: 22px;
+    max-height: 22px;
+    border-right-width : 2px;
+    justify-content: flex-start;
+}
+
+#markerArea {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+#markerArea .unity-text-element{
+    min-width: 0;
+}
+
+#timelineArea {
+    flex-direction: row;
+    border-width: 2px;
+}
+
+#tagRanges {
+    margin-top: 20px;
+    flex: 1;
+}
+
+#toolbarSpacer {
+    flex-grow: 1;
+}
+
+.clipTagRoot {
+    flex-direction: column;
+    flex: 1 0 0;
+    align-self: stretch;
+    max-height: 22px;
+    min-height: 22px;
+    padding-top: 1px;
+}
+
+.clipTag {
+    flex: 1;
+    flex-direction: row;
+    border-width: 1px;
+}
+
+.clipTag:hover {
+    border-width: 1px;
+}
+
+.clipTag--checked {
+    border-width: 1px;
+}
+
+.timelineTimeRangeLabelContainer {
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+}
+
+.timelineTimeRangeLabel {
+    -unity-text-align: middle-center;
+    align-self: center;
+    font-size: 9px;
+    margin-top : 1px;
+    margin-bottom : 1px;
+}
+
+.clipTagDragHandle {
+    flex: 0;
+    width: 6px;
+    min-width: 6px;
+    max-width: 6px;
+    max-height: 20px;
+    cursor: resize-horizontal;
+}
+
+.tagValueColorHash {
+    max-height: 5px;
+    min-height: 5px;
+}
+
+/* Tick Styles */
+
+#clipLength {
+    position : absolute;
+    height: 2px;
+    top: 62px;
+}
+
+.endOfClip {
+    top: 44px;
+    bottom:0px;
+    left:0px;
+    right: 0px;
+    width: 2px;
+    position: absolute;
+}
+
+.clipArea {
+    flex-grow: 1;
+    position: absolute;
+}
+
+.endOfClipHead {
+    position: absolute;
+    width: 6px;
+    height: 18px;
+    left: -2px;
+}
+
+.majorTickLabel {
+    position: absolute;
+    top: 0px;
+    bottom:0px;
+    left:2px;
+    right: 0px;
+    width: 16px;
+    font-size: 9px;
+}
+
+.majorTickElement {
+    position: absolute;
+    width: 1px;
+    align-self: flex-end;
+}
+
+.tickElement {
+    position: absolute;
+    width: 1px;
+    align-self: flex-end;
+}
+
+.playHead {
+    top: 42px;
+    bottom:0px;
+    width: 1px;
+    position: absolute;
+}
+
+.playHeadHandle {
+    position: absolute;
+    width: 11px;
+    height: 14px;
+    left: -5px;
+}
+
+.activeTickElement {
+    top: -20px;
+    bottom:0px;
+    left:0px;
+    right: 0px;
+    width: 1px;
+    position: absolute;
+}
+
+.activeTickHead {
+    position: absolute;
+    width: 11px;
+    height: 14px;
+    left: -5px;
+}
+
+/* Timeline Styles */
+
+.tagEntry {
+    flex-direction: row;
+    justify-content: space-between;
+    height: 22px;
+    margin-top: 1px;
+    padding-top: 1px;
+    padding-left: 1px;
+    overflow: hidden;
+}
+
+.metricsTrack {
+    min-height: 22px;
+}
+
+.metricElement {
+    min-height: 22px;
+    position: absolute;
+    border-width: : 1px;
+    -unity-font-style: italic;
+}
+
+#timelineWorkArea {
+    overflow: hidden;
+    margin-right: 2px;
+    flex-direction: column;
+    flex: 1 0;
+}
+
+.timelineRow {
+    min-height: 20px;
+    height: 20px;
+    max-height: 20px;
+}
+
+#timelineHeader {
+    flex-direction: column;
+}
+
+.timelineRight {
+    flex: 1;
+    overflow: visible;
+}
+
+.timeline Label {
+    margin-bottom: 0px;
+}
+
+.creationManipulator {
+    top: 2px;
+    position: absolute;
+    border-width: 1px;
+}
+
+.boundaryClip {
+    top: 64px;
+    position: absolute;
+    min-width: 80px;
+    margin-left: 2px;
+}

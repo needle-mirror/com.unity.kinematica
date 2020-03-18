@@ -1,0 +1,102 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67ddb658bcc363b4bbf299214cfbe711, type: 3}
+  m_Name: Ninja
+  m_EditorClassIdentifier: 
+  animationLibrary: []
+  destinationAvatar: {fileID: 0}
+  timeHorizon: -1
+  sampleRate: -1
+  m_Data:
+    syncedWithBinary: 0
+    animationLibrary:
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
+      m_AnimationClipReference: {fileID: 1827226128182048838, guid: d1cc3c1065bd08041876451d8d8c0234,
+        type: 3}
+      m_CachedClipName: Idle
+      m_RetargetSourceAvatar: {fileID: 9000000, guid: 49d98e6a4a7147249a542e5dc51474cc,
+        type: 3}
+      tags:
+      - startTime: 0
+        duration: 10.033334
+        payload:
+          serializedData: '{}'
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      - startTime: 0
+        duration: 10.033334
+        payload:
+          serializedData: '{}'
+          assemblyQualifiedTypeName: IdleTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
+      m_AnimationClipReference: {fileID: 1827226128182048838, guid: 7662e0ab368192e45b6196377987e34b,
+        type: 3}
+      m_CachedClipName: Start_Stop_1
+      m_RetargetSourceAvatar: {fileID: 9000000, guid: 49d98e6a4a7147249a542e5dc51474cc,
+        type: 3}
+      tags:
+      - startTime: 0
+        duration: 70.100006
+        payload:
+          serializedData: '{}'
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    - m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
+      m_AnimationClipReference: {fileID: 1827226128182048838, guid: c65f26cc9e0939c4d89d6c3d0c496ad2,
+        type: 3}
+      m_CachedClipName: Plants_Turns_Fancy_1
+      m_RetargetSourceAvatar: {fileID: 9000000, guid: 49d98e6a4a7147249a542e5dc51474cc,
+        type: 3}
+      tags:
+      - startTime: 0
+        duration: 45.233337
+        payload:
+          serializedData: '{}'
+          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        name: 
+      markers: []
+      m_Asset: {fileID: 11400000}
+    destinationAvatar: {fileID: 9000000, guid: 4e97c9e25181cf64d8c8090a09819192, type: 3}
+    metrics:
+    - name: Default
+      tagTypes:
+        m_TagTypeNames:
+        - IdleTag
+        - LocomotionTag
+      numPoses: 2
+      poseSampleRatio: 0.3333
+      joints:
+      - Ninja:LeftFoot
+      - Ninja:RightFoot
+      - Ninja:Neck
+      trajectorySampleRatio: 0.3333
+      trajectorySampleRange: 0
+      trajectoryDisplacements: 0
+      numAttempts: 1
+      numIterations: 25
+      minimumNumberSamples: 32
+      maximumNumberSamples: 256
+    timeHorizon: 1
+    sampleRate: 30
+  m_SerializeVersion: 1

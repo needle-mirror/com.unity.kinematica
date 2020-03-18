@@ -1,0 +1,32 @@
+<UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements"
+      xmlns:kinematica="Unity.Kinematica.Editor"
+      xmlns:kinematicaTemp="Unity.Kinematica.Temporary">
+    <ui:Template path="packages/com.unity.kinematica/Editor/Templates/MarkerWindow.uxml" name="Markers"/>
+    <!-- TODO - this is simple enough to go directly into Builder-->
+    <ui:VisualElement class="timeline">
+        <ui:VisualElement class="timelineToolbar" name="toolbar">
+            <uie:ToolbarToggle class="toolbarToggle" name="previewToggle" text="Preview" tooltip="Enable/disable scene preview mode."/>
+            <uie:ObjectField name="previewTarget" allow-scene-objects="true" tooltip="Object in scene to preview on."/>
+            <ui:Image name="warningImage" class="warningImage" />
+            <ui:VisualElement name="toolbarSpacer"/>
+            <ui:Button class="viewMode"/>
+        </ui:VisualElement>
+        <ui:VisualElement name="timelineWorkArea">
+            <ui:VisualElement name="timelineHeader">
+                <ui:VisualElement name="addTagRow" class="row">
+                    <ui:Button name="addTagButton" tooltip="Add tag." text="+"/>
+                    <uie:FloatField name="frameField"/>
+                </ui:VisualElement>
+                <ui:VisualElement name="betterTimeRuler"/>
+            </ui:VisualElement>
+            <ui:VisualElement name="clipLength"/>
+            <ui:VisualElement name="trackScrollViewContainer" class="timelineRight">
+                <ui:ScrollView name="trackScrollView" class="timelineRight">
+                    <ui:VisualElement name="scrollableTimeArea" class="timelineRight">
+                        <ui:VisualElement name="tracks"/>
+                    </ui:VisualElement>
+                </ui:ScrollView>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</UXML>

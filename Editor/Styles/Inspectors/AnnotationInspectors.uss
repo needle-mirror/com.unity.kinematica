@@ -1,0 +1,14 @@
+#clipName {
+    padding-bottom: 2px;
+}
+
+#clipName Label {
+    font-size: 14px;
+}
+
+#tagsList {
+}
+
+.unknownAnnotationTypeLabel {
+    padding-bottom: 2px;
+}

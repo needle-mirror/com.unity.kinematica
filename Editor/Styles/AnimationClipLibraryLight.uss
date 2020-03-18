@@ -1,0 +1,7 @@
+#animationLibrary {
+    background-color: #AAAAAA;
+}
+
+.animationClipHighlight {
+    background-color: #FFFFFF;
+}

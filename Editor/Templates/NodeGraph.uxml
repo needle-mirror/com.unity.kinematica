@@ -1,0 +1,8 @@
+<UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+  <ui:VisualElement name="playModeMessage" class="message">
+    <ui:Label text="You must be in play mode to visualize a task graph"/>
+  </ui:VisualElement>
+  <ui:VisualElement name="selectionMessage" class="message">
+    <ui:Label text="Select an GameObject that has a Kinematica component"/>
+  </ui:VisualElement>
+</UXML>

@@ -1,0 +1,4 @@
+<UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Label name="trackName"/>
+    <ui:VisualElement class="trackElement" />
+</UXML>

@@ -1,0 +1,617 @@
+<Binary>
+  <AnimationRig>
+    <Joint name="NinjaHumanoid" parent="-1">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:models_grp" parent="0">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:cloth_grp" parent="1">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:beltcloth_mesh" parent="2">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:ribbon_mesh" parent="2">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:skirt_mesh" parent="2">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:ninja_grp" parent="1">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:arms_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:belt_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:boots_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:elbowpads_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:forearms_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:hands_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:head_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:headtech_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:kneepads_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:pants_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:scarf_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:shinguards_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:torso_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:waist_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:wristguards_mesh" parent="6">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:weapons_grp" parent="1">
+      <Position x="0" y="0" z="0.6098924" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:knives_mesh" parent="22">
+      <Position x="0" y="0" z="-0.6098924" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:Root" parent="0">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:Displacement" parent="24">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="3.061617E-17" y="2.526608E-16" z="2.220446E-16" w="1" />
+    </Joint>
+    <Joint name="Ninja:Displacement Arrow" parent="25">
+      <Position x="6.817381E-10" y="2.00574E-08" z="1.178943E-09" />
+      <Rotation x="-0.7071068" y="0" z="0" w="0.7071068" />
+    </Joint>
+    <Joint name="Ninja:Hips" parent="24">
+      <Position x="-0.004954146" y="0.9993474" z="0.01419741" />
+      <Rotation x="0.568746" y="-0.3758591" z="-0.5530703" w="0.4789271" />
+    </Joint>
+    <Joint name="Ninja:Handle_Bone" parent="27">
+      <Position x="-0.4345819" y="-0.1359057" z="-0.08249184" />
+      <Rotation x="-0.06360865" y="-0.07543798" z="-0.08563322" w="0.9914283" />
+    </Joint>
+    <Joint name="Ninja:EjectionPort_Root_Bone" parent="28">
+      <Position x="0.1435053" y="-0.02846252" z="0.1216535" />
+      <Rotation x="1.972428E-08" y="-4.13814E-08" z="-0.7071068" w="0.7071068" />
+    </Joint>
+    <Joint name="Ninja:EjectionPort_Zero_Bone" parent="29">
+      <Position x="-2.31203E-08" y="-0.02909334" z="-1.436731E-08" />
+      <Rotation x="-9.970962E-08" y="-2.092835E-08" z="-5.652738E-08" w="1" />
+    </Joint>
+    <Joint name="Ninja:EjectionPort_Bone" parent="30">
+      <Position x="1.027779E-08" y="5.643226E-08" z="1.028399E-08" />
+      <Rotation x="4.057055E-08" y="1.178511E-08" z="-6.40479E-08" w="1" />
+    </Joint>
+    <Joint name="Ninja:ReloadHandle_Root_Bone" parent="31">
+      <Position x="0.01494239" y="-0.04223744" z="-0.002343637" />
+      <Rotation x="-1.82146E-17" y="-1.263892E-34" z="6.938894E-18" w="1" />
+    </Joint>
+    <Joint name="Ninja:ReloadHandle_Bone" parent="32">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="2.000058E-08" y="2.23419E-08" z="0.002341003" w="0.9999973" />
+    </Joint>
+    <Joint name="Ninja:LHIK_Zero" parent="28">
+      <Position x="0.3392" y="-0.0686" z="-0.012" />
+      <Rotation x="-0.05339803" y="-0.007567822" z="0.9412845" w="-0.3332791" />
+    </Joint>
+    <Joint name="Ninja:LHIK_Target" parent="34">
+      <Position x="-0.3476162" y="-0.1155833" z="0.3365449" />
+      <Rotation x="0.6442632" y="-0.08084303" z="-0.02986199" w="0.7599326" />
+    </Joint>
+    <Joint name="Ninja:Mag_Root_Bone" parent="28">
+      <Position x="0.2000598" y="-2.21017E-08" z="0.05441619" />
+      <Rotation x="1.972428E-08" y="-4.13814E-08" z="-0.7071068" w="0.7071068" />
+    </Joint>
+    <Joint name="Ninja:Mag_Zero_Bone" parent="36">
+      <Position x="-7.160105E-09" y="-8.577572E-09" z="-0.0668048" />
+      <Rotation x="-6.938894E-18" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:Mag_Bone" parent="37">
+      <Position x="1.115071E-08" y="6.451762E-08" z="-4.122299E-08" />
+      <Rotation x="-3.113349E-09" y="-1.13605E-08" z="-5.984277E-08" w="1" />
+    </Joint>
+    <Joint name="Ninja:RHIK_Zero" parent="28">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:RHIK_Target" parent="39">
+      <Position x="0.3629897" y="0.3741191" z="-0.24777" />
+      <Rotation x="0.9243984" y="0.3215167" z="0.03842733" w="0.2015884" />
+    </Joint>
+    <Joint name="Ninja:SlideGrip_Root_Bone" parent="28">
+      <Position x="0.4280126" y="-2.326704E-08" z="0.07059354" />
+      <Rotation x="1.972428E-08" y="-4.13814E-08" z="-0.7071068" w="0.7071068" />
+    </Joint>
+    <Joint name="Ninja:SlideGrip_Bone" parent="41">
+      <Position x="-2.132107E-08" y="-0.05234481" z="1.645146E-08" />
+      <Rotation x="-3.732346E-08" y="2.079556E-08" z="0.7372773" w="0.6755903" />
+    </Joint>
+    <Joint name="Ninja:FrontGrip_Zero_Bone" parent="42">
+      <Position x="-2.391635E-09" y="-3.398052E-09" z="-0.01299924" />
+      <Rotation x="-1.800343E-08" y="-3.046392E-08" z="-0.7372773" w="0.6755902" />
+    </Joint>
+    <Joint name="Ninja:FrontGrip_Bone" parent="43">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="2.014695E-08" y="5.98173E-08" z="0.7372774" w="0.6755902" />
+    </Joint>
+    <Joint name="Ninja:Trigger_Root_Bone" parent="28">
+      <Position x="0.04562426" y="-1.122987E-08" z="0.04642433" />
+      <Rotation x="-8.425944E-35" y="-1.214306E-17" z="-6.938894E-18" w="1" />
+    </Joint>
+    <Joint name="Ninja:Trigger_Bone" parent="45">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="-2.775558E-17" y="9.714451E-17" z="6.678685E-17" w="1" />
+    </Joint>
+    <Joint name="Ninja:LeftUpperLeg" parent="27">
+      <Position x="0.05013463" y="-0.00243173" z="0.09" />
+      <Rotation x="-0.06358977" y="0.02043178" z="0.9966099" w="0.04803818" />
+    </Joint>
+    <Joint name="Ninja:LeftLowerLeg" parent="47">
+      <Position x="-0.4357673" y="1.124776E-08" z="3.303849E-09" />
+      <Rotation x="-0.09796422" y="-0.02982138" z="-0.2543353" w="0.9616794" />
+    </Joint>
+    <Joint name="Ninja:LeftFoot" parent="48">
+      <Position x="-0.4248354" y="6.819546E-08" z="9.102463E-10" />
+      <Rotation x="-0.03677547" y="-0.03223016" z="-0.1568944" w="0.9864041" />
+    </Joint>
+    <Joint name="Ninja:LeftToes" parent="49">
+      <Position x="-0.07587179" y="-0.1706925" z="-9.552971E-09" />
+      <Rotation x="0.0006559275" y="0.002701721" z="0.6647533" w="0.7470578" />
+    </Joint>
+    <Joint name="Ninja:LeftToesEnd" parent="50">
+      <Position x="-0.05404899" y="-4.884981E-17" z="9.947598E-16" />
+      <Rotation x="-1.232595E-32" y="0" z="1.387779E-17" w="1" />
+    </Joint>
+    <Joint name="Ninja:LeftKnee" parent="48">
+      <Position x="-0.0001" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:LeftUpperLegTwist1" parent="47">
+      <Position x="-0.0001" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:LeftUpperLegTwist2" parent="47">
+      <Position x="-0.1452558" y="1.421085E-16" z="-3.552714E-17" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:LeftUpperLegTwist3" parent="47">
+      <Position x="-0.2905116" y="3.197442E-16" z="-7.105427E-17" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:RightUpperLeg" parent="27">
+      <Position x="0.05013463" y="-0.002431735" z="-0.09" />
+      <Rotation x="-0.02163636" y="-0.01371232" z="0.3255782" w="0.9451681" />
+    </Joint>
+    <Joint name="Ninja:RightLowerLeg" parent="56">
+      <Position x="0.4357672" y="-2.399667E-08" z="-2.413435E-08" />
+      <Rotation x="-0.1192343" y="-0.0496059" z="-0.275164" w="0.9526842" />
+    </Joint>
+    <Joint name="Ninja:joint1" parent="57">
+      <Position x="-0.01118402" y="0.1289771" z="-1.511539E-09" />
+      <Rotation x="1.110223E-16" y="-7.23783E-25" z="-6.245004E-17" w="1" />
+    </Joint>
+    <Joint name="Ninja:RightFoot" parent="57">
+      <Position x="0.424836" y="5.96145E-08" z="3.347868E-08" />
+      <Rotation x="-0.04352805" y="-0.02533115" z="0.0104255" w="0.9986766" />
+    </Joint>
+    <Joint name="Ninja:RightToes" parent="59">
+      <Position x="0.0758718" y="0.1706926" z="-1.28816E-09" />
+      <Rotation x="0.0006982989" y="0.002704963" z="0.6647664" w="0.7470461" />
+    </Joint>
+    <Joint name="Ninja:RightToesEnd" parent="60">
+      <Position x="0.054049" y="1.332268E-17" z="7.105427E-17" />
+      <Rotation x="2.773339E-32" y="0" z="9.860761E-32" w="1" />
+    </Joint>
+    <Joint name="Ninja:RightUpperLegTwist1" parent="56">
+      <Position x="0.0001" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:RightUpperLegTwist2" parent="56">
+      <Position x="0.1452557" y="-1.622482E-10" z="1.065814E-16" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:RightUpperLegTwist3" parent="56">
+      <Position x="0.2905113" y="-3.244964E-10" z="2.131628E-16" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:Spine" parent="27">
+      <Position x="-0.07637069" y="0.004109506" z="-4.418788E-18" />
+      <Rotation x="-0.006798198" y="-0.01260465" z="-0.1261272" w="0.9919107" />
+    </Joint>
+    <Joint name="Ninja:Chest" parent="65">
+      <Position x="-0.1021592" y="-3.279667E-09" z="-6.254097E-18" />
+      <Rotation x="-0.03221451" y="-0.02363283" z="-0.04393941" w="0.998235" />
+    </Joint>
+    <Joint name="Ninja:UpperChest" parent="66">
+      <Position x="-0.09986373" y="1.002809E-08" z="-6.11332E-18" />
+      <Rotation x="-0.06258185" y="-0.001704172" z="0.01813354" w="0.9978737" />
+    </Joint>
+    <Joint name="Ninja:LeftShoulder" parent="67">
+      <Position x="-0.1488846" y="0.01021125" z="0.0412939" />
+      <Rotation x="-0.4548697" y="0.4487613" z="0.5437869" w="0.5440614" />
+    </Joint>
+    <Joint name="Ninja:LeftUpperArm" parent="68">
+      <Position x="-0.1498851" y="-0.01317353" z="-0.02691858" />
+      <Rotation x="-0.05267497" y="0.1691162" z="0.3719279" w="0.9112051" />
+    </Joint>
+    <Joint name="Ninja:LeftLowerArm" parent="69">
+      <Position x="-0.2598083" y="-1.815192E-07" z="-3.051308E-07" />
+      <Rotation x="0.03846576" y="0.8414304" z="0.2356914" w="0.4847318" />
+    </Joint>
+    <Joint name="Ninja:LeftElbow" parent="70">
+      <Position x="-0.0001" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:LeftHand" parent="70">
+      <Position x="-0.2583355" y="5.564434E-06" z="6.47513E-06" />
+      <Rotation x="-0.1411091" y="0.07594676" z="0.07752382" w="0.9840276" />
+    </Joint>
+    <Joint name="Ninja:LeftHandGrip" parent="72">
+      <Position x="0.554453" y="-0.349463" z="0.009190207" />
+      <Rotation x="-0.1789761" y="0.6260327" z="0.7344577" w="0.1913704" />
+    </Joint>
+    <Joint name="Ninja:LeftIndexProximal" parent="72">
+      <Position x="-0.1014457" y="-0.01042594" z="0.03227328" />
+      <Rotation x="0.9424989" y="0.3339044" z="0.007372171" w="-0.01222484" />
+    </Joint>
+    <Joint name="Ninja:LeftIndexIntermediate" parent="74">
+      <Position x="-0.03005082" y="-3.918812E-06" z="-3.754152E-06" />
+      <Rotation x="-0.05393858" y="0.04556071" z="-0.4355792" w="0.8973771" />
+    </Joint>
+    <Joint name="Ninja:LeftIndexDistal" parent="75">
+      <Position x="-0.02329471" y="-8.911203E-07" z="-2.159489E-06" />
+      <Rotation x="-0.06946609" y="0.05814207" z="-0.5499118" w="0.8302957" />
+    </Joint>
+    <Joint name="Ninja:LeftIndexDistalEnd" parent="76">
+      <Position x="-0.02773102" y="1.488703E-06" z="3.399049E-06" />
+      <Rotation x="1.398353E-06" y="-1.029429E-07" z="0.1161568" w="0.9932309" />
+    </Joint>
+    <Joint name="Ninja:LeftMiddleProximal" parent="72">
+      <Position x="-0.1017654" y="-0.009201005" z="0.007671894" />
+      <Rotation x="0.9273393" y="0.3682689" z="0.06516931" w="0.01314784" />
+    </Joint>
+    <Joint name="Ninja:LeftMiddleIntermediate" parent="78">
+      <Position x="-0.02959051" y="-1.406457E-06" z="-1.778952E-06" />
+      <Rotation x="-0.02459762" y="0.07482351" z="-0.4317563" w="0.8985449" />
+    </Joint>
+    <Joint name="Ninja:LeftMiddleDistal" parent="79">
+      <Position x="-0.02734489" y="7.761332E-07" z="3.596661E-06" />
+      <Rotation x="-0.03304435" y="0.08886307" z="-0.4984956" w="0.8616922" />
+    </Joint>
+    <Joint name="Ninja:LeftMiddleDistalEnd" parent="80">
+      <Position x="-0.0296116" y="-2.608213E-07" z="1.831221E-06" />
+      <Rotation x="3.518928E-06" y="-5.521507E-07" z="0.1573034" w="0.9875503" />
+    </Joint>
+    <Joint name="Ninja:LeftPinkyProximal" parent="72">
+      <Position x="-0.09005463" y="-0.01086467" z="-0.03371355" />
+      <Rotation x="0.9105555" y="0.3621907" z="0.192653" w="0.05090478" />
+    </Joint>
+    <Joint name="Ninja:LeftPinkyIntermediate" parent="82">
+      <Position x="-0.02517455" y="-1.908847E-06" z="-6.568591E-06" />
+      <Rotation x="0.03575943" y="0.141991" z="-0.4414404" w="0.8852628" />
+    </Joint>
+    <Joint name="Ninja:LeftPinkyDistal" parent="83">
+      <Position x="-0.01966134" y="9.675291E-08" z="2.243178E-06" />
+      <Rotation x="0.02220181" y="0.1748527" z="-0.517614" w="0.8372631" />
+    </Joint>
+    <Joint name="Ninja:LeftPinkyDistalEnd" parent="84">
+      <Position x="-0.02177113" y="3.554768E-07" z="-2.131275E-06" />
+      <Rotation x="8.881007E-07" y="-1.681259E-07" z="0.1573034" w="0.9875503" />
+    </Joint>
+    <Joint name="Ninja:LeftRingProximal" parent="72">
+      <Position x="-0.1009839" y="-0.008683647" z="-0.01519324" />
+      <Rotation x="0.9202082" y="0.376153" z="0.1063806" w="-0.02022068" />
+    </Joint>
+    <Joint name="Ninja:LeftRingIntermediate" parent="86">
+      <Position x="-0.02801479" y="1.113054E-06" z="4.386211E-07" />
+      <Rotation x="-0.01067295" y="0.09894866" z="-0.4264009" w="0.8990426" />
+    </Joint>
+    <Joint name="Ninja:LeftRingDistal" parent="87">
+      <Position x="-0.02993658" y="-6.707849E-07" z="-1.030988E-06" />
+      <Rotation x="-0.01925387" y="0.1182419" z="-0.5071027" w="0.8535191" />
+    </Joint>
+    <Joint name="Ninja:LeftRingDistalEnd" parent="88">
+      <Position x="-0.02613384" y="-7.696725E-07" z="2.421152E-06" />
+      <Rotation x="1.314779E-08" y="4.291497E-08" z="0.1900183" w="0.9817806" />
+    </Joint>
+    <Joint name="Ninja:LeftThumbProximal2" parent="72">
+      <Position x="-0.0148767" y="-0.009082575" z="0.01978787" />
+      <Rotation x="-0.494554" y="-0.2910585" z="0.3097439" w="0.7581294" />
+    </Joint>
+    <Joint name="Ninja:LeftThumbIntermediate" parent="90">
+      <Position x="-0.05111969" y="-2.447165E-06" z="2.180698E-06" />
+      <Rotation x="-0.07555529" y="0.006742333" z="-0.2564921" w="0.9635652" />
+    </Joint>
+    <Joint name="Ninja:LeftThumbDistal" parent="91">
+      <Position x="-0.03116853" y="1.922812E-06" z="-1.884703E-06" />
+      <Rotation x="-0.1888286" y="-0.02832714" z="-0.4235301" w="0.8855301" />
+    </Joint>
+    <Joint name="Ninja:LeftThumbDistalEnd" parent="92">
+      <Position x="-0.03196929" y="-1.699941E-06" z="1.562132E-06" />
+      <Rotation x="5.849921E-36" y="-1.355253E-18" z="4.31648E-18" w="1" />
+    </Joint>
+    <Joint name="Ninja:LeftLowerArmTwist1" parent="70">
+      <Position x="-0.2582349" y="6.165414E-06" z="7.275992E-06" />
+      <Rotation x="0" y="-0.001119961" z="0" w="0.9999994" />
+    </Joint>
+    <Joint name="Ninja:LeftLowerArmTwist2" parent="70">
+      <Position x="-0.1722245" y="1.675019E-06" z="1.80848E-06" />
+      <Rotation x="0" y="-0.001119961" z="0" w="0.9999994" />
+    </Joint>
+    <Joint name="Ninja:LeftLowerArmTwist3" parent="70">
+      <Position x="-0.08611056" y="3.909743E-06" z="4.48421E-06" />
+      <Rotation x="0" y="-0.001119961" z="0" w="0.9999994" />
+    </Joint>
+    <Joint name="Ninja:LeftUpperArmTwist1" parent="69">
+      <Position x="-9.815025E-05" y="2.367307E-06" z="7.689625E-07" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:LeftUpperArmTwist2" parent="69">
+      <Position x="-0.08660276" y="-5.688981E-08" z="-1.283097E-07" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:LeftUpperArmTwist3" parent="69">
+      <Position x="-0.173208" y="2.230299E-06" z="9.391644E-07" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:Neck" parent="67">
+      <Position x="-0.2214941" y="-0.0005306161" z="0.005401521" />
+      <Rotation x="0.03720662" y="0.03218514" z="-0.1228921" w="0.9912" />
+    </Joint>
+    <Joint name="Ninja:Head" parent="100">
+      <Position x="-0.09720311" y="3.425201E-08" z="1.554312E-17" />
+      <Rotation x="0.1979726" y="0.06090299" z="0.2249238" w="0.9521066" />
+    </Joint>
+    <Joint name="Ninja:Head_null" parent="101">
+      <Position x="-0.1624123" y="8.881784E-18" z="-7.212556E-17" />
+      <Rotation x="0" y="-1.232595E-32" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:RightShoulder" parent="67">
+      <Position x="-0.1488846" y="0.01021125" z="-0.0412939" />
+      <Rotation x="0.4403787" y="0.4230663" z="-0.5657501" w="0.5540833" />
+    </Joint>
+    <Joint name="Ninja:RightUpperArm" parent="103">
+      <Position x="0.1498855" y="0.01316955" z="0.02691836" />
+      <Rotation x="0.115863" y="-0.1743921" z="0.3812091" w="0.9004681" />
+    </Joint>
+    <Joint name="Ninja:RightLowerArm" parent="104">
+      <Position x="0.2598076" y="-3.278387E-08" z="1.184905E-08" />
+      <Rotation x="0.04813348" y="0.6838094" z="0.184848" w="0.7042152" />
+    </Joint>
+    <Joint name="Ninja:RightElbow" parent="105">
+      <Position x="0.0001" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:RightHand" parent="105">
+      <Position x="0.2583377" y="5.788539E-09" z="-1.095285E-09" />
+      <Rotation x="-0.01060153" y="-0.0117103" z="0.1099877" w="0.9938074" />
+    </Joint>
+    <Joint name="Ninja:RightHandGrip" parent="107">
+      <Position x="-0.5295661" y="0.1546857" z="-0.1695544" />
+      <Rotation x="0.9243984" y="0.3215168" z="0.03842732" w="-0.2015884" />
+    </Joint>
+    <Joint name="Ninja:RightIndexProximal" parent="107">
+      <Position x="0.101444" y="0.01041995" z="-0.03227988" />
+      <Rotation x="0.9656022" y="0.2539712" z="0.04861508" w="-0.02734416" />
+    </Joint>
+    <Joint name="Ninja:RightIndexIntermediate" parent="109">
+      <Position x="0.03005363" y="-8.708474E-08" z="-4.82506E-09" />
+      <Rotation x="-0.03994976" y="0.03382134" z="-0.3246716" w="0.9443774" />
+    </Joint>
+    <Joint name="Ninja:RightIndexDistal" parent="110">
+      <Position x="0.02329502" y="-2.207817E-07" z="-2.279379E-08" />
+      <Rotation x="-0.05209558" y="0.04359941" z="-0.4119922" w="0.9086515" />
+    </Joint>
+    <Joint name="Ninja:RightIndexDistalEnd" parent="111">
+      <Position x="0.02772802" y="-6.340265E-08" z="-3.810302E-09" />
+      <Rotation x="1.437986E-06" y="-1.838005E-07" z="0.1161568" w="0.9932309" />
+    </Joint>
+    <Joint name="Ninja:RightMiddleProximal" parent="107">
+      <Position x="0.101765" y="0.009199969" z="-0.007673525" />
+      <Rotation x="0.9556472" y="0.2739985" z="0.107981" w="-0.001854424" />
+    </Joint>
+    <Joint name="Ninja:RightMiddleIntermediate" parent="113">
+      <Position x="0.02959215" y="3.037923E-07" z="5.413183E-10" />
+      <Rotation x="-0.01819092" y="0.05535995" z="-0.3272774" w="0.9431298" />
+    </Joint>
+    <Joint name="Ninja:RightMiddleDistal" parent="114">
+      <Position x="0.02734101" y="2.303581E-07" z="1.733424E-09" />
+      <Rotation x="-0.02461557" y="0.066224" z="-0.3745506" w="0.9245108" />
+    </Joint>
+    <Joint name="Ninja:RightMiddleDistalEnd" parent="115">
+      <Position x="0.02961" y="2.341246E-07" z="8.609511E-10" />
+      <Rotation x="3.477649E-06" y="-5.770846E-07" z="0.1573034" w="0.9875504" />
+    </Joint>
+    <Joint name="Ninja:RightPinkyProximal" parent="107">
+      <Position x="0.09005301" y="0.01086003" z="0.03370723" />
+      <Rotation x="0.9392821" y="0.2872081" z="0.1554672" w="0.1053125" />
+    </Joint>
+    <Joint name="Ninja:RightPinkyIntermediate" parent="117">
+      <Position x="0.02517857" y="-2.152564E-09" z="-1.230516E-08" />
+      <Rotation x="0.02647725" y="0.1050698" z="-0.343438" w="0.9329039" />
+    </Joint>
+    <Joint name="Ninja:RightPinkyDistal" parent="118">
+      <Position x="0.01965998" y="1.063497E-07" z="2.324357E-08" />
+      <Rotation x="0.01656645" y="0.1303225" z="-0.4028126" w="0.9058055" />
+    </Joint>
+    <Joint name="Ninja:RightPinkyDistalEnd" parent="119">
+      <Position x="0.02177211" y="-1.653614E-08" z="-1.581581E-08" />
+      <Rotation x="8.453437E-07" y="-1.381385E-07" z="0.1573034" w="0.9875504" />
+    </Joint>
+    <Joint name="Ninja:RightRingProximal" parent="107">
+      <Position x="0.100982" y="0.008680061" z="0.01518863" />
+      <Rotation x="0.9481791" y="0.273597" z="0.1462317" w="0.06868302" />
+    </Joint>
+    <Joint name="Ninja:RightRingIntermediate" parent="121">
+      <Position x="0.02801498" y="7.360719E-08" z="1.844062E-08" />
+      <Rotation x="-0.007886349" y="0.07321557" z="-0.3230729" w="0.9435048" />
+    </Joint>
+    <Joint name="Ninja:RightRingDistal" parent="122">
+      <Position x="0.02993702" y="-3.057927E-08" z="-9.17545E-09" />
+      <Rotation x="-0.01433621" y="0.08812315" z="-0.3856114" w="0.9183314" />
+    </Joint>
+    <Joint name="Ninja:RightRingDistalEnd" parent="123">
+      <Position x="0.02613202" y="6.672418E-08" z="1.521784E-08" />
+      <Rotation x="3.835572E-09" y="-1.105827E-09" z="0.1900183" w="0.9817806" />
+    </Joint>
+    <Joint name="Ninja:RightThumbProximal2" parent="107">
+      <Position x="0.0148753" y="0.009078458" z="-0.01979194" />
+      <Rotation x="-0.4294834" y="-0.2174256" z="0.3004175" w="0.8234194" />
+    </Joint>
+    <Joint name="Ninja:RightThumbIntermediate" parent="125">
+      <Position x="0.05112088" y="7.965951E-09" z="2.752716E-08" />
+      <Rotation x="-0.05174561" y="-0.00150864" z="-0.2297894" w="0.9718626" />
+    </Joint>
+    <Joint name="Ninja:RightThumbDistal" parent="126">
+      <Position x="0.03116765" y="-1.053944E-09" z="1.67968E-08" />
+      <Rotation x="-0.1300007" y="-0.03477544" z="-0.3356183" w="0.9323363" />
+    </Joint>
+    <Joint name="Ninja:RightThumbDistalEnd" parent="127">
+      <Position x="0.03197071" y="4.312785E-10" z="-8.94801E-09" />
+      <Rotation x="-2.497677E-08" y="-0.005682083" z="-0.01492747" w="0.9998724" />
+    </Joint>
+    <Joint name="Ninja:RightLowerArmTwist1" parent="105">
+      <Position x="0.2582376" y="8.228085E-13" z="-2.280034E-07" />
+      <Rotation x="0" y="-0.001119961" z="0" w="0.9999994" />
+    </Joint>
+    <Joint name="Ninja:RightLowerArmTwist2" parent="105">
+      <Position x="0.1722251" y="5.483969E-13" z="-2.674185E-09" />
+      <Rotation x="0" y="-0.001119961" z="0" w="0.9999994" />
+    </Joint>
+    <Joint name="Ninja:RightLowerArmTwist3" parent="105">
+      <Position x="0.08611254" y="2.741274E-13" z="-1.337092E-09" />
+      <Rotation x="0" y="-0.001119961" z="0" w="0.9999994" />
+    </Joint>
+    <Joint name="Ninja:RightUpperArmTwist1" parent="104">
+      <Position x="0.0001" y="-2.842171E-16" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:RightUpperArmTwist2" parent="104">
+      <Position x="0.08660252" y="-1.953122E-08" z="2.18523E-09" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:RightUpperArmTwist3" parent="104">
+      <Position x="0.1732102" y="-3.906361E-08" z="4.370592E-09" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:Weapon" parent="0">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="-0.5" y="0.5" z="0.5" w="0.5" />
+    </Joint>
+    <Joint name="Ninja:Weapon_Geometry" parent="135">
+      <Position x="0" y="0" z="0" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:Assault_Machine_Gun" parent="136">
+      <Position x="0.3690751" y="0" z="0.1103937" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:Cringe_TechB" parent="136">
+      <Position x="0.07621452" y="-0.04032072" z="0.1187965" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+    <Joint name="Ninja:Grip_TechB" parent="136">
+      <Position x="0.4255145" y="0" z="0.06057305" />
+      <Rotation x="0" y="0" z="-8.742278E-08" w="1" />
+    </Joint>
+    <Joint name="Ninja:Mag_TechB" parent="136">
+      <Position x="0.2000935" y="0" z="-0.01237546" />
+      <Rotation x="0" y="0" z="0" w="1" />
+    </Joint>
+  </AnimationRig>
+  <Types>
+    <Type name="Locomotion" size="1" />
+    <Type name="Idle" size="1" />
+  </Types>
+  <Traits>
+    <Trait index="0" type="Locomotion" payload="00" />
+    <Trait index="1" type="Idle" payload="00" />
+  </Traits>
+  <Segments>
+    <Segment index="0" name="Idle" tagIndex="0" numTags="2" intervalIndex="0" numIntervals="1">
+      <Source firstFrame="0" numFrames="301" />
+      <Destination firstFrame="0" numFrames="301" />
+    </Segment>
+    <Segment index="1" name="Start_Stop_1" tagIndex="2" numTags="1" intervalIndex="1" numIntervals="1">
+      <Source firstFrame="0" numFrames="2103" />
+      <Destination firstFrame="301" numFrames="2103" />
+    </Segment>
+    <Segment index="2" name="Plants_Turns_Fancy_1" tagIndex="3" numTags="1" intervalIndex="2" numIntervals="1">
+      <Source firstFrame="0" numFrames="1357" />
+      <Destination firstFrame="2404" numFrames="1357" />
+    </Segment>
+  </Segments>
+  <Tags>
+    <Tag index="0" trait="0" marker="-1" numMarkers="0" segment="0" firstFrame="0" numFrames="301" />
+    <Tag index="1" trait="1" marker="-1" numMarkers="0" segment="0" firstFrame="0" numFrames="301" />
+    <Tag index="2" trait="0" marker="-1" numMarkers="0" segment="1" firstFrame="0" numFrames="2103" />
+    <Tag index="3" trait="0" marker="-1" numMarkers="0" segment="2" firstFrame="0" numFrames="1357" />
+  </Tags>
+  <Markers />
+  <Intervals>
+    <Interval index="0" segment="0" firstFrame="0" numFrames="301" tagList="0" codeBook="0" />
+    <Interval index="1" segment="1" firstFrame="0" numFrames="2103" tagList="1" codeBook="0" />
+    <Interval index="2" segment="2" firstFrame="0" numFrames="1357" tagList="2" codeBook="0" />
+  </Intervals>
+  <TagLists>
+    <TagList index="0" indices="0;1;" />
+    <TagList index="1" indices="2;" />
+    <TagList index="2" indices="3;" />
+  </TagLists>
+  <Metrics>
+    <Metric index="0" poseTimeSpan="0.06666667">
+      <Joint name="Ninja:LeftFoot" index="49" />
+      <Joint name="Ninja:RightFoot" index="59" />
+      <Joint name="Ninja:Neck" index="100" />
+    </Metric>
+  </Metrics>
+  <CodeBooks>
+    <CodeBook index="0" metric="0" trait="0" />
+  </CodeBooks>
+</Binary>

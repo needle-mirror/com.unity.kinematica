@@ -1,0 +1,19 @@
+<UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements"
+      xmlns:kinematica="Unity.Kinematica.Editor">
+    <ui:Template path="packages/com.unity.kinematica/Editor/Templates/AnimationClipLibrary.uxml" name="AnimationClipLibrary"/>
+    <ui:Template path="packages/com.unity.kinematica/Editor/Templates/Timeline.uxml" name="Timeline"/>
+    <ui:Template path="packages/com.unity.kinematica/Editor/Templates/MarkerWindow.uxml" name="Markers"/>
+    <ui:VisualElement class="createLayout">
+        <ui:Label name="createLabel"/>
+        <ui:Button name="createButton"/>
+    </ui:VisualElement>
+    <kinematica:TwoPaneSplitView name="inputLayout" fixed-pane-index="0" fixed-pane-initial-size="200" orientation="horizontal">
+        <ui:VisualElement name="inputArea">
+            <!-- Implementation of template will make it so only one of these is visible at a time -->
+            <ui:Instance template="AnimationClipLibrary" name="animationClipInput" class="flexGrowClass"/>
+        </ui:VisualElement>
+        <ui:VisualElement class="timelineArea">
+            <ui:VisualElement name="timeline" class="flexGrowClass"/>
+        </ui:VisualElement>
+    </kinematica:TwoPaneSplitView>
+</UXML>

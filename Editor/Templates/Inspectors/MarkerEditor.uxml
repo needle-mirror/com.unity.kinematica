@@ -1,0 +1,10 @@
+<UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement class="arrayEntryContents">
+        <ui:TextField name="markerTypeLabel" label="Marker Type"/>
+        <uie:FloatField label="Time In Seconds" />
+        <ui:VisualElement name="payloadInspector"/>
+    </ui:VisualElement>
+    <ui:VisualElement class="drawerButtonContainer">
+        <ui:Button name="deleteButton" text="-" class="arrayButton"/>
+    </ui:VisualElement>
+</UXML>

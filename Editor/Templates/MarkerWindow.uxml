@@ -1,0 +1,16 @@
+<UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement class="menuContainer" >
+        <uie:ToolbarMenu name="addMarkerMenu" text="Add"/>
+    </ui:VisualElement>
+    <ui:ScrollView class="markerScrollView" pickingMode="Ignore" stretch-content-width="true"
+                   horizontal-page-size="60" vertical-page-size="60">
+        <ui:VisualElement name="tagInfoContainer" class="structInfoContainer">
+            <ui:Label class="structInfoLabel" text="Tag Properties"/>
+            <ui:VisualElement name="tagPropertiesList"/>
+        </ui:VisualElement>
+        <ui:VisualElement name="markerInfoContainer" class="structInfoContainer">
+            <ui:Label class="structInfoLabel" text="Markers"/>
+            <ui:VisualElement name="markersList"/>
+        </ui:VisualElement>
+    </ui:ScrollView>
+</UXML>
