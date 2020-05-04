@@ -65,7 +65,7 @@ namespace Unity.Kinematica
             var trajectory = GetArray<AffineTransform>(desiredTrajectory);
 
             AffineTransform binaryRootDelta = rootDeltaTransform;
-            AffineTransform desiredRootDelta = Utility.SampleTrajectoryAtTime(trajectory, _deltaTime, Binary.TimeHorizon, Binary.SampleRate);
+            AffineTransform desiredRootDelta = Utility.SampleTrajectoryAtTime(trajectory, _deltaTime, Binary.TimeHorizon);
 
             AffineTransform rootDelta = binaryRootDelta;
 

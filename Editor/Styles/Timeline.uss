@@ -18,19 +18,18 @@
     background-image: resource("d_Settings");
 }
 
-.track Label {
-    padding-top: 4px;
-    padding-bottom: 2px;
-}
-
 .track {
-    border-width: 1px;
+    border-bottom-width: 1px;
 }
 
 .trackElement {
-    padding-top: 2px;
-    padding-bottom: 2px;
+    flex-grow: 1;
 }
+
+.gutterTrackElement {
+    flex-shrink: 1;
+}
+
 
 #trackLabels {
     flex-direction: column;
@@ -48,33 +47,31 @@
     flex: 1;
 }
 
-#previewToggle {
-    flex: 0 0 auto;
-    margin-top: 2px;
-    padding-bottom: 1px;
-    overflow: hidden;
-    white-space: nowrap;
-}
-
 #previewTarget {
-    flex: 1;
-    max-width: 200px;
+    max-width: 350px;
 }
-
 
 #frameField {
     flex-shrink: 1;
-    height: 18px;
-    max-width: 100px;
-    min-width: 100px;
+    max-width: 60px;
+    min-width: 60px;
+    border-left-width: 1px;
+    border-right-width: : 1px;
+    margin-top: 0px;
+    margin-right: 0px;
+    margin-bottom: 0px;
+    margin-left: 0px;
+    padding-left: 2px;
+    padding-right: 3px;
+    padding-bottom: 1px;
 }
 
-#addTagRow {
+#frameField FloatInput {
+    margin-top: 1px;
+}
+
+.markerTrack {
     min-height: 22px;
-    height: 22px;
-    max-height: 22px;
-    border-right-width : 2px;
-    justify-content: flex-start;
 }
 
 #markerArea {
@@ -100,19 +97,21 @@
     flex-grow: 1;
 }
 
+.tagElementBackground {
+    margin-bottom: 3px;
+    min-height: 22px;
+}
+
 .clipTagRoot {
-    flex-direction: column;
     flex: 1 0 0;
     align-self: stretch;
     max-height: 22px;
     min-height: 22px;
-    padding-top: 1px;
-}
-
-.clipTag {
-    flex: 1;
     flex-direction: row;
-    border-width: 1px;
+    border-left-width: 4px;
+    border-bottom-width: 4px;
+    border-right-width: 4px;
+    margin-bottom: 3px;
 }
 
 .clipTag:hover {
@@ -120,13 +119,30 @@
 }
 
 .clipTag--checked {
-    border-width: 1px;
+    border-top-width: 1px;
 }
+
+.tagManipulateLabel {
+    position: absolute;
+    visibility: hidden;
+    top: 3px;
+}
+
+.tagManipulateStartLabel {
+    left: -16px;
+}
+
+.tagManipulateEndLabel {
+    left: 8px;
+}
+
 
 .timelineTimeRangeLabelContainer {
     flex-direction: column;
     justify-content: center;
     flex: 1;
+    left: -4px;
+    margin-right: -8px;
 }
 
 .timelineTimeRangeLabel {
@@ -139,9 +155,8 @@
 
 .clipTagDragHandle {
     flex: 0;
-    width: 6px;
-    min-width: 6px;
-    max-width: 6px;
+    min-width: 4px;
+    max-width: 4px;
     max-height: 20px;
     cursor: resize-horizontal;
 }
@@ -155,29 +170,14 @@
 
 #clipLength {
     position : absolute;
-    height: 2px;
-    top: 62px;
+    height: 4px;
+    top: 17px;
 }
 
-.endOfClip {
-    top: 44px;
-    bottom:0px;
-    left:0px;
-    right: 0px;
-    width: 2px;
-    position: absolute;
-}
 
 .clipArea {
     flex-grow: 1;
     position: absolute;
-}
-
-.endOfClipHead {
-    position: absolute;
-    width: 6px;
-    height: 18px;
-    left: -2px;
 }
 
 .majorTickLabel {
@@ -203,7 +203,7 @@
 }
 
 .playHead {
-    top: 42px;
+    top: 2px;
     bottom:0px;
     width: 1px;
     position: absolute;
@@ -249,15 +249,19 @@
 }
 
 .metricElement {
-    min-height: 22px;
+    min-height: 21px;
     position: absolute;
-    border-width: : 1px;
     -unity-font-style: italic;
+}
+
+.metricBorderElement {
+    max-height: 19px;
+    min-height: 21px;
+    position: absolute;
 }
 
 #timelineWorkArea {
     overflow: hidden;
-    margin-right: 2px;
     flex-direction: column;
     flex: 1 0;
 }
@@ -268,17 +272,22 @@
     max-height: 20px;
 }
 
-#timelineHeader {
-    flex-direction: column;
-}
-
 .timelineRight {
     flex: 1;
     overflow: visible;
 }
 
+#tracks {
+    flex-grow: 1;
+}
+
 .timeline Label {
     margin-bottom: 0px;
+}
+
+.timeRuler {
+    max-height: 22px;
+    border-bottom-width: 1px;
 }
 
 .creationManipulator {
@@ -287,9 +296,35 @@
     border-width: 1px;
 }
 
+.boundaryClipTrack {
+    height: 22px;
+}
+
 .boundaryClip {
-    top: 64px;
     position: absolute;
     min-width: 80px;
     margin-left: 2px;
+    flex-direction: row;
+}
+
+.boundaryClip Image {
+    left: 2px;
+    min-width: 18px;
+}
+
+.manipulationGuideline {
+    position: absolute;
+    visibility: hidden;
+    min-width: 1px;
+    max-width: 1px;
+    bottom: 0px;
+    top: 0px;
+}
+
+.tagElementRow {
+}
+.tagElementRow--even {
+}
+
+.tagElementRow--odd {
 }

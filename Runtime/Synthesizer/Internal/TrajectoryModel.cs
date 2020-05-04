@@ -219,7 +219,7 @@ namespace Unity.Kinematica
         /// <returns>Memory array that references the trajectory array.</returns>
         public AffineTransform RootTransformAtTime(float sampleTimeInSeconds)
         {
-            return Utility.SampleTrajectoryAtTime(trajectory, sampleTimeInSeconds, Binary.TimeHorizon, Binary.SampleRate);
+            return Utility.SampleTrajectoryAtTime(trajectory, sampleTimeInSeconds, Binary.TimeHorizon);
         }
 
         /// <summary>

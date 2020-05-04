@@ -1,14 +1,30 @@
-using System;
 using Unity.SnapshotDebugger;
 
 namespace Unity.Kinematica
 {
-    internal struct AnimationFrameDebugInfo : IFrameDebugInfo
+    /// <summary>
+    /// Informations about a played animation during one given frame that will feed the animation timeline in the snapshot debugger
+    /// </summary>
+    public struct AnimationFrameDebugInfo : IFrameDebugInfo
     {
+        /// <summary>
+        /// Unique identifier allowing the debugger to group frames sharing the same identifier into blocks onto the timeline
+        /// </summary>
         public int     sequenceIdentifier;
+
+        /// <summary>
+        /// Name of the animation
+        /// </summary>
         public string  animName;
+
+        /// <summary>
+        /// Animation clip frame index
+        /// </summary>
         public float   animFrame;
-        public float   animTime;
+
+        /// <summary>
+        /// Weight of the animation in the final pose
+        /// </summary>
         public float   weight;
     }
 }

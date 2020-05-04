@@ -1,32 +1,35 @@
 ﻿using Unity.Kinematica;
 using UnityEngine;
 
-[RequireComponent(typeof(Kinematica))]
-public class HelloWorld : MonoBehaviour
+namespace HelloWorld
 {
-    bool idle;
-
-    void Update()
+    [RequireComponent(typeof(Kinematica))]
+    public class HelloWorld : MonoBehaviour
     {
-        if (Input.anyKeyDown)
+        bool idle;
+
+        void Update()
         {
-            idle ^= true;
-
-            var kinematica = GetComponent<Kinematica>();
-
-            ref var synthesizer = ref kinematica.Synthesizer.Ref;
-
-            if (idle)
+            if (Input.anyKeyDown)
             {
-                synthesizer.Action().Push(
-                    synthesizer.Query.Where(
-                        Locomotion.Default).And(Idle.Default));
-            }
-            else
-            {
-                synthesizer.Action().Push(
-                    synthesizer.Query.Where(
-                        Locomotion.Default).Except(Idle.Default));
+                idle ^= true;
+
+                var kinematica = GetComponent<Kinematica>();
+
+                ref var synthesizer = ref kinematica.Synthesizer.Ref;
+
+                if (idle)
+                {
+                    synthesizer.Action().Push(
+                        synthesizer.Query.Where(
+                            Locomotion.Default).And(Idle.Default));
+                }
+                else
+                {
+                    synthesizer.Action().Push(
+                        synthesizer.Query.Where(
+                            Locomotion.Default).Except(Idle.Default));
+                }
             }
         }
     }

@@ -1,7 +1,10 @@
 using Unity.Kinematica;
 
-[Trait]
-public struct Locomotion
+namespace HelloWorld
 {
-    public static Locomotion Default => new Locomotion();
+    [Trait]
+    public struct Locomotion
+    {
+        public static Locomotion Default => new Locomotion();
+    }
 }

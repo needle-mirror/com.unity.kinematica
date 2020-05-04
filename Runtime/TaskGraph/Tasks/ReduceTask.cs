@@ -797,18 +797,16 @@ namespace Unity.Kinematica
 
                 var onePastLastFrame = sequence.onePastLastFrame;
 
-                var boundaryFrameLeft = 0;
-
-                if (!segment.previousSegment.IsValid)
+                var boundaryFrameLeft = numBoundaryFrames;
+                if (segment.previousSegment.IsValid)
                 {
-                    boundaryFrameLeft += numBoundaryFrames;
+                    boundaryFrameLeft -= binary.GetSegment(segment.previousSegment).destination.numFrames;
                 }
 
-                var boundaryFrameRight = segment.destination.numFrames;
-
-                if (!segment.nextSegment.IsValid)
+                var boundaryFrameRight = segment.destination.numFrames - numBoundaryFrames;
+                if (segment.nextSegment.IsValid)
                 {
-                    boundaryFrameRight -= numBoundaryFrames;
+                    boundaryFrameRight += binary.GetSegment(segment.nextSegment).destination.numFrames;
                 }
 
                 sequence.firstFrame = math.max(boundaryFrameLeft, sequence.firstFrame);
@@ -819,7 +817,29 @@ namespace Unity.Kinematica
 
                 if (sequence.numFrames <= 0)
                 {
-                    throw new SegmentTooShortException(this.synthesizer, interval.segmentIndex);
+                    bool intervalValid = false;
+
+                    ref Binary.TagList tagList = ref binary.GetTagList(interval.tagListIndex);
+                    for (int j = 0; j < tagList.numIndices; ++j)
+                    {
+                        ref Binary.Tag tag = ref binary.GetTag(tagList.tagIndicesIndex + j);
+                        int tagFirstFrame = math.max(boundaryFrameLeft, tag.FirstFrame);
+                        int tagOnePastLastFrame = math.max(boundaryFrameRight, tag.OnePastLastFrame);
+
+                        if (tagFirstFrame < tagOnePastLastFrame)
+                        {
+                            // intersection is too short, but one of the tags it contains is long enough, which is enough to make the intersection valid
+                            intervalValid = true;
+                            break;
+                        }
+                    }
+
+                    if (!intervalValid)
+                    {
+                        throw new SegmentTooShortException(this.synthesizer, interval.segmentIndex);
+                    }
+
+                    continue;
                 }
 
                 sequences[i] = sequence;
@@ -1010,7 +1030,7 @@ namespace Unity.Kinematica
 
             if (sequencesArray.Length == 0)
             {
-                throw new Exception("Error in ReduceTask : no sequence given as input");
+                throw new Exception("Error in ReduceTask : no sequence matching the query were found in the binary");
             }
 
             if (samplingTime.IsValid)

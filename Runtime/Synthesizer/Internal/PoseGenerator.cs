@@ -96,6 +96,7 @@ namespace Unity.Kinematica
 
                 return new LinearTransition
                 {
+                    t = 0.0f,
                     axis = axis,
                     transition = transition
                 };
@@ -149,6 +150,7 @@ namespace Unity.Kinematica
 
                 return new AngularTransition
                 {
+                    t = 0.0f,
                     axis = axis,
                     transition = transition
                 };
@@ -171,6 +173,8 @@ namespace Unity.Kinematica
         {
             public LinearTransition linear;
             public AngularTransition angular;
+
+            public float Progression => linear.transition.t1 > 0.0f ? math.clamp(linear.t / linear.transition.t1, 0.0f, 1.0f) : 1.0f;
 
             public const float epsilon = 0.0001f;
 
@@ -223,6 +227,9 @@ namespace Unity.Kinematica
 
             var numJoints = binary.numJoints;
 
+            currentPushIndex = -1;
+            approximateTransitionProgression = 0;
+
             previousPose.Construct(ref memoryBlock, numJoints);
             currentPose.Construct(ref memoryBlock, numJoints);
 
@@ -251,7 +258,7 @@ namespace Unity.Kinematica
             var targetPose = SamplePoseAt(samplingTime);
 
             //
-            // Trigger transition is requested
+            // Trigger transition if requested
             //
 
             TriggerTransition(ref targetPose.Ref, previousDeltaTime);
@@ -264,6 +271,8 @@ namespace Unity.Kinematica
             {
                 transitions[i].Update(deltaTime);
             }
+
+            approximateTransitionProgression = transitions[0].Progression;
 
             //
             // Store the final output pose in the pose history buffer
@@ -290,6 +299,9 @@ namespace Unity.Kinematica
         }
 
         internal TransformBuffer LocalSpaceTransformBuffer => currentPose;
+
+        public int CurrentPushIndex => currentPushIndex;
+        public float ApproximateTransitionProgression => approximateTransitionProgression;
 
         public void WriteToStream(Buffer buffer)
         {
@@ -363,6 +375,9 @@ namespace Unity.Kinematica
                             deltaTransform, velocityTransform,
                             blendDuration, deltaTime);
                 }
+
+                approximateTransitionProgression = blendDuration > 0.0f ? blendDuration : 1.0f;
+                ++currentPushIndex;
             }
         }
 
@@ -391,6 +406,10 @@ namespace Unity.Kinematica
         BlittableBool triggerTransition;
 
         float previousDeltaTime;
+
+        int currentPushIndex;
+
+        float approximateTransitionProgression;
 
         TransformBuffer previousPose;
 

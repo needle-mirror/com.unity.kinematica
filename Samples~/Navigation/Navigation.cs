@@ -4,99 +4,102 @@ using UnityEngine;
 using UnityEngine.AI;
 using System;
 
-[RequireComponent(typeof(Kinematica))]
-public class Navigation : MonoBehaviour
+namespace Navigation
 {
-    public Transform targetMarker;
-
-    Identifier<SelectorTask> locomotion;
-
-    void OnEnable()
+    [RequireComponent(typeof(Kinematica))]
+    public class Navigation : MonoBehaviour
     {
-        var kinematica = GetComponent<Kinematica>();
+        public Transform targetMarker;
 
-        ref var synthesizer = ref kinematica.Synthesizer.Ref;
+        Identifier<SelectorTask> locomotion;
 
-        synthesizer.Push(
-            synthesizer.Query.Where(
-                Locomotion.Default).And(Idle.Default));
-
-        var selector = synthesizer.Selector();
-
+        void OnEnable()
         {
-            var sequence = selector.Condition().Sequence();
+            var kinematica = GetComponent<Kinematica>();
 
-            sequence.Action().PushConstrained(
+            ref var synthesizer = ref kinematica.Synthesizer.Ref;
+
+            synthesizer.Push(
                 synthesizer.Query.Where(
-                    Locomotion.Default).And(Idle.Default), 0.01f);
+                    Locomotion.Default).And(Idle.Default));
 
-            sequence.Action().Timer();
-        }
+            var selector = synthesizer.Selector();
 
-        {
-            var action = selector.Action();
-
-            action.PushConstrained(
-                synthesizer.Query.Where(
-                    Locomotion.Default).Except(Idle.Default),
-                        action.Navigation().trajectory);
-        }
-
-        locomotion = selector;
-    }
-
-    void Update()
-    {
-        var kinematica = GetComponent<Kinematica>();
-
-        ref var synthesizer = ref kinematica.Synthesizer.Ref;
-
-        synthesizer.Tick(locomotion);
-
-        ref var navigation = ref synthesizer.GetByType<NavigationTask>(locomotion).Ref;
-        ref var idle = ref synthesizer.GetByType<ConditionTask>(locomotion).Ref;
-
-        if (Input.GetMouseButtonDown(0))
-        {
-            RaycastHit hit;
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-
-            if (Physics.Raycast(ray, out hit))
             {
-                Vector3 targetPosition = hit.point;
+                var sequence = selector.Condition().Sequence();
 
-                float desiredSpeed = 1.5f;
-                float accelerationDistance = 0.1f;
-                float decelerationDistance = 1.0f;
+                sequence.Action().PushConstrained(
+                    synthesizer.Query.Where(
+                        Locomotion.Default).And(Idle.Default), 0.01f);
 
-                NavMeshPath navMeshPath = new NavMeshPath();
-                if (NavMesh.CalculatePath(transform.position, targetPosition, NavMesh.AllAreas, navMeshPath))
-                {
-                    var navParams = new NavigationParams()
-                    {
-                        desiredSpeed = desiredSpeed,
-                        maxSpeedAtRightAngle = 0.0f,
-                        maximumAcceleration = NavigationParams.ComputeAccelerationToReachSpeed(desiredSpeed, accelerationDistance),
-                        maximumDeceleration = NavigationParams.ComputeAccelerationToReachSpeed(desiredSpeed, decelerationDistance),
-                        intermediateControlPointRadius = 1.0f,
-                        finalControlPointRadius = 0.15f,
-                        pathCurvature = 5.0f
-                    };
-
-                    float3[] points = Array.ConvertAll(navMeshPath.corners, pos => new float3(pos));
-                    navigation.FollowPath(points, navParams);
-
-                    targetMarker.gameObject.SetActive(true);
-                    targetMarker.position = targetPosition;
-                }                
+                sequence.Action().Timer();
             }
+
+            {
+                var action = selector.Action();
+
+                action.PushConstrained(
+                    synthesizer.Query.Where(
+                        Locomotion.Default).Except(Idle.Default),
+                            action.Navigation().trajectory);
+            }
+
+            locomotion = selector;
         }
 
-        idle.value = !navigation.IsPathValid || navigation.GoalReached;
-    }
+        void Update()
+        {
+            var kinematica = GetComponent<Kinematica>();
 
-    void OnGUI()
-    {
-        GUI.Label(new Rect(10, 10, 900, 20), "Click in blue area to move character.");
+            ref var synthesizer = ref kinematica.Synthesizer.Ref;
+
+            synthesizer.Tick(locomotion);
+
+            ref var navigation = ref synthesizer.GetByType<NavigationTask>(locomotion).Ref;
+            ref var idle = ref synthesizer.GetByType<ConditionTask>(locomotion).Ref;
+
+            if (Input.GetMouseButtonDown(0))
+            {
+                RaycastHit hit;
+                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+                if (Physics.Raycast(ray, out hit))
+                {
+                    Vector3 targetPosition = hit.point;
+
+                    float desiredSpeed = 1.5f;
+                    float accelerationDistance = 0.1f;
+                    float decelerationDistance = 1.0f;
+
+                    NavMeshPath navMeshPath = new NavMeshPath();
+                    if (NavMesh.CalculatePath(transform.position, targetPosition, NavMesh.AllAreas, navMeshPath))
+                    {
+                        var navParams = new NavigationParams()
+                        {
+                            desiredSpeed = desiredSpeed,
+                            maxSpeedAtRightAngle = 0.0f,
+                            maximumAcceleration = NavigationParams.ComputeAccelerationToReachSpeed(desiredSpeed, accelerationDistance),
+                            maximumDeceleration = NavigationParams.ComputeAccelerationToReachSpeed(desiredSpeed, decelerationDistance),
+                            intermediateControlPointRadius = 1.0f,
+                            finalControlPointRadius = 0.15f,
+                            pathCurvature = 5.0f
+                        };
+
+                        float3[] points = Array.ConvertAll(navMeshPath.corners, pos => new float3(pos));
+                        navigation.FollowPath(points, navParams);
+
+                        targetMarker.gameObject.SetActive(true);
+                        targetMarker.position = targetPosition;
+                    }
+                }
+            }
+
+            idle.value = !navigation.IsPathValid || navigation.GoalReached;
+        }
+
+        void OnGUI()
+        {
+            GUI.Label(new Rect(10, 10, 900, 20), "Click in blue area to move character.");
+        }
     }
 }

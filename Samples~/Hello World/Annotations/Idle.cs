@@ -1,7 +1,10 @@
 using Unity.Kinematica;
 
-[Trait]
-public struct Idle
+namespace HelloWorld
 {
-    public static Idle Default => new Idle();
+    [Trait]
+    public struct Idle
+    {
+        public static Idle Default => new Idle();
+    }
 }

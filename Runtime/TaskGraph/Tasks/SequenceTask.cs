@@ -13,6 +13,16 @@ namespace Unity.Kinematica
 
         internal MemoryRef<MotionSynthesizer> synthesizer;
 
+        /// <summary>
+        /// If false, once the sequence has finished executing all its children, it will do nothing and just return success. If true, sequence will reexecute all its children tasks indefinitely.
+        /// </summary>
+        BlittableBool loop;
+
+        /// <summary>
+        /// If true, and if the sequence isn't executed during one task graph pass, next time the sequence will be executed again, it will restart execution from its first child.
+        /// </summary>
+        BlittableBool resetWhenNotExecuted;
+
         int currentIndex;
         int expectedTickFrame;
 
@@ -20,10 +30,11 @@ namespace Unity.Kinematica
         /// Execute method for the sequence task.
         /// </summary>
         /// <remarks>
-        /// The sequence task executes all of its children in order
-        /// until it encounters a success status.
+        /// The sequence task executes all of its children in order, one per frame.
+        /// If one child task execution fails, it will be re-executed again next frame, and so on until it succeeds.
+        ///
         /// </remarks>
-        /// <returns>Result success if a child task executes successfully; false otherwise.</returns>
+        /// <returns>Result success if a child task executes successfully or if all children have already been successfuly executed (the sequence is then considered to be finished); false otherwise.</returns>
         public unsafe Result Execute()
         {
             ref var synthesizer = ref this.synthesizer.Ref;
@@ -34,7 +45,7 @@ namespace Unity.Kinematica
 
             var nextTickFrame = header->GetNextTickFrame();
 
-            if (expectedTickFrame != nextTickFrame)
+            if (resetWhenNotExecuted && expectedTickFrame != nextTickFrame)
             {
                 currentIndex = 0;
             }
@@ -43,7 +54,14 @@ namespace Unity.Kinematica
 
             if (currentIndex == memoryChunk.NumChildren(self))
             {
-                return Result.Success;
+                if (loop)
+                {
+                    currentIndex = 0;
+                }
+                else
+                {
+                    return Result.Success;
+                }
             }
 
             var node = memoryChunk.Child(self, currentIndex);
@@ -74,11 +92,14 @@ namespace Unity.Kinematica
             return self.Cast<SequenceTask>().Execute();
         }
 
-        internal SequenceTask(ref MotionSynthesizer synthesizer)
+        internal SequenceTask(ref MotionSynthesizer synthesizer, bool loop, bool resetWhenNotExecuted)
         {
             this.synthesizer = synthesizer.self;
 
             self = MemoryIdentifier.Invalid;
+
+            this.loop = loop;
+            this.resetWhenNotExecuted = resetWhenNotExecuted;
 
             currentIndex = 0;
             expectedTickFrame = -1;
@@ -114,10 +135,12 @@ namespace Unity.Kinematica
         /// <summary>
         /// Creates a new sequence task as a child of the sequence task.
         /// </summary>
+        /// <param name="loop">If false, once the sequence has finished executing all its children, it will do nothing and just return success. If true, sequence will reexecute all its children tasks indefinitely.</param>
+        /// <param name="resetWhenNotExecuted">If true, and if the sequence isn't executed during one task graph pass, next time the sequence will be executed again, it will restart execution from its first child.</param>
         /// <returns>Reference to the newly created sequence task.</returns>
-        public ref SequenceTask Sequence()
+        public ref SequenceTask Sequence(bool loop = false, bool resetWhenNotExecuted = true)
         {
-            return ref synthesizer.Ref.Sequence(self);
+            return ref synthesizer.Ref.Sequence(self, loop, resetWhenNotExecuted);
         }
 
         /// <summary>
@@ -129,9 +152,9 @@ namespace Unity.Kinematica
             return ref synthesizer.Ref.Parallel(self);
         }
 
-        internal static SequenceTask Create(ref MotionSynthesizer synthesizer)
+        internal static SequenceTask Create(ref MotionSynthesizer synthesizer, bool loop, bool resetWhenNotExecuted)
         {
-            return new SequenceTask(ref synthesizer);
+            return new SequenceTask(ref synthesizer, loop, resetWhenNotExecuted);
         }
 
         /// <summary>

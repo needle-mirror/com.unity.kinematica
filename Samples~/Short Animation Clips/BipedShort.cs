@@ -37,7 +37,7 @@ public class BipedShort : MonoBehaviour
 
         synthesizer.Push(
             synthesizer.Query.Where(
-                Locomotion.Default).And(Idle.Default));
+                ShortAnimationClips.Locomotion.Default).And(ShortAnimationClips.Idle.Default));
 
         var selector = synthesizer.Selector();
 
@@ -46,7 +46,7 @@ public class BipedShort : MonoBehaviour
 
             sequence.Action().PushConstrained(
                 synthesizer.Query.Where(
-                    Locomotion.Default).And(Idle.Default), 0.01f);
+                    ShortAnimationClips.Locomotion.Default).And(ShortAnimationClips.Idle.Default), 0.01f);
 
             // TODO: If in idle, otherwise search
             sequence.Action().Timer();
@@ -57,7 +57,7 @@ public class BipedShort : MonoBehaviour
 
             action.PushConstrained(
                 synthesizer.Query.Where(
-                    Locomotion.Default).Except(Idle.Default),
+                    ShortAnimationClips.Locomotion.Default).Except(ShortAnimationClips.Idle.Default),
                         action.TrajectoryPrediction().trajectory);
 
             synthesizer.GetByType<TrajectoryHeuristicTask>(action.self).Ref.threshold = 0.01f;

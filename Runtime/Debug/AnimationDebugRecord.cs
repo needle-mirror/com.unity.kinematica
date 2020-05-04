@@ -45,7 +45,7 @@ namespace Unity.Kinematica
                     {
                         // snapshot from already existing sequence, just add a new animation frame
                         animRecord.endTime = frameEndTime;
-                        animRecord.AddAnimationFrame(frameEndTime, frameDebugInfo.weight, frameDebugInfo.animFrame, frameDebugInfo.animTime);
+                        animRecord.AddAnimationFrame(frameEndTime, frameDebugInfo.weight, frameDebugInfo.animFrame);
 
                         m_LinesEndTimes[animRecord.rank] = frameEndTime;
                         m_AnimationRecords.SwapElements(i, m_AnimationRecords.Count - updatedSnapshots - 1);
@@ -68,7 +68,7 @@ namespace Unity.Kinematica
                 AnimationFrameDebugInfo frameDebugInfo = frameSnapshots[snapshotIndex];
 
                 CircularList<AnimationFrameInfo> animFrames = new CircularList<AnimationFrameInfo>();
-                animFrames.PushBack(new AnimationFrameInfo { endTime = frameEndTime, weight = frameDebugInfo.weight, animFrame = frameDebugInfo.animFrame, animTime = frameDebugInfo.animTime });
+                animFrames.PushBack(new AnimationFrameInfo { endTime = frameEndTime, weight = frameDebugInfo.weight, animFrame = frameDebugInfo.animFrame });
 
                 m_AnimationRecords.PushBack(new AnimationRecord
                 {
@@ -116,7 +116,7 @@ namespace Unity.Kinematica
             // find the highest available rank
             for (int rank = 0; rank < m_LinesEndTimes.Count; ++rank)
             {
-                if (m_LinesEndTimes[rank] < startTime)
+                if (m_LinesEndTimes[rank] <= startTime)
                 {
                     m_LinesEndTimes[rank] = endTime;
                     return rank;

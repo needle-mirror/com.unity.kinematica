@@ -1,3 +1,36 @@
+#toolbar {
+    border-color: #232323;
+}
+
+#gutterToggleArea {
+    border-color: #232323;
+    background-color: #C2C2C2;
+}
+
+#gutterToggleMenu {
+    background-image: resource("Packages/com.unity.kinematica/Editor/Images/Tracks.png");
+}
+
+#gutterToggleMenu:hover {
+    background-color: #AAAAAA;
+}
+
+.trackToggle {
+    border-color: #202020;
+}
+
+.trackToggle--checked {
+    background-color: #EFEFEF;
+}
+
+#gutterList {
+    border-color: #090909;
+}
+
+#gutterList Label {
+    border-color: #090909;
+}
+
 #targetGameObject {
     border-color: #8A8A8A;
 }
@@ -21,10 +54,6 @@
 
 .marker-selected {
     border-color: #0AFF00;
-}
-
-.marker:hover {
-    border-color: #FFFF00;
 }
 
 #timeSliderArea {

@@ -2,6 +2,10 @@
     border-bottom-color : #222222;
 }
 
+#frameField {
+    border-color: #202020;
+}
+
 #timelineArea {
     border-color: #09C2D4;
 }
@@ -9,6 +13,12 @@
 .timelineTimeRangeLabel {
     color : white;
 }
+
+
+.tagElementBackground {
+    background-color: #323232;
+}
+
 
 .clipTag {
     background-color: #C32148;
@@ -20,7 +30,7 @@
 }
 
 .clipTag--checked {
-    border-color: #EEEEEE;
+    border-top-color: #EEEEEE;
 }
 
 .majorTickLabel {
@@ -61,7 +71,7 @@
 }
 
 .clipArea {
-    background-color: rgba(190, 190, 190, .15);
+    background-color: rgba(190, 190, 190, .02);
 }
 
 .endOfClipHead {
@@ -82,7 +92,7 @@
 }
 
 .trackElement {
-    border-color: #5E5E5E;
+    border-color: #090909;
 }
 
 #trackLabels {
@@ -94,8 +104,9 @@
     background-color: #292929;
 }
 
-#addTagRow {
-    border-right-color : #464646;
+.timeRuler {
+    background-color: rgba(64, 64, 64, 199);
+    border-color: #090909;
 }
 
 .creationManipulator {
@@ -104,5 +115,9 @@
 }
 
 .boundaryClip {
-    background-color: rgba(94, 116, 154, .2);
+    background-color: rgba(94, 116, 154, .1);
+}
+
+.manipulationGuideline {
+    background-color: #4F4F4F;
 }

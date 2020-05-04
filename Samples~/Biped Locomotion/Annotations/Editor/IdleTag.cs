@@ -1,12 +1,15 @@
 using System;
 using Unity.Kinematica.Editor;
 
-[Serializable]
-[Tag("Idle", "#0ab266")]
-public struct IdleTag : Payload<Idle>
+namespace BipedLocomotion
 {
-    public Idle Build(PayloadBuilder builder)
+    [Serializable]
+    [Tag("Idle", "#0ab266")]
+    public struct IdleTag : Payload<Idle>
     {
-        return Idle.Default;
+        public Idle Build(PayloadBuilder builder)
+        {
+            return Idle.Default;
+        }
     }
 }

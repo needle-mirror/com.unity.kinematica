@@ -11,7 +11,7 @@ namespace Unity.SnapshotDebugger.Editor
     {
         static VariableValidator()
         {
-            foreach (Type type in Assembly.GetAssembly(typeof(SnapshotAttribute)).GetTypes())
+            foreach (Type type in SnapshotDebugger.ReflectionUtility.GetTypesFromAssembly(Assembly.GetAssembly(typeof(SnapshotAttribute))))
             {
                 foreach (FieldInfo field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
                 {

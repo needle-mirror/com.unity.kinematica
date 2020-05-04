@@ -2,96 +2,99 @@ using Unity.Mathematics;
 using UnityEngine;
 using Unity.Kinematica;
 
-public class FollowCamera : MonoBehaviour
+namespace BipedLocomotion
 {
-    //
-    // Target transform to be tracked
-    //
-
-    public Transform targetTransform;
-
-    //
-    // Offset to be maintained between camera and target
-    //
-
-    private float3 offset;
-
-    [Range(0.01f, 1.0f)]
-    public float smoothFactor = 0.5f;
-
-    public float degreesPerSecond = 180.0f;
-
-    public float maximumYawAngle = 45.0f;
-
-    public float minimumHeight = 0.2f;
-
-    public float heightOffset = 1.0f;
-
-    void Start()
+    public class FollowCamera : MonoBehaviour
     {
-        offset = Convert(transform.position) - TargetPosition;
-    }
+        //
+        // Target transform to be tracked
+        //
 
-    void LateUpdate()
-    {
-        float radiansPerSecond = math.radians(degreesPerSecond);
+        public Transform targetTransform;
 
-        float horizontal = InputUtility.GetCameraHorizontalInput();
-        float vertical = InputUtility.GetCameraVerticalInput();
+        //
+        // Offset to be maintained between camera and target
+        //
 
-        if (math.abs(horizontal) >= 0.2f)
+        private float3 offset;
+
+        [Range(0.01f, 1.0f)]
+        public float smoothFactor = 0.5f;
+
+        public float degreesPerSecond = 180.0f;
+
+        public float maximumYawAngle = 45.0f;
+
+        public float minimumHeight = 0.2f;
+
+        public float heightOffset = 1.0f;
+
+        void Start()
         {
-            RotateOffset(Time.deltaTime * horizontal * radiansPerSecond, Vector3.up);
+            offset = Convert(transform.position) - TargetPosition;
         }
 
-        if (math.abs(vertical) >= 0.2f)
+        void LateUpdate()
         {
-            float angleAt = math.abs(math.asin(transform.forward.y));
-            float maximumAngle = math.radians(maximumYawAngle);
-            float angleDeltaDesired = Time.deltaTime * vertical * radiansPerSecond;
-            float angleDeltaClamped =
-                CalculateAngleDelta(angleDeltaDesired,
-                    maximumAngle - angleAt);
+            float radiansPerSecond = math.radians(degreesPerSecond);
 
-            RotateOffset(angleDeltaClamped, transform.right);
+            float horizontal = InputUtility.GetCameraHorizontalInput();
+            float vertical = InputUtility.GetCameraVerticalInput();
+
+            if (math.abs(horizontal) >= 0.2f)
+            {
+                RotateOffset(Time.deltaTime * horizontal * radiansPerSecond, Vector3.up);
+            }
+
+            if (math.abs(vertical) >= 0.2f)
+            {
+                float angleAt = math.abs(math.asin(transform.forward.y));
+                float maximumAngle = math.radians(maximumYawAngle);
+                float angleDeltaDesired = Time.deltaTime * vertical * radiansPerSecond;
+                float angleDeltaClamped =
+                    CalculateAngleDelta(angleDeltaDesired,
+                        maximumAngle - angleAt);
+
+                RotateOffset(angleDeltaClamped, transform.right);
+            }
+
+            Vector3 cameraPosition = TargetPosition + offset;
+
+            if (cameraPosition.y <= minimumHeight)
+            {
+                cameraPosition.y = minimumHeight;
+            }
+
+            transform.position = Vector3.Slerp(transform.position, cameraPosition, smoothFactor);
+
+            transform.LookAt(TargetPosition);
         }
 
-        Vector3 cameraPosition = TargetPosition + offset;
-
-        if (cameraPosition.y <= minimumHeight)
+        private float CalculateAngleDelta(float angleDeltaDesired, float angleRemaining)
         {
-            cameraPosition.y = minimumHeight;
+            if (math.dot(transform.forward, Missing.up) >= 0.0f)
+            {
+                return -math.min(-angleDeltaDesired, angleRemaining);
+            }
+            else
+            {
+                return math.min(angleDeltaDesired, angleRemaining);
+            }
         }
 
-        transform.position = Vector3.Slerp(transform.position, cameraPosition, smoothFactor);
-
-        transform.LookAt(TargetPosition);
-    }
-
-    private float CalculateAngleDelta(float angleDeltaDesired, float angleRemaining)
-    {
-        if (math.dot(transform.forward, Missing.up) >= 0.0f)
+        private void RotateOffset(float angleInRadians, float3 axis)
         {
-            return -math.min(-angleDeltaDesired, angleRemaining);
+            offset = math.mul(quaternion.AxisAngle(axis, angleInRadians), offset);
         }
-        else
+
+        private static float3 Convert(Vector3 p)
         {
-            return math.min(angleDeltaDesired, angleRemaining);
+            return p;
         }
-    }
 
-    private void RotateOffset(float angleInRadians, float3 axis)
-    {
-        offset = math.mul(quaternion.AxisAngle(axis, angleInRadians), offset);
-    }
-
-    private static float3 Convert(Vector3 p)
-    {
-        return p;
-    }
-
-    private float3 TargetPosition
-    {
-        get { return Convert(targetTransform.position) + new float3(0.0f, heightOffset, 0.0f); }
+        private float3 TargetPosition
+        {
+            get { return Convert(targetTransform.position) + new float3(0.0f, heightOffset, 0.0f); }
+        }
     }
 }

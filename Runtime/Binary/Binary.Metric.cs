@@ -40,6 +40,19 @@ namespace Unity.Kinematica
             public int numTrajectorySamples => Missing.roundToInt(math.rcp(trajectorySampleRatio));
 
             public float poseSampleRate => poseTimeSpan * poseSampleRatio;
+
+            /// <summary>
+            /// Return the different times at which the trajectory will be sampled in order to build a fragment.
+            /// Those times are in seconds and relative to the sampling time of the fragment in the binary.
+            /// </summary>
+            public TimeSampler GetTrajectoryRelativeTimeSampler(ref Binary binary)
+            {
+                var startTimeInSeconds =
+                    math.min(binary.timeHorizon, binary.timeHorizon *
+                        trajectorySampleRange);
+
+                return TimeSampler.CreateFromRange(startTimeInSeconds, binary.timeHorizon, numTrajectorySamples + 1);
+            }
         }
 
         /// <summary>

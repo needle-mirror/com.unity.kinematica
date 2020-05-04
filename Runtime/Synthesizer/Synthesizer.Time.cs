@@ -207,5 +207,9 @@ namespace Unity.Kinematica
         /// Denotes the current sampling time of the motion synthesizer.
         /// </summary>
         public SamplingTime Time => samplingTime;
+
+        public int CurrentPushIndex => poseGenerator.CurrentPushIndex;
+
+        public float ApproximateTransitionProgression => poseGenerator.ApproximateTransitionProgression;
     }
 }

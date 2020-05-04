@@ -11,43 +11,81 @@ using Unity.SnapshotDebugger;
 using Unity.Collections;
 
 using Buffer = Unity.SnapshotDebugger.Buffer;
+using System.Linq;
 
 namespace Unity.Kinematica
 {
-    public partial class Kinematica : SnapshotProvider
+    public partial class Kinematica : SnapshotProvider, FrameDebugProvider<AnimationFrameDebugInfo>
     {
-        internal int GetUniqueIdentifier()
+        List<AnimationFrameDebugInfo> m_FrameDebugInfos = new List<AnimationFrameDebugInfo>();
+
+        public int GetUniqueIdentifier()
         {
             return gameObject.GetInstanceID();
         }
 
-        internal string GetDisplayName()
+        public string GetDisplayName()
         {
             return gameObject.name;
         }
 
-        //public List<AnimationFrameDebugInfo> GetFrameDebugInfo()
-        //{
-        //    List<AnimationFrameDebugInfo> snapshots = new List<AnimationFrameDebugInfo>();
+        public List<AnimationFrameDebugInfo> GetFrameDebugInfo()
+        {
+            List<AnimationFrameDebugInfo> snapshots = new List<AnimationFrameDebugInfo>();
 
-        //    //for(int i = 0; i < Synthesizer.Ref.GetNumActiveAtoms(); ++i)
-        //    //{
-        //    //    AtomDebugInfo atomDebugInfo = Synthesizer.Ref.GetAtomDebugInfo(i);
+            if (synthesizer.IsValid && synthesizer.Ref.CurrentPushIndex >= 0)
+            {
+                AnimationSampleTimeIndex animSampleTime = synthesizer.Ref.Binary.GetAnimationSampleTimeIndex(synthesizer.Ref.Time.timeIndex);
 
-        //    //    snapshots.Add(new AnimationFrameDebugInfo()
-        //    //    {
-        //    //        sequenceIdentifier = atomDebugInfo.identifier,
-        //    //        animName = atomDebugInfo.animName,
-        //    //        animFrame = atomDebugInfo.animFrame,
-        //    //        animTime = atomDebugInfo.animTime,
-        //    //        weight = atomDebugInfo.weight
-        //    //    });
-        //    //}
+                if (animSampleTime.IsValid)
+                {
+                    AnimationFrameDebugInfo lastFrame = new AnimationFrameDebugInfo()
+                    {
+                        sequenceIdentifier = synthesizer.Ref.CurrentPushIndex,
+                        animName = animSampleTime.clipName,
+                        animFrame = animSampleTime.animFrameIndex,
+                        weight = synthesizer.Ref.ApproximateTransitionProgression,
+                    };
+                    snapshots.Add(lastFrame);
 
-        //    //Assert.IsTrue(false);
 
-        //    return snapshots;
-        //}
+                    // update "blending-out" anims
+                    if (blendDuration > 0.0f)
+                    {
+                        if (!m_FrameDebugInfos.Any((AnimationFrameDebugInfo f) => f.sequenceIdentifier == lastFrame.sequenceIdentifier))
+                        {
+                            m_FrameDebugInfos.Add(lastFrame);
+                        }
+
+                        float blendOutSpeed = 1.0f / blendDuration;
+                        for (int i = 0; i < m_FrameDebugInfos.Count; ++i)
+                        {
+                            if (m_FrameDebugInfos[i].sequenceIdentifier == lastFrame.sequenceIdentifier)
+                            {
+                                m_FrameDebugInfos[i] = lastFrame;
+                            }
+                            else
+                            {
+                                var frameDebugInfo = m_FrameDebugInfos[i];
+                                frameDebugInfo.weight -= blendOutSpeed * _deltaTime;
+                                m_FrameDebugInfos[i] = frameDebugInfo;
+
+                                // add previous anim frames that are still influencing the final pose because of the inertia
+                                // those frames will be considered as blending out in the snapshot debugger
+                                if (frameDebugInfo.weight > 0.0f)
+                                {
+                                    snapshots.Add(frameDebugInfo);
+                                }
+                            }
+                        }
+
+                        m_FrameDebugInfos.RemoveAll(f => f.weight <= 0.0f);
+                    }
+                }
+            }
+
+            return snapshots;
+        }
 
         /// <summary>
         /// Stores the contents of the Kinematica component in the buffer passed as argument.

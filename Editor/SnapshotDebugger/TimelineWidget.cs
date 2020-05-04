@@ -284,8 +284,14 @@ internal class TimelineWidget
                 e.Use();
             }
 
-            if (e.button == 2 && e.type == EventType.MouseDown) { mouseButton2Down = true; }
-            if (e.button == 2 && e.rawType == EventType.MouseUp) { mouseButton2Down = false; }
+            if ((e.button == 2 || e.button == 0 && e.alt) && e.type == EventType.MouseDown)
+            {
+                mouseButton2Down = true;
+            }
+            else if ((e.button == 2 || e.button == 0 && e.alt) && e.rawType == EventType.MouseUp)
+            {
+                mouseButton2Down = false;
+            }
 
             if (mouseButton2Down)
             {

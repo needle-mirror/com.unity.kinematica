@@ -2,6 +2,10 @@
     border-bottom-color : #8A8A8A;
 }
 
+#frameField {
+    border-color: #202020;
+}
+
 #timelineArea {
     border-color: #8A8A8A;
 }
@@ -20,7 +24,7 @@
 }
 
 .clipTag--checked {
-    border-color: #EEEEEE;
+    border-top-color: #EEEEEE;
 }
 
 .majorTickElement {
@@ -91,10 +95,6 @@
 
 #trackScrollView {
     background-color: #C2C2C2;
-}
-
-#addTagRow {
-    border-right-color : #8A8A8A;
 }
 
 .timeRuler {

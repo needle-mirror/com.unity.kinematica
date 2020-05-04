@@ -143,6 +143,50 @@ namespace Unity.Kinematica
             /// </summary>
             public float3 this[int index] => array[index];
 
+            /// <summary>
+            /// Returns root velocity of a trajectory sample, relative to the root transform of the character at fragment sampling time
+            /// </summary>
+            /// <param name="index">Index of the trajectory sample</param>
+            public float3 GetRootVelocity(ref Binary binary, int index)
+            {
+                ref var metric = ref binary.GetMetric(metricIndex);
+
+                Assert.IsTrue(index <= metric.numTrajectorySamples);
+
+                return array[index];
+            }
+
+            /// <summary>
+            /// Returns root forward vector of a trajectory sample, relative to the root transform of the character at fragment sampling time
+            /// </summary>
+            /// <param name="index">Index of the trajectory sample</param>
+            public float3 GetRootForward(ref Binary binary, int index)
+            {
+                ref var metric = ref binary.GetMetric(metricIndex);
+
+                Assert.IsTrue(index <= metric.numTrajectorySamples);
+
+                int stride = metric.numTrajectorySamples + 1;
+
+                return array[stride + index];
+            }
+
+            /// <summary>
+            /// Returns root displacement of a trajectory sample, relative to the root transform of the character at fragment sampling time
+            /// </summary>
+            /// <param name="index">Index of the trajectory sample</param>
+            public float3 GetRootDisplacement(ref Binary binary, int index)
+            {
+                ref var metric = ref binary.GetMetric(metricIndex);
+
+                Assert.IsTrue(metric.trajectoryDisplacements);
+                Assert.IsTrue(index < metric.numTrajectorySamples);
+
+                int stride = metric.numTrajectorySamples + 1;
+
+                return array[stride * 2 + index];
+            }
+
             internal static TrajectoryFragment Create(ref Binary binary, MetricIndex metricIndex)
             {
                 return new TrajectoryFragment(ref binary, metricIndex);
@@ -194,15 +238,8 @@ namespace Unity.Kinematica
 
                     Assert.IsTrue(numTrajectorySamples > 0);
 
-                    var startTimeInSeconds =
-                        math.min(timeHorizon, timeHorizon *
-                            metric.trajectorySampleRange);
+                    TimeSampler relativeTimeSampler = metric.GetTrajectoryRelativeTimeSampler(ref binary);
 
-                    var advanceInSeconds =
-                        (timeHorizon - startTimeInSeconds) /
-                        numTrajectorySamples;
-
-                    //
                     // Sample velocities and forward directions
                     //
 
@@ -210,26 +247,20 @@ namespace Unity.Kinematica
 
                     var trajectoryTimeSpan = deltaTime * 2.0f;
 
-                    var relativeTime = startTimeInSeconds;
-
                     var stride = numTrajectorySamples + 1;
 
                     for (int i = 0; i <= numTrajectorySamples; ++i)
                     {
                         var rootVelocity =
                             binary.GetTrajectoryVelocity(
-                                samplingTime, relativeTime, trajectoryTimeSpan);
+                                samplingTime, relativeTimeSampler[i], trajectoryTimeSpan);
 
                         var rootForward =
                             binary.GetTrajectoryForward(
-                                samplingTime, relativeTime, trajectoryTimeSpan);
+                                samplingTime, relativeTimeSampler[i], trajectoryTimeSpan);
 
                         WriteFloat3(rootVelocity, stride * 0 + i);
                         WriteFloat3(rootForward, stride * 1 + i);
-
-                        relativeTime =
-                            math.min(timeHorizon,
-                                relativeTime + advanceInSeconds);
                     }
 
                     //
@@ -238,26 +269,20 @@ namespace Unity.Kinematica
 
                     if (metric.trajectoryDisplacements)
                     {
-                        relativeTime = startTimeInSeconds;
-
                         AffineTransform referenceTransform =
                             binary.GetTrajectoryTransform(samplingTime);
 
                         AffineTransform previousRootTransform =
                             referenceTransform.inverseTimes(
                                 binary.GetTrajectoryTransform(
-                                    binary.Advance(samplingTime, relativeTime)));
+                                    binary.Advance(samplingTime, relativeTimeSampler[0])));
 
                         for (int i = 0; i < numTrajectorySamples; ++i)
                         {
-                            relativeTime =
-                                math.min(timeHorizon,
-                                    relativeTime + advanceInSeconds);
-
                             AffineTransform rootTransform =
                                 referenceTransform.inverseTimes(
                                     binary.GetTrajectoryTransform(
-                                        binary.Advance(samplingTime, relativeTime)));
+                                        binary.Advance(samplingTime, relativeTimeSampler[i + 1])));
 
                             WriteFloat3(rootTransform.t - previousRootTransform.t, stride * 2 + i);
 
@@ -278,39 +303,7 @@ namespace Unity.Kinematica
 
                     AffineTransform GetRootTransform(float sampleTimeInSeconds)
                     {
-                        var fraction = sampleTimeInSeconds / timeHorizon;
-
-                        var truncated =
-                            math.floor(
-                                fraction * halfTrajectoryLength);
-
-                        int sampleKeyFrame =
-                            halfTrajectoryLength +
-                            Missing.truncToInt(truncated);
-
-                        var numFramesMinusOne = trajectoryLength - 1;
-
-                        sampleKeyFrame = math.clamp(sampleKeyFrame, 0, numFramesMinusOne);
-
-                        if (sampleKeyFrame >= numFramesMinusOne)
-                        {
-                            return trajectory[numFramesMinusOne];
-                        }
-
-                        float fractionalKeyFrame =
-                            halfTrajectoryLength +
-                            fraction * halfTrajectoryLength;
-                        float theta = math.saturate(fractionalKeyFrame - sampleKeyFrame);
-
-                        if (theta <= Missing.epsilon)
-                        {
-                            return trajectory[sampleKeyFrame];
-                        }
-
-                        AffineTransform t0 = trajectory[sampleKeyFrame + 0];
-                        AffineTransform t1 = trajectory[sampleKeyFrame + 1];
-
-                        return Missing.lerp(t0, t1, theta);
+                        return Utility.SampleTrajectoryAtTime(trajectory, sampleTimeInSeconds, timeHorizon);
                     }
 
                     float3 GetRootVelocity(float sampleTimeInSeconds)
@@ -344,29 +337,17 @@ namespace Unity.Kinematica
 
                     Assert.IsTrue(numTrajectorySamples > 0);
 
-                    var startTimeInSeconds =
-                        math.min(timeHorizon, timeHorizon *
-                            metric.trajectorySampleRange);
-
-                    var advanceInSeconds =
-                        (timeHorizon - startTimeInSeconds) /
-                        numTrajectorySamples;
-
-                    var relativeTime = startTimeInSeconds;
+                    TimeSampler relativeTimeSampler = metric.GetTrajectoryRelativeTimeSampler(ref binary);
 
                     var stride = numTrajectorySamples + 1;
 
                     for (int i = 0; i <= numTrajectorySamples; ++i)
                     {
-                        var rootVelocity = GetRootVelocity(relativeTime);
-                        var rootForward = GetRootForward(relativeTime);
+                        var rootVelocity = GetRootVelocity(relativeTimeSampler[i]);
+                        var rootForward = GetRootForward(relativeTimeSampler[i]);
 
                         WriteFloat3(rootVelocity, stride * 0 + i);
                         WriteFloat3(rootForward, stride * 1 + i);
-
-                        relativeTime =
-                            math.min(timeHorizon,
-                                relativeTime + advanceInSeconds);
                     }
 
                     //
@@ -375,17 +356,11 @@ namespace Unity.Kinematica
 
                     if (metric.trajectoryDisplacements)
                     {
-                        relativeTime = startTimeInSeconds;
-
-                        var previousRootTransform = GetRootTransform(relativeTime);
+                        var previousRootTransform = GetRootTransform(relativeTimeSampler[0]);
 
                         for (int i = 0; i < numTrajectorySamples; ++i)
                         {
-                            relativeTime =
-                                math.min(timeHorizon,
-                                    relativeTime + advanceInSeconds);
-
-                            var rootTransform = GetRootTransform(relativeTime);
+                            var rootTransform = GetRootTransform(relativeTimeSampler[i + 1]);
 
                             var displacement = rootTransform.t - previousRootTransform.t;
 

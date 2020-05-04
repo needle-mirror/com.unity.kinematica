@@ -11,18 +11,33 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 67ddb658bcc363b4bbf299214cfbe711, type: 3}
   m_Name: SnappyLocomotion
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   animationLibrary: []
   destinationAvatar: {fileID: 0}
   timeHorizon: -1
   sampleRate: -1
   m_Data:
-    syncedWithBinary: 1
+    syncedWithBinary: 0
     animationLibrary:
     - m_PreBoundaryClip: {fileID: 0}
+      m_PreBoundaryClipGuid:
+        val0: 0
+        val1: 0
+        val2: 0
+        val3: 0
       m_PostBoundaryClip: {fileID: 0}
+      m_PostBoundaryClipGuid:
+        val0: 0
+        val1: 0
+        val2: 0
+        val3: 0
       m_AnimationClipReference: {fileID: 1827226128182048838, guid: ecd415726dd25244f83d0bafba00ca5d,
         type: 3}
+      m_AnimationClipGuid:
+        val0: -321645198
+        val1: 1380216274
+        val2: -1358217736
+        val3: 1573519546
       m_CachedClipName: Idle
       m_RetargetSourceAvatar: {fileID: 0}
       tags:
@@ -30,22 +45,37 @@ MonoBehaviour:
         duration: 10.066667
         payload:
           serializedData: '{}'
-          assemblyQualifiedTypeName: IdleTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+          assemblyQualifiedTypeName: SnappyLocomotion.IdleTag, Assembly-CSharp-Editor, Version=0.0.0.0,
             Culture=neutral, PublicKeyToken=null
-        name: 
+        name:
       - startTime: 0
         duration: 10.033334
         payload:
           serializedData: '{}'
-          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+          assemblyQualifiedTypeName: SnappyLocomotion.LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
             Culture=neutral, PublicKeyToken=null
-        name: 
+        name:
       markers: []
       m_Asset: {fileID: 11400000}
     - m_PreBoundaryClip: {fileID: 0}
+      m_PreBoundaryClipGuid:
+        val0: 0
+        val1: 0
+        val2: 0
+        val3: 0
       m_PostBoundaryClip: {fileID: 0}
+      m_PostBoundaryClipGuid:
+        val0: 0
+        val1: 0
+        val2: 0
+        val3: 0
       m_AnimationClipReference: {fileID: 1827226128182048838, guid: 946e62805041b194fa9dfceb7dfbadd8,
         type: 3}
+      m_AnimationClipGuid:
+        val0: -1804705152
+        val1: -1315680191
+        val2: -335766022
+        val3: -659686531
       m_CachedClipName: Start_Stop_2
       m_RetargetSourceAvatar: {fileID: 0}
       tags:
@@ -53,9 +83,9 @@ MonoBehaviour:
         duration: 6.0333333
         payload:
           serializedData: '{}'
-          assemblyQualifiedTypeName: LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
+          assemblyQualifiedTypeName: SnappyLocomotion.LocomotionTag, Assembly-CSharp-Editor, Version=0.0.0.0,
             Culture=neutral, PublicKeyToken=null
-        name: 
+        name:
       markers: []
       m_Asset: {fileID: 11400000}
     destinationAvatar: {fileID: 9000000, guid: 74cebad771d996c4cb5b49a97f4a567a, type: 3}
@@ -63,7 +93,8 @@ MonoBehaviour:
     - name: New Metric
       tagTypes:
         m_TagTypeNames:
-        - LocomotionTag
+        - SnappyLocomotion.LocomotionTag
+        - SnappyLocomotion.SnappyLocomotion.LocomotionTag
       numPoses: 2
       poseSampleRatio: 0.3333
       joints:
@@ -79,4 +110,4 @@ MonoBehaviour:
       maximumNumberSamples: 256
     timeHorizon: 1
     sampleRate: 30
-  m_SerializeVersion: 1
+  m_SerializeVersion: 2

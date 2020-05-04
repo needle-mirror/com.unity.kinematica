@@ -83,7 +83,10 @@ namespace Unity.SnapshotDebugger.Editor
                     $"{gameObject.name} [{(int)aggregate.identifier}]", label);
             }
 
-            Repaint();
+            if (EditorApplication.isPlaying)
+            {
+                Repaint();
+            }
         }
 
         Color m_BackgroundColor = Color.white;
@@ -154,7 +157,7 @@ namespace Unity.SnapshotDebugger.Editor
                     {
                         var e = Event.current;
 
-                        if (e.button == 0)
+                        if (e.button == 0 && !e.alt)
                         {
                             if (e.type == EventType.MouseDrag || e.type == EventType.MouseDown || e.type == EventType.MouseUp)
                             {
@@ -181,7 +184,7 @@ namespace Unity.SnapshotDebugger.Editor
                 GUI.EndGroup();
             }
 
-            GUILayout.Space(5);
+            GUILayout.Space(5 + rt.height);
         }
     }
 }

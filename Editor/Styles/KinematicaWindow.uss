@@ -3,6 +3,50 @@
     align-items:stretch;
 }
 
+.toolbarRow {
+    flex: 1 0 0;
+    justify-content: space-between;
+    flex-direction: row;
+    max-height: 22px;
+}
+
+#viewToggles {
+    flex-direction: row;
+}
+
+#toolbarButtons {
+    flex-direction: row;
+}
+
+#toolbarAsset {
+    flex-direction: row;
+}
+
+#editAssetButton {
+    align-self: flex-start;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    margin-right: 4px;
+}
+
+#buildButton {
+    align-self: flex-end;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+#editButton {
+    --unity-image : resource("Icons/PackageManager/Dark/edit.png");
+    width: 16px;
+    height: 16px;
+    padding: 2px;
+    display: none;
+}
+
 #kinematica {
     flex: 1 0 0;
     align-items:stretch;
@@ -14,14 +58,38 @@
 }
 
 #toolbar {
-    height: 20px;
+    height: 21px;
+    border-bottom-width: 1px;
 }
 
 #inputArea {
-    margin-right: 2px;
+    margin-right: 1px;
     min-width: 200px;
-    flex-direction: row;
-    padding-left: 2px;
+    flex-direction: column;
+}
+
+#gutterToggleArea {
+    min-height: 22px;
+    max-height: 22px;
+    padding-right: 1px;
+    border-bottom-width: 1px;
+    align-items: flex-end;
+    align-self: auto;
+}
+
+#gutterToggleMenu {
+    min-width: 20px;
+    min-height: 20px;
+}
+
+.trackToggle {
+    border-left-width: 1px;
+}
+
+#gutterList Label {
+    border-bottom-width: 1px;
+    min-height: 22px;
+    -unity-text-align : middle-center;
 }
 
 #assetSettingsScrollView {
@@ -57,7 +125,6 @@
     flex-direction: row;
     justify-content: space-between;
     min-width: 450px;
-    padding-right: 2px;
 }
 
 #tagArea {
@@ -120,12 +187,22 @@ Slider {
 }
 
 .marker {
-    width: 2px;
-    min-width: 2px;
+    position: absolute;
+    width: 5px;
+    height: 21px;
+    left: -2px;
+}
+
+.markerManipulateLabel {
+    position: absolute;
+    left: 10px;
+}
+
+.markerGuideline {
+    margin-top: -4px;
     position: absolute;
     top: 0;
     bottom:0;
-    left:0;
     right: 0;
 }
 
@@ -144,11 +221,9 @@ Slider {
 }
 
 .marker-selected {
-    border-width: 1px;
-}
-
-.marker:hover {
     border-top-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
 }
 
 #deleteButton {

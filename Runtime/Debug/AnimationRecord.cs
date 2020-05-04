@@ -9,7 +9,6 @@ namespace Unity.Kinematica
         public float    weight;
 
         public float    animFrame;
-        public float    animTime;
     }
 
     internal class AnimationRecord
@@ -25,14 +24,13 @@ namespace Unity.Kinematica
         public CircularList<AnimationFrameInfo> animFrames;
 
 
-        public void AddAnimationFrame(float endTime, float weight, float animFrame, float animTime)
+        public void AddAnimationFrame(float endTime, float weight, float animFrame)
         {
             animFrames.PushBack(new AnimationFrameInfo()
             {
                 endTime = endTime,
                 weight = weight,
-                animFrame = animFrame,
-                animTime = animTime
+                animFrame = animFrame
             });
 
             Assert.IsTrue(endTime <= this.endTime);

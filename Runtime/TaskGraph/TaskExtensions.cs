@@ -73,23 +73,27 @@ namespace Unity.Kinematica
         /// <summary>
         /// Creates a new sequence task as a child of the root task.
         /// </summary>
+        /// <param name="loop">If false, once the sequence has finished executing all its children, it will do nothing and just return success. If true, sequence will reexecute all its children tasks indefinitely.</param>
+        /// <param name="resetWhenNotExecuted">If true, and if the sequence isn't executed during one task graph pass, next time the sequence will be executed again, it will restart execution from its first child.</param>
         /// <returns>Reference to the newly created sequence task.</returns>
         /// <seealso cref="RootTask"/>
-        public static ref SequenceTask Sequence(this MotionSynthesizer synthesizer)
+        public static ref SequenceTask Sequence(this MotionSynthesizer synthesizer, bool loop = false, bool resetWhenNotExecuted = true)
         {
-            return ref synthesizer.Sequence(synthesizer.Root);
+            return ref synthesizer.Sequence(synthesizer.Root, loop, resetWhenNotExecuted);
         }
 
         /// <summary>
         /// Creates a new sequence task as a child of the parent task passed as argument.
         /// </summary>
         /// <param name="parent">Identifier of the parent task.</param>
+        /// <param name="loop">If false, once the sequence has finished executing all its children, it will do nothing and just return success. If true, sequence will reexecute all its children tasks indefinitely.</param>
+        /// <param name="resetWhenNotExecuted">If true, and if the sequence isn't executed during one task graph pass, next time the sequence will be executed again, it will restart execution from its first child.</param>
         /// <returns>Reference to the newly created sequence task.</returns>
-        public static ref SequenceTask Sequence(this MotionSynthesizer synthesizer, MemoryIdentifier parent)
+        public static ref SequenceTask Sequence(this MotionSynthesizer synthesizer, MemoryIdentifier parent, bool loop = false, bool resetWhenNotExecuted = true)
         {
             var identifier =
                 synthesizer.Allocate(
-                    SequenceTask.Create(ref synthesizer), parent);
+                    SequenceTask.Create(ref synthesizer, loop, resetWhenNotExecuted), parent);
 
             ref var task = ref synthesizer.GetRef<SequenceTask>(identifier).Ref;
 

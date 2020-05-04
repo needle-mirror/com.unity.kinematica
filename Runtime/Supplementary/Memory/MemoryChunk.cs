@@ -144,7 +144,7 @@ namespace Unity.Kinematica
 
             for (short i = 0; i < numElements; ++i)
             {
-                if (memoryPtr[-i].offset < 0)
+                if ((memoryPtr - i)->offset < 0)
                 {
                     return i;
                 }
@@ -161,7 +161,7 @@ namespace Unity.Kinematica
                 Grow(sizeOfToc);
             }
 
-            memoryPtr[-numElements].offset = -1;
+            (memoryPtr - numElements)->offset = -1;
 
             return numElements++;
         }
@@ -876,7 +876,7 @@ namespace Unity.Kinematica
                         // Mark the corresponding toc entry as invalid
                         //
 
-                        tocPtr[-header->self].offset = -1;
+                        (tocPtr - header->self)->offset = -1;
 
                         //
                         // We remember the current cursor position for later pruning.
@@ -966,7 +966,7 @@ namespace Unity.Kinematica
 
                     int offset = (int)(ptr - basePtr);
 
-                    tocPtr[-header->self].offset = offset;
+                    (tocPtr - header->self)->offset = offset;
 
                     ptr += numBytesTotal;
 
@@ -1138,7 +1138,7 @@ namespace Unity.Kinematica
 
                 var numBytesTotal = sizeOfHeader + numBytesPayload;
 
-                Assert.IsTrue(tocPtr[-header->self].offset == offset);
+                Assert.IsTrue((tocPtr - header->self)->offset == offset);
 
                 readPtr += numBytesTotal;
 

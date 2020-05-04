@@ -3,108 +3,111 @@ using UnityEngine;
 using Unity.Kinematica;
 using Unity.Mathematics;
 
-[RequireComponent(typeof(Kinematica))]
-public class Biped : MonoBehaviour
+namespace BipedLocomotion
 {
-    [Header("Prediction settings")]
-    [Tooltip("Desired speed in meters per second for slow movement.")]
-    [Range(0.0f, 10.0f)]
-    public float desiredSpeedSlow = 3.9f;
-
-    [Tooltip("Desired speed in meters per second for fast movement.")]
-    [Range(0.0f, 10.0f)]
-    public float desiredSpeedFast = 5.5f;
-
-    [Tooltip("How fast or slow the target velocity is supposed to be reached.")]
-    [Range(0.0f, 1.0f)]
-    public float velocityPercentage = 1.0f;
-
-    [Tooltip("How fast or slow the desired forward direction is supposed to be reached.")]
-    [Range(0.0f, 1.0f)]
-    public float forwardPercentage = 1.0f;
-
-    Identifier<SelectorTask> locomotion;
-
-    float3 movementDirection = Missing.forward;
-
-    float desiredLinearSpeed => InputUtility.IsPressingActionButton() ? desiredSpeedFast : desiredSpeedSlow;
-
-    void OnEnable()
+    [RequireComponent(typeof(Kinematica))]
+    public class Biped : MonoBehaviour
     {
-        var kinematica = GetComponent<Kinematica>();
+        [Header("Prediction settings")]
+        [Tooltip("Desired speed in meters per second for slow movement.")]
+        [Range(0.0f, 10.0f)]
+        public float desiredSpeedSlow = 3.9f;
 
-        ref var synthesizer = ref kinematica.Synthesizer.Ref;
+        [Tooltip("Desired speed in meters per second for fast movement.")]
+        [Range(0.0f, 10.0f)]
+        public float desiredSpeedFast = 5.5f;
 
-        synthesizer.Push(
-            synthesizer.Query.Where(
-                Locomotion.Default).And(Idle.Default));
+        [Tooltip("How fast or slow the target velocity is supposed to be reached.")]
+        [Range(0.0f, 1.0f)]
+        public float velocityPercentage = 1.0f;
 
-        var selector = synthesizer.Selector();
+        [Tooltip("How fast or slow the desired forward direction is supposed to be reached.")]
+        [Range(0.0f, 1.0f)]
+        public float forwardPercentage = 1.0f;
 
+        Identifier<SelectorTask> locomotion;
+
+        float3 movementDirection = Missing.forward;
+
+        float desiredLinearSpeed => InputUtility.IsPressingActionButton() ? desiredSpeedFast : desiredSpeedSlow;
+
+        void OnEnable()
         {
-            var sequence = selector.Condition().Sequence();
+            var kinematica = GetComponent<Kinematica>();
 
-            sequence.Action().PushConstrained(
+            ref var synthesizer = ref kinematica.Synthesizer.Ref;
+
+            synthesizer.Push(
                 synthesizer.Query.Where(
-                    Locomotion.Default).And(Idle.Default), 0.01f);
+                    Locomotion.Default).And(Idle.Default));
 
-            sequence.Action().Timer();
+            var selector = synthesizer.Selector();
+
+            {
+                var sequence = selector.Condition().Sequence();
+
+                sequence.Action().PushConstrained(
+                    synthesizer.Query.Where(
+                        Locomotion.Default).And(Idle.Default), 0.01f);
+
+                sequence.Action().Timer();
+            }
+
+            {
+                var action = selector.Action();
+
+                action.PushConstrained(
+                    synthesizer.Query.Where(
+                        Locomotion.Default).Except(Idle.Default),
+                    action.TrajectoryPrediction().trajectory);
+            }
+
+            locomotion = selector;
         }
 
+        void Update()
         {
-            var action = selector.Action();
+            var kinematica = GetComponent<Kinematica>();
 
-            action.PushConstrained(
-                synthesizer.Query.Where(
-                    Locomotion.Default).Except(Idle.Default),
-                        action.TrajectoryPrediction().trajectory);
-        }
+            ref var synthesizer = ref kinematica.Synthesizer.Ref;
 
-        locomotion = selector;
-    }
+            synthesizer.Tick(locomotion);
 
-    void Update()
-    {
-        var kinematica = GetComponent<Kinematica>();
+            ref var prediction = ref synthesizer.GetByType<TrajectoryPredictionTask>(locomotion).Ref;
+            ref var idle = ref synthesizer.GetByType<ConditionTask>(locomotion).Ref;
 
-        ref var synthesizer = ref kinematica.Synthesizer.Ref;
+            var horizontal = InputUtility.GetMoveHorizontalInput();
+            var vertical = InputUtility.GetMoveVerticalInput();
 
-        synthesizer.Tick(locomotion);
+            float3 analogInput = Utility.GetAnalogInput(horizontal, vertical);
 
-        ref var prediction = ref synthesizer.GetByType<TrajectoryPredictionTask>(locomotion).Ref;
-        ref var idle = ref synthesizer.GetByType<ConditionTask>(locomotion).Ref;
+            prediction.velocityFactor = velocityPercentage;
+            prediction.rotationFactor = forwardPercentage;
 
-        var horizontal = InputUtility.GetMoveHorizontalInput();
-        var vertical = InputUtility.GetMoveVerticalInput();
+            idle.value = math.length(analogInput) <= 0.1f;
 
-        float3 analogInput = Utility.GetAnalogInput(horizontal, vertical);
+            if (idle)
+            {
+                prediction.linearSpeed = 0.0f;
+            }
+            else
+            {
+                movementDirection =
+                    Utility.GetDesiredForwardDirection(
+                        analogInput, movementDirection);
 
-        prediction.velocityFactor = velocityPercentage;
-        prediction.rotationFactor = forwardPercentage;
-
-        idle.value = math.length(analogInput) <= 0.1f;
-        
-        if (idle)
-        {
-            prediction.linearSpeed = 0.0f;
-        }
-        else
-        {
-            movementDirection =
-                Utility.GetDesiredForwardDirection(
-                    analogInput, movementDirection);
-
-            prediction.linearSpeed =
-                math.length(analogInput) *
+                prediction.linearSpeed =
+                    math.length(analogInput) *
                     desiredLinearSpeed;
 
-            prediction.movementDirection = movementDirection;
-            prediction.forwardDirection = movementDirection;
+                prediction.movementDirection = movementDirection;
+                prediction.forwardDirection = movementDirection;
+            }
         }
-    }
 
-    void OnGUI()
-    {
-        InputUtility.DisplayMissingInputs(InputUtility.ActionButtonInput | InputUtility.MoveInput | InputUtility.CameraInput);
+        void OnGUI()
+        {
+            InputUtility.DisplayMissingInputs(InputUtility.ActionButtonInput | InputUtility.MoveInput | InputUtility.CameraInput);
+        }
     }
 }

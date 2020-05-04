@@ -35,10 +35,10 @@ namespace Unity.Kinematica
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Animator))]
     [AddComponentMenu("Kinematica/Kinematica")]
-    public partial class Kinematica : SnapshotProvider//, FrameDebugProvider<AnimationFrameDebugInfo>
+    public partial class Kinematica : SnapshotProvider, FrameDebugProvider<AnimationFrameDebugInfo>
     {
         /// <summary>
-        /// Allows access to the underlying Kinemtica runtime asset.
+        /// Allows access to the underlying Kinematica runtime asset.
         /// </summary>
         public BinaryReference resource;
 
@@ -159,9 +159,9 @@ namespace Unity.Kinematica
         {
             base.OnEnable();
 
-//#if UNITY_EDITOR
-//            Debugger.frameDebugger.AddFrameDebugProvider<AnimationDebugRecord>(this);
-//#endif
+#if UNITY_EDITOR
+            Debugger.frameDebugger.AddFrameDebugProvider<AnimationDebugRecord>(this);
+#endif
             OnEarlyUpdate(false);
 
             try
@@ -196,9 +196,9 @@ namespace Unity.Kinematica
 
             base.OnDisable();
 
-//#if UNITY_EDITOR
-//            Debugger.frameDebugger.RemoveFrameDebugProvider(this);
-//#endif
+#if UNITY_EDITOR
+            Debugger.frameDebugger.RemoveFrameDebugProvider(this);
+#endif
             synthesizer.Dispose();
 
             if (memoryChunk.IsValid)

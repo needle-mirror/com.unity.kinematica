@@ -249,7 +249,7 @@ namespace Unity.Kinematica
         {
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
-                foreach (Type type in assembly.GetTypes())
+                foreach (Type type in SnapshotDebugger.ReflectionUtility.GetTypesFromAssembly(assembly))
                 {
                     if (!type.IsAbstract)
                     {

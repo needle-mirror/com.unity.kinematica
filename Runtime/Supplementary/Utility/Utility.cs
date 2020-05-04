@@ -1,5 +1,6 @@
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace Unity.Kinematica
 {
@@ -92,12 +93,14 @@ namespace Unity.Kinematica
             return analogInput;
         }
 
-        public static AffineTransform SampleTrajectoryAtTime(MemoryArray<AffineTransform> trajectory, float sampleTimeInSeconds, float timeHorizon, float sampleRate)
+        public static AffineTransform SampleTrajectoryAtTime(MemoryArray<AffineTransform> trajectory, float sampleTimeInSeconds, float timeHorizon)
         {
             int trajectoryLength = trajectory.Length;
 
             float adjustedTimeInSeconds =
                 timeHorizon + sampleTimeInSeconds;
+
+            float sampleRate = timeHorizon > 0.0f ? (trajectoryLength - 1) / (2.0f * timeHorizon) : 0.0f;
 
             float fractionalKeyFrame =
                 adjustedTimeInSeconds * sampleRate;

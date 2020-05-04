@@ -4,26 +4,26 @@ using System.Collections.Generic;
 
 namespace Unity.Kinematica
 {
-    internal static class DebugDraw
+    public static class DebugDraw
     {
-        public static Color White = Color.white;
-        public static Color Black = Color.black;
-        public static Color Red = Color.red;
-        public static Color DarkRed = new Color(0.75f, 0f, 0f, 1f);
-        public static Color Green = Color.green;
-        public static Color DarkGreen = new Color(0f, 0.75f, 0f, 1f);
-        public static Color Blue = Color.blue;
-        public static Color Cyan = Color.cyan;
-        public static Color Magenta = Color.magenta;
-        public static Color Yellow = Color.yellow;
-        public static Color Grey = Color.grey;
-        public static Color LightGrey = new Color(0.75f, 0.75f, 0.75f, 1f);
-        public static Color DarkGrey = new Color(0.25f, 0.25f, 0.25f, 1f);
-        public static Color Orange = new Color(1f, 0.5f, 0f, 1f);
-        public static Color Brown = new Color(0.5f, 0.25f, 0f, 1f);
-        public static Color Mustard = new Color(1f, 0.75f, 0.25f, 1f);
-        public static Color Teal = new Color(0f, 0.75f, 0.75f, 1f);
-        public static Color Purple = new Color(0.5f, 0f, 0.5f, 1f);
+        internal static Color White = Color.white;
+        internal static Color Black = Color.black;
+        internal static Color Red = Color.red;
+        internal static Color DarkRed = new Color(0.75f, 0f, 0f, 1f);
+        internal static Color Green = Color.green;
+        internal static Color DarkGreen = new Color(0f, 0.75f, 0f, 1f);
+        internal static Color Blue = Color.blue;
+        internal static Color Cyan = Color.cyan;
+        internal static Color Magenta = Color.magenta;
+        internal static Color Yellow = Color.yellow;
+        internal static Color Grey = Color.grey;
+        internal static Color LightGrey = new Color(0.75f, 0.75f, 0.75f, 1f);
+        internal static Color DarkGrey = new Color(0.25f, 0.25f, 0.25f, 1f);
+        internal static Color Orange = new Color(1f, 0.5f, 0f, 1f);
+        internal static Color Brown = new Color(0.5f, 0.25f, 0f, 1f);
+        internal static Color Mustard = new Color(1f, 0.75f, 0.25f, 1f);
+        internal static Color Teal = new Color(0f, 0.75f, 0.75f, 1f);
+        internal static Color Purple = new Color(0.5f, 0f, 0.5f, 1f);
 
         public static void Begin()
         {
@@ -73,7 +73,7 @@ namespace Unity.Kinematica
             }
         }
 
-        public static void SetDepthRendering(bool enabled)
+        internal static void SetDepthRendering(bool enabled)
         {
             Initialize();
             SetProgram(PROGRAM.NONE);
@@ -89,14 +89,14 @@ namespace Unity.Kinematica
                 : (int)UnityEngine.Rendering.CompareFunction.Always);
         }
 
-        public static void SetCurvature(float value)
+        internal static void SetCurvature(float value)
         {
             Initialize();
             SetProgram(PROGRAM.NONE);
             MeshMaterial.SetFloat("_Power", value);
         }
 
-        public static void SetFilling(float value)
+        internal static void SetFilling(float value)
         {
             value = Mathf.Clamp(value, 0f, 1f);
             Initialize();
@@ -104,7 +104,7 @@ namespace Unity.Kinematica
             MeshMaterial.SetFloat("_Filling", value);
         }
 
-        public static void DrawLine(Vector3 start, Vector3 end, Color color)
+        internal static void DrawLine(Vector3 start, Vector3 end, Color color)
         {
             if (Return())
             {
@@ -117,19 +117,19 @@ namespace Unity.Kinematica
             GL.Vertex(end);
         }
 
-        public static void DrawTransform(AffineTransform transform, float scale, float duration = 0.0f)
+        internal static void DrawTransform(AffineTransform transform, float scale, float duration = 0.0f)
         {
             Debug.DrawLine(transform.t, transform.t + Missing.xaxis(transform.q) * scale, Color.red, duration);
             Debug.DrawLine(transform.t, transform.t + Missing.yaxis(transform.q) * scale, Color.green, duration);
             Debug.DrawLine(transform.t, transform.t + Missing.zaxis(transform.q) * scale, Color.blue, duration);
         }
 
-        public static void DrawLine(Vector3 start, Vector3 end, float thickness, Color color)
+        internal static void DrawLine(Vector3 start, Vector3 end, float thickness, Color color)
         {
             DrawLine(start, end, thickness, thickness, color);
         }
 
-        public static void DrawLine(Vector3 start, Vector3 end, float startThickness, float endThickness, Color color)
+        internal static void DrawLine(Vector3 start, Vector3 end, float startThickness, float endThickness, Color color)
         {
             if (Return())
             {
@@ -147,7 +147,7 @@ namespace Unity.Kinematica
             GL.Vertex(start + orthoStart);
         }
 
-        public static void DrawTriangle(Vector3 a, Vector3 b, Vector3 c, Color color)
+        internal static void DrawTriangle(Vector3 a, Vector3 b, Vector3 c, Color color)
         {
             if (Return())
             {
@@ -161,7 +161,7 @@ namespace Unity.Kinematica
             GL.Vertex(c);
         }
 
-        public static void DrawArrow(AffineTransform transform, Color arrowColor, Color lineColor, float scale)
+        internal static void DrawArrow(AffineTransform transform, Color arrowColor, Color lineColor, float scale)
         {
             float width = 0.2f * scale;
             float length = 0.3f * scale;
@@ -191,72 +191,72 @@ namespace Unity.Kinematica
             DrawLine(p4, p1, lineColor);
         }
 
-        public static void DrawCircle(Vector3 position, float size, Color color)
+        internal static void DrawCircle(Vector3 position, float size, Color color)
         {
             DrawMesh(CircleMesh, position, ViewRotation, size * Vector3.one, color);
         }
 
-        public static void DrawCircle(Vector3 position, Quaternion rotation, float size, Color color)
+        internal static void DrawCircle(Vector3 position, Quaternion rotation, float size, Color color)
         {
             DrawMesh(CircleMesh, position, rotation, size * Vector3.one, color);
         }
 
-        public static void DrawWireCircle(Vector3 position, float size, Color color)
+        internal static void DrawWireCircle(Vector3 position, float size, Color color)
         {
             DrawWire(CircleWire, position, ViewRotation, size * Vector3.one, color);
         }
 
-        public static void DrawWireCircle(Vector3 position, Quaternion rotation, float size, Color color)
+        internal static void DrawWireCircle(Vector3 position, Quaternion rotation, float size, Color color)
         {
             DrawWire(CircleWire, position, rotation, size * Vector3.one, color);
         }
 
-        public static void DrawWiredCircle(Vector3 position, float size, Color circleColor, Color wireColor)
+        internal static void DrawWiredCircle(Vector3 position, float size, Color circleColor, Color wireColor)
         {
             DrawCircle(position, size, circleColor);
             DrawWireCircle(position, size, wireColor);
         }
 
-        public static void DrawWiredCircle(Vector3 position, Quaternion rotation, float size, Color circleColor,
+        internal static void DrawWiredCircle(Vector3 position, Quaternion rotation, float size, Color circleColor,
             Color wireColor)
         {
             DrawCircle(position, rotation, size, circleColor);
             DrawWireCircle(position, rotation, size, wireColor);
         }
 
-        public static void DrawEllipse(Vector3 position, float width, float height, Color color)
+        internal static void DrawEllipse(Vector3 position, float width, float height, Color color)
         {
             DrawMesh(CircleMesh, position, ViewRotation, new Vector3(width, height, 1f), color);
         }
 
-        public static void DrawEllipse(Vector3 position, Quaternion rotation, float width, float height, Color color)
+        internal static void DrawEllipse(Vector3 position, Quaternion rotation, float width, float height, Color color)
         {
             DrawMesh(CircleMesh, position, rotation, new Vector3(width, height, 1f), color);
         }
 
-        public static void DrawWireEllipse(Vector3 position, float width, float height, Color color)
+        internal static void DrawWireEllipse(Vector3 position, float width, float height, Color color)
         {
             DrawWire(CircleWire, position, ViewRotation, new Vector3(width, height, 1f), color);
         }
 
-        public static void DrawWireEllipse(Vector3 position, Quaternion rotation, float width, float height, Color color)
+        internal static void DrawWireEllipse(Vector3 position, Quaternion rotation, float width, float height, Color color)
         {
             DrawWire(CircleWire, position, rotation, new Vector3(width, height, 1f), color);
         }
 
-        public static void DrawWiredEllipse(Vector3 position, float width, float height, Color ellipseColor, Color wireColor)
+        internal static void DrawWiredEllipse(Vector3 position, float width, float height, Color ellipseColor, Color wireColor)
         {
             DrawEllipse(position, ViewRotation, width, height, ellipseColor);
             DrawWireEllipse(position, ViewRotation, width, height, wireColor);
         }
 
-        public static void DrawWiredEllipse(Vector3 position, Quaternion rotation, float width, float height, Color ellipseColor, Color wireColor)
+        internal static void DrawWiredEllipse(Vector3 position, Quaternion rotation, float width, float height, Color ellipseColor, Color wireColor)
         {
             DrawEllipse(position, rotation, width, height, ellipseColor);
             DrawWireEllipse(position, rotation, width, height, wireColor);
         }
 
-        public static void DrawArrow(Vector3 start, Vector3 end, float tipPivot, float shaftWidth, float tipWidth, Color color)
+        internal static void DrawArrow(Vector3 start, Vector3 end, float tipPivot, float shaftWidth, float tipWidth, Color color)
         {
             tipPivot = Mathf.Clamp(tipPivot, 0f, 1f);
             Vector3 pivot = start + tipPivot * (end - start);
@@ -264,7 +264,7 @@ namespace Unity.Kinematica
             DrawLine(pivot, end, tipWidth, 0f, color);
         }
 
-        public static void DrawArrow(Vector3 start, Vector3 end, float tipPivot, float shaftWidth, float tipWidth, Color shaftColor, Color tipColor)
+        internal static void DrawArrow(Vector3 start, Vector3 end, float tipPivot, float shaftWidth, float tipWidth, Color shaftColor, Color tipColor)
         {
             tipPivot = Mathf.Clamp(tipPivot, 0f, 1f);
             Vector3 pivot = start + tipPivot * (end - start);
@@ -272,7 +272,7 @@ namespace Unity.Kinematica
             DrawLine(pivot, end, tipWidth, 0f, tipColor);
         }
 
-        public static void DrawGrid(Vector3 center, Quaternion rotation, int cellsX, int cellsY, float sizeX, float sizeY, Color color)
+        internal static void DrawGrid(Vector3 center, Quaternion rotation, int cellsX, int cellsY, float sizeX, float sizeY, Color color)
         {
             if (Return())
             {
@@ -295,167 +295,167 @@ namespace Unity.Kinematica
             }
         }
 
-        public static void DrawQuad(Vector3 position, Quaternion rotation, float width, float height, Color color)
+        internal static void DrawQuad(Vector3 position, Quaternion rotation, float width, float height, Color color)
         {
             DrawMesh(QuadMesh, position, rotation, new Vector3(width, height, 1f), color);
         }
 
-        public static void DrawWireQuad(Vector3 position, Quaternion rotation, float width, float height, Color color)
+        internal static void DrawWireQuad(Vector3 position, Quaternion rotation, float width, float height, Color color)
         {
             DrawWire(QuadWire, position, rotation, new Vector3(width, height, 1f), color);
         }
 
-        public static void DrawWiredQuad(Vector3 position, Quaternion rotation, float width, float height, Color quadColor, Color wireColor)
+        internal static void DrawWiredQuad(Vector3 position, Quaternion rotation, float width, float height, Color quadColor, Color wireColor)
         {
             DrawQuad(position, rotation, width, height, quadColor);
             DrawWireQuad(position, rotation, width, height, wireColor);
         }
 
-        public static void DrawCube(Vector3 position, Quaternion rotation, float size, Color color)
+        internal static void DrawCube(Vector3 position, Quaternion rotation, float size, Color color)
         {
             DrawMesh(CubeMesh, position, rotation, size * Vector3.one, color);
         }
 
-        public static void DrawWireCube(Vector3 position, Quaternion rotation, float size, Color color)
+        internal static void DrawWireCube(Vector3 position, Quaternion rotation, float size, Color color)
         {
             DrawWire(CubeWire, position, rotation, size * Vector3.one, color);
         }
 
-        public static void DrawWiredCube(Vector3 position, Quaternion rotation, float size, Color cubeColor, Color wireColor)
+        internal static void DrawWiredCube(Vector3 position, Quaternion rotation, float size, Color cubeColor, Color wireColor)
         {
             DrawCube(position, rotation, size, cubeColor);
             DrawWireCube(position, rotation, size, wireColor);
         }
 
-        public static void DrawCuboid(Vector3 position, Quaternion rotation, Vector3 size, Color color)
+        internal static void DrawCuboid(Vector3 position, Quaternion rotation, Vector3 size, Color color)
         {
             DrawMesh(CubeMesh, position, rotation, size, color);
         }
 
-        public static void DrawWireCuboid(Vector3 position, Quaternion rotation, Vector3 size, Color color)
+        internal static void DrawWireCuboid(Vector3 position, Quaternion rotation, Vector3 size, Color color)
         {
             DrawWire(CubeWire, position, rotation, size, color);
         }
 
-        public static void DrawWiredCuboid(Vector3 position, Quaternion rotation, Vector3 size, Color cuboidColor, Color wireColor)
+        internal static void DrawWiredCuboid(Vector3 position, Quaternion rotation, Vector3 size, Color cuboidColor, Color wireColor)
         {
             DrawCuboid(position, rotation, size, cuboidColor);
             DrawWireCuboid(position, rotation, size, wireColor);
         }
 
-        public static void DrawSphere(Vector3 position, Quaternion rotation, float size, Color color)
+        internal static void DrawSphere(Vector3 position, Quaternion rotation, float size, Color color)
         {
             DrawMesh(SphereMesh, position, rotation, size * Vector3.one, color);
         }
 
-        public static void DrawWireSphere(Vector3 position, Quaternion rotation, float size, Color color)
+        internal static void DrawWireSphere(Vector3 position, Quaternion rotation, float size, Color color)
         {
             DrawWire(SphereWire, position, rotation, size * Vector3.one, color);
         }
 
-        public static void DrawWiredSphere(Vector3 position, Quaternion rotation, float size, Color sphereColor, Color wireColor)
+        internal static void DrawWiredSphere(Vector3 position, Quaternion rotation, float size, Color sphereColor, Color wireColor)
         {
             DrawSphere(position, rotation, size, sphereColor);
             DrawWireSphere(position, rotation, size, wireColor);
         }
 
-        public static void DrawEllipsoid(Vector3 position, Quaternion rotation, float width, float height, Color color)
+        internal static void DrawEllipsoid(Vector3 position, Quaternion rotation, float width, float height, Color color)
         {
             DrawMesh(SphereMesh, position, rotation, new Vector3(width, height, width), color);
         }
 
-        public static void DrawWireEllipsoid(Vector3 position, Quaternion rotation, float width, float height, Color color)
+        internal static void DrawWireEllipsoid(Vector3 position, Quaternion rotation, float width, float height, Color color)
         {
             DrawWire(SphereWire, position, rotation, new Vector3(width, height, width), color);
         }
 
-        public static void DrawWiredEllipsoid(Vector3 position, Quaternion rotation, float width, float height, Color ellipsoidColor, Color wireColor)
+        internal static void DrawWiredEllipsoid(Vector3 position, Quaternion rotation, float width, float height, Color ellipsoidColor, Color wireColor)
         {
             DrawEllipsoid(position, rotation, width, height, ellipsoidColor);
             DrawWireEllipsoid(position, rotation, width, height, wireColor);
         }
 
-        public static void DrawCylinder(Vector3 position, Quaternion rotation, float width, float height, Color color)
+        internal static void DrawCylinder(Vector3 position, Quaternion rotation, float width, float height, Color color)
         {
             DrawMesh(CylinderMesh, position, rotation, new Vector3(width, height / 2f, width), color);
         }
 
-        public static void DrawWireCylinder(Vector3 position, Quaternion rotation, float width, float height, Color color)
+        internal static void DrawWireCylinder(Vector3 position, Quaternion rotation, float width, float height, Color color)
         {
             DrawWire(CylinderWire, position, rotation, new Vector3(width, height / 2f, width), color);
         }
 
-        public static void DrawWiredCylinder(Vector3 position, Quaternion rotation, float width, float height, Color cylinderColor, Color wireColor)
+        internal static void DrawWiredCylinder(Vector3 position, Quaternion rotation, float width, float height, Color cylinderColor, Color wireColor)
         {
             DrawCylinder(position, rotation, width, height, cylinderColor);
             DrawWireCylinder(position, rotation, width, height, wireColor);
         }
 
-        public static void DrawCapsule(Vector3 position, Quaternion rotation, float width, float height, Color color)
+        internal static void DrawCapsule(Vector3 position, Quaternion rotation, float width, float height, Color color)
         {
             DrawMesh(CapsuleMesh, position, rotation, new Vector3(width, height / 2f, width), color);
         }
 
-        public static void DrawWireCapsule(Vector3 position, Quaternion rotation, float width, float height, Color color)
+        internal static void DrawWireCapsule(Vector3 position, Quaternion rotation, float width, float height, Color color)
         {
             DrawWire(CapsuleWire, position, rotation, new Vector3(width, height / 2f, width), color);
         }
 
-        public static void DrawWiredCapsule(Vector3 position, Quaternion rotation, float width, float height, Color capsuleColor, Color wireColor)
+        internal static void DrawWiredCapsule(Vector3 position, Quaternion rotation, float width, float height, Color capsuleColor, Color wireColor)
         {
             DrawCapsule(position, rotation, width, height, capsuleColor);
             DrawWireCapsule(position, rotation, width, height, wireColor);
         }
 
-        public static void DrawCone(Vector3 position, Quaternion rotation, float width, float height, Color color)
+        internal static void DrawCone(Vector3 position, Quaternion rotation, float width, float height, Color color)
         {
             DrawMesh(ConeMesh, position, rotation, new Vector3(width, height, width), color);
         }
 
-        public static void DrawWireCone(Vector3 position, Quaternion rotation, float width, float height, Color color)
+        internal static void DrawWireCone(Vector3 position, Quaternion rotation, float width, float height, Color color)
         {
             DrawWire(ConeWire, position, rotation, new Vector3(width, height, width), color);
         }
 
-        public static void DrawWiredCone(Vector3 position, Quaternion rotation, float width, float height, Color coneColor, Color wireColor)
+        internal static void DrawWiredCone(Vector3 position, Quaternion rotation, float width, float height, Color coneColor, Color wireColor)
         {
             DrawCone(position, rotation, width, height, coneColor);
             DrawWireCone(position, rotation, width, height, wireColor);
         }
 
-        public static void DrawPyramid(Vector3 position, Quaternion rotation, float width, float height, Color color)
+        internal static void DrawPyramid(Vector3 position, Quaternion rotation, float width, float height, Color color)
         {
             DrawMesh(PyramidMesh, position, rotation, new Vector3(width, height, width), color);
         }
 
-        public static void DrawWirePyramid(Vector3 position, Quaternion rotation, float width, float height, Color color)
+        internal static void DrawWirePyramid(Vector3 position, Quaternion rotation, float width, float height, Color color)
         {
             DrawWire(PyramidWire, position, rotation, new Vector3(width, height, width), color);
         }
 
-        public static void DrawWiredPyramid(Vector3 position, Quaternion rotation, float width, float height, Color pyramidColor, Color wireColor)
+        internal static void DrawWiredPyramid(Vector3 position, Quaternion rotation, float width, float height, Color pyramidColor, Color wireColor)
         {
             DrawPyramid(position, rotation, width, height, pyramidColor);
             DrawWirePyramid(position, rotation, width, height, wireColor);
         }
 
-        public static void DrawBone(Vector3 position, Quaternion rotation, float width, float length, Color color)
+        internal static void DrawBone(Vector3 position, Quaternion rotation, float width, float length, Color color)
         {
             DrawMesh(BoneMesh, position, rotation, new Vector3(width, width, length), color);
         }
 
-        public static void DrawWireBone(Vector3 position, Quaternion rotation, float width, float length, Color color)
+        internal static void DrawWireBone(Vector3 position, Quaternion rotation, float width, float length, Color color)
         {
             DrawWire(BoneWire, position, rotation, new Vector3(width, width, length), color);
         }
 
-        public static void DrawWiredBone(Vector3 position, Quaternion rotation, float width, float length, Color boneColor, Color wireColor)
+        internal static void DrawWiredBone(Vector3 position, Quaternion rotation, float width, float length, Color boneColor, Color wireColor)
         {
             DrawBone(position, rotation, width, length, boneColor);
             DrawWireBone(position, rotation, width, length, wireColor);
         }
 
-        public static void DrawTranslateGizmo(Vector3 position, Quaternion rotation, float size)
+        internal static void DrawTranslateGizmo(Vector3 position, Quaternion rotation, float size)
         {
             if (Return())
             {
@@ -473,7 +473,7 @@ namespace Unity.Kinematica
                 0.15f * size, 0.2f * size, Blue);
         }
 
-        public static void DrawRotateGizmo(Vector3 position, Quaternion rotation, float size)
+        internal static void DrawRotateGizmo(Vector3 position, Quaternion rotation, float size)
         {
             if (Return())
             {
@@ -489,7 +489,7 @@ namespace Unity.Kinematica
             SetProgram(PROGRAM.NONE);
         }
 
-        public static void DrawScaleGizmo(Vector3 position, Quaternion rotation, float size)
+        internal static void DrawScaleGizmo(Vector3 position, Quaternion rotation, float size)
         {
             if (Return())
             {
@@ -504,7 +504,7 @@ namespace Unity.Kinematica
             DrawCube(position + 0.925f * size * (rotation * Vector3.forward), rotation, 0.15f, Blue);
         }
 
-        public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, Vector3 scale, Color color)
+        internal static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, Vector3 scale, Color color)
         {
             if (Return())
             {
@@ -517,7 +517,7 @@ namespace Unity.Kinematica
             Graphics.DrawMeshNow(mesh, Matrix4x4.TRS(position, rotation, scale));
         }
 
-        public static void DrawGUILine(Vector2 start, Vector2 end, Color color)
+        internal static void DrawGUILine(Vector2 start, Vector2 end, Color color)
         {
             if (Camera != Camera.main)
             {
@@ -539,7 +539,7 @@ namespace Unity.Kinematica
             GL.Vertex(Camera.ScreenToWorldPoint(new Vector3(end.x, end.y, Camera.nearClipPlane + GUIOffset)));
         }
 
-        public static void DrawGUILine(Vector2 start, Vector2 end, float thickness, Color color)
+        internal static void DrawGUILine(Vector2 start, Vector2 end, float thickness, Color color)
         {
             if (Camera != Camera.main)
             {
@@ -568,7 +568,7 @@ namespace Unity.Kinematica
             GL.Vertex(Camera.ScreenToWorldPoint(p2 - ortho));
         }
 
-        public static void DrawGUIRectangle(Vector2 center, Vector2 size, Color color)
+        internal static void DrawGUIRectangle(Vector2 center, Vector2 size, Color color)
         {
             if (Camera != Camera.main)
             {
@@ -596,7 +596,7 @@ namespace Unity.Kinematica
                 Camera.nearClipPlane + GUIOffset)));
         }
 
-        public static void DrawGUITriangle(Vector2 a, Vector2 b, Vector2 c, Color color)
+        internal static void DrawGUITriangle(Vector2 a, Vector2 b, Vector2 c, Color color)
         {
             if (Camera != Camera.main)
             {
@@ -621,7 +621,7 @@ namespace Unity.Kinematica
             GL.Vertex(Camera.ScreenToWorldPoint(new Vector3(c.x, c.y, Camera.nearClipPlane + GUIOffset)));
         }
 
-        public static void DrawGUICircle(Vector2 center, float size, Color color)
+        internal static void DrawGUICircle(Vector2 center, float size, Color color)
         {
             if (Camera != Camera.main)
             {
@@ -645,7 +645,7 @@ namespace Unity.Kinematica
             }
         }
 
-        public static void DrawGUIFunction(Vector2 center, Vector2 size, float[] values, float yMin, float yMax, Color background, Color line)
+        internal static void DrawGUIFunction(Vector2 center, Vector2 size, float[] values, float yMin, float yMax, Color background, Color line)
         {
             DrawGUIRectangle(center, size, background);
             float x = center.x - size.x / 2f;
@@ -663,7 +663,7 @@ namespace Unity.Kinematica
             }
         }
 
-        public static void DrawGUIFunction(Vector2 center, Vector2 size, float[] values, float yMin, float yMax, float thickness, Color background, Color line)
+        internal static void DrawGUIFunction(Vector2 center, Vector2 size, float[] values, float yMin, float yMax, float thickness, Color background, Color line)
         {
             DrawGUIRectangle(center, size, background);
             float x = center.x - size.x / 2f;
@@ -682,7 +682,7 @@ namespace Unity.Kinematica
             }
         }
 
-        public static void DrawGUIFunctions(Vector2 center, Vector2 size, List<float[]> values, float yMin, float yMax, Color background, Color[] lines)
+        internal static void DrawGUIFunctions(Vector2 center, Vector2 size, List<float[]> values, float yMin, float yMax, Color background, Color[] lines)
         {
             DrawGUIRectangle(center, size, background);
             float x = center.x - size.x / 2f;
@@ -703,7 +703,7 @@ namespace Unity.Kinematica
             }
         }
 
-        public static void DrawGUIFunctions(Vector2 center, Vector2 size, List<float[]> values, float yMin, float yMax, float thickness, Color background, Color[] lines)
+        internal static void DrawGUIFunctions(Vector2 center, Vector2 size, List<float[]> values, float yMin, float yMax, float thickness, Color background, Color[] lines)
         {
             DrawGUIRectangle(center, size, background);
             float x = center.x - size.x / 2f;
@@ -1235,12 +1235,12 @@ namespace Unity.Kinematica
             return points.ToArray();
         }
 
-        public static Color Transparent(this Color color, float opacity)
+        internal static Color Transparent(this Color color, float opacity)
         {
             return new Color(color.r, color.g, color.b, Mathf.Clamp(opacity, 0f, 1f));
         }
 
-        public static Color[] GetRainbowColors(int number)
+        internal static Color[] GetRainbowColors(int number)
         {
             Color[] colors = new Color[number];
             for (int i = 0; i < number; i++)
@@ -1255,7 +1255,7 @@ namespace Unity.Kinematica
             return colors;
         }
 
-        public static float Normalize(float value, float valueMin, float valueMax, float resultMin, float resultMax)
+        internal static float Normalize(float value, float valueMin, float valueMax, float resultMin, float resultMax)
         {
             if (valueMax - valueMin != 0f)
             {

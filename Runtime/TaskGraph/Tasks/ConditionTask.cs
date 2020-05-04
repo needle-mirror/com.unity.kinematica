@@ -70,7 +70,7 @@ namespace Unity.Kinematica
         }
 
         /// <summary>
-        /// Creates a new action task as a child of the contition task.
+        /// Creates a new action task as a child of the condition task.
         /// </summary>
         /// <returns>Reference to the newly created action task.</returns>
         public ref ActionTask Action()
@@ -79,7 +79,7 @@ namespace Unity.Kinematica
         }
 
         /// <summary>
-        /// Creates a new selector task as a child of the contition task.
+        /// Creates a new selector task as a child of the condition task.
         /// </summary>
         /// <returns>Reference to the newly created selector task.</returns>
         public ref SelectorTask Selector()
@@ -88,16 +88,18 @@ namespace Unity.Kinematica
         }
 
         /// <summary>
-        /// Creates a new sequence task as a child of the contition task.
+        /// Creates a new sequence task as a child of the condition task.
         /// </summary>
+        /// <param name="loop">If false, once the sequence has finished executing all its children, it will do nothing and just return success. If true, sequence will reexecute all its children tasks indefinitely.</param>
+        /// <param name="resetWhenNotExecuted">If true, and if the sequence isn't executed during one task graph pass, next time the sequence will be executed again, it will restart execution from its first child.</param>
         /// <returns>Reference to the newly created sequence task.</returns>
-        public ref SequenceTask Sequence()
+        public ref SequenceTask Sequence(bool loop = false, bool resetWhenNotExecuted = true)
         {
-            return ref synthesizer.Ref.Sequence(self);
+            return ref synthesizer.Ref.Sequence(self, loop, resetWhenNotExecuted);
         }
 
         /// <summary>
-        /// Creates a new parallel task as a child of the contition task.
+        /// Creates a new parallel task as a child of the condition task.
         /// </summary>
         /// <returns>Reference to the newly created parallel task.</returns>
         public ref ParallelTask Parallel()
