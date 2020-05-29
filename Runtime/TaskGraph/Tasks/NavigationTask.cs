@@ -26,6 +26,8 @@ namespace Unity.Kinematica
 
         public unsafe Result Execute()
         {
+            ClearTrajectory();
+
             if (!IsPathValid)
             {
                 return Result.Failure;
@@ -39,11 +41,13 @@ namespace Unity.Kinematica
             ref var synthesizer = ref this.synthesizer.Ref;
 
             MemoryArray<AffineTransform> trajectoryArray = synthesizer.GetArray<AffineTransform>(trajectory);
-            synthesizer.trajectory.Array.CopyTo(ref trajectoryArray);
 
             Spline pathSpline = GetPathSpline();
             navigationPath.UpdateAgentTransform(synthesizer.WorldRootTransform, ref pathSpline);
-            navigationPath.GenerateTrajectory(ref synthesizer, ref pathSpline, ref trajectoryArray);
+            if (!GoalReached)
+            {
+                navigationPath.GenerateTrajectory(ref synthesizer, ref pathSpline, ref trajectoryArray);
+            }
 
             return Result.Success;
         }
@@ -132,6 +136,20 @@ namespace Unity.Kinematica
             {
                 segments = synthesizer.Ref.GetArray<HermitCurve>(pathCurvesIdentifier)
             };
+        }
+
+        void ClearTrajectory()
+        {
+            ref var synthesizer = ref this.synthesizer.Ref;
+
+            MemoryArray<AffineTransform> trajectoryArray = synthesizer.GetArray<AffineTransform>(trajectory);
+            synthesizer.trajectory.Array.CopyTo(ref trajectoryArray);
+
+            int halfTrajectoryLength = trajectoryArray.Length / 2;
+            for (int i = halfTrajectoryLength; i < trajectoryArray.Length; ++i)
+            {
+                trajectoryArray[i] = AffineTransform.identity;
+            }
         }
     }
 }

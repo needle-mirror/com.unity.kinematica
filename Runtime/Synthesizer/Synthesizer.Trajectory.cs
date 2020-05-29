@@ -53,11 +53,12 @@ namespace Unity.Kinematica
         /// <param name="desiredTrajectory">Memory identifier of the desired trajectory that will be sampled from time 0 to <code>_deltaTime</code> in order to compute the desired delta transform</param>
         /// <param name="translationWeight">Interpolation weight between the root delta position at 0, and the desired delta position at 1</param>
         /// <param name="rotationWeight">Interpolation weight between the root delta rotation at 0, and the desired delta rotation at 1</param>
-        /// <param name="minSpeed">Minimum character speed (m/s) at which the interpolation will be fully effective</param>
+        /// <param name="startSpeed">Root speed (m/s) at which steering will start to be effective, steering weight will then increase linearly as root speed increases toward <code>endSpeed</code></param>
+        /// <param name="endSpeed">Root speed (m/s) at which steering will be fully effective</param>
         /// <returns></returns>
-        public AffineTransform SteerRootDeltaTransform(Identifier<Trajectory> desiredTrajectory, float translationWeight, float rotationWeight, float minSpeed = 0.15f)
+        public AffineTransform SteerRootMotion(Identifier<Trajectory> desiredTrajectory, float translationWeight, float rotationWeight, float startSpeed = 0.0f, float endSpeed = 0.15f)
         {
-            if (_deltaTime == 0.0f)
+            if (_deltaTime <= 0.0f)
             {
                 return AffineTransform.identity;
             }
@@ -67,19 +68,7 @@ namespace Unity.Kinematica
             AffineTransform binaryRootDelta = rootDeltaTransform;
             AffineTransform desiredRootDelta = Utility.SampleTrajectoryAtTime(trajectory, _deltaTime, Binary.TimeHorizon);
 
-            AffineTransform rootDelta = binaryRootDelta;
-
-            float speed = math.length(desiredRootDelta.t / _deltaTime);
-            float weight = math.min(speed / minSpeed, 1.0f);
-
-            quaternion steerRotation = math.mul(desiredRootDelta.q, math.conjugate(binaryRootDelta.q));
-            steerRotation = math.slerp(quaternion.identity, steerRotation, rotationWeight * weight);
-            rootDelta.t = math.rotate(steerRotation, rootDelta.t);
-            rootDelta.q = math.mul(steerRotation, rootDelta.q);
-
-            rootDelta.t = math.lerp(rootDelta.t, desiredRootDelta.t, translationWeight * weight);
-
-            return rootDelta;
+            return Utility.SteerRootMotion(binaryRootDelta, desiredRootDelta, _deltaTime, translationWeight, rotationWeight, startSpeed, endSpeed);
         }
 
         /// <summary>
@@ -126,7 +115,10 @@ namespace Unity.Kinematica
             }
         }
 
-        internal float3 CurrentVelocity
+        /// <summary>
+        /// Velocity from binary at current sampling time, in meters per second, in character space
+        /// </summary>
+        public float3 CurrentVelocity
         {
             get
             {

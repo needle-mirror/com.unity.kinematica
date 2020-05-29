@@ -105,28 +105,26 @@ namespace Unity.Kinematica
         public struct TocEntry
         {
             public int offset;
+            public short version;
 
-            public bool IsValid => offset != Invalid;
+            public bool IsValid => offset != -1;
 
-            public static implicit operator int(TocEntry entry)
+            public void Invalidate()
             {
-                return entry.offset;
-            }
-
-            public static implicit operator TocEntry(int offset)
-            {
-                return Create(offset);
+                offset = -1;
+                ++version;
             }
 
             public static TocEntry Create(int offset)
             {
                 return new TocEntry
                 {
-                    offset = offset
+                    offset = offset,
+                    version = 0
                 };
             }
 
-            public static TocEntry Invalid => - 1;
+            public static TocEntry Invalid => Create(-1);
         }
 
         public bool IsValid => ptr != null;
@@ -137,6 +135,8 @@ namespace Unity.Kinematica
 
         MemoryIdentifier CreateIdentifier()
         {
+            TocEntry* toc = null;
+
             int sizeOfToc = sizeof(TocEntry);
 
             var memoryPtr = (TocEntry*)((byte*)
@@ -144,9 +144,11 @@ namespace Unity.Kinematica
 
             for (short i = 0; i < numElements; ++i)
             {
-                if ((memoryPtr - i)->offset < 0)
+                toc = memoryPtr - i;
+                if (toc->offset < 0)
                 {
-                    return i;
+                    // Found a free block in TOC
+                    return MemoryIdentifier.Create(i, toc->version);
                 }
             }
 
@@ -159,11 +161,31 @@ namespace Unity.Kinematica
             if (numBytesRemaining < 0)
             {
                 Grow(sizeOfToc);
+
+                memoryPtr = (TocEntry*)((byte*)
+                    ptr + numBytesAllocated - sizeOfToc);
             }
 
-            (memoryPtr - numElements)->offset = -1;
+            toc = memoryPtr - numElements;
+            *toc = TocEntry.Invalid;
 
-            return numElements++;
+            return MemoryIdentifier.Create(numElements++, toc->version);
+        }
+
+        public bool IsIdentifierInValidRange(MemoryIdentifier identifier)
+        {
+            return identifier.IsValid && identifier.index >= 0 && identifier.index < numElements;
+        }
+
+        public bool IsIdentifierBound(MemoryIdentifier identifier)
+        {
+            if (!IsIdentifierInValidRange(identifier))
+            {
+                return false;
+            }
+
+            TocEntry* toc = GetTocEntryAtIndex(identifier.index);
+            return toc->version == identifier.version && toc->offset >= 0;
         }
 
         public void TickRecursive(MemoryIdentifier identifier)
@@ -187,6 +209,10 @@ namespace Unity.Kinematica
             var nextTickFrame = (ushort)((this.tickFrame + 1) & bitMask);
 
             var header = GetHeader(identifier);
+            if (header == null)
+            {
+                return;
+            }
 
             var tickFrame = header->tickFrame;
 
@@ -195,22 +221,56 @@ namespace Unity.Kinematica
             header->tickFrame = (ushort)(nextTickFrame | bits);
         }
 
-        TocEntry* GetTocEntry(MemoryIdentifier identifier)
+        TocEntry* GetTocEntryAtIndex(short index)
         {
             var memoryPtr = (byte*)ptr + numBytesAllocated;
-            memoryPtr -= sizeof(TocEntry) * (identifier + 1);
+            memoryPtr -= sizeof(TocEntry) * (index + 1);
             return (TocEntry*)memoryPtr;
+        }
+
+        TocEntry* GetTocEntry(MemoryIdentifier identifier)
+        {
+            Assert.IsTrue(IsIdentifierInValidRange(identifier));
+            if (!IsIdentifierInValidRange(identifier))
+            {
+                return null;
+            }
+
+            TocEntry* toc = GetTocEntryAtIndex(identifier.index);
+            Assert.IsTrue(toc->version == identifier.version);
+            if (toc->version != identifier.version)
+            {
+                return null;
+            }
+
+            return toc;
         }
 
         public Header* GetHeader(MemoryIdentifier identifier)
         {
-            Assert.IsTrue(identifier.IsValid);
+            TocEntry* tocEntry = GetTocEntry(identifier);
+            if (tocEntry == null)
+            {
+                return null;
+            }
 
-            return (Header*)((byte*)ptr + GetTocEntry(identifier)->offset);
+            Assert.IsTrue(tocEntry->offset >= 0);
+            if (tocEntry->offset < 0)
+            {
+                return null;
+            }
+
+            return (Header*)((byte*)ptr + tocEntry->offset);
         }
 
         public byte* GetPayload(MemoryIdentifier identifier)
         {
+            Header* header = GetHeader(identifier);
+            if (header == null)
+            {
+                return null;
+            }
+
             return (byte*)(GetHeader(identifier) + 1);
         }
 
@@ -316,9 +376,11 @@ namespace Unity.Kinematica
 
         public MemoryRef<T> GetByType<T>(DataTypeIndex typeIndex, MemoryIdentifier identifier) where T : struct
         {
-            Assert.IsTrue(identifier.IsValid);
-
             var headerPtr = GetHeader(identifier);
+            if (headerPtr == null)
+            {
+                return MemoryRef<T>.Null;
+            }
 
             if (headerPtr->typeIndex == typeIndex)
             {
@@ -349,9 +411,11 @@ namespace Unity.Kinematica
 
         public MemoryRef<T> GetRef<T>(MemoryIdentifier identifier) where T : struct
         {
-            Assert.IsTrue(identifier.IsValid);
-
             var headerPtr = GetHeader(identifier);
+            if (headerPtr == null)
+            {
+                return MemoryRef<T>.Null;
+            }
 
             var memoryPtr = (byte*)(++headerPtr);
 
@@ -363,9 +427,11 @@ namespace Unity.Kinematica
 
         public MemoryArray<T> GetArray<T>(MemoryIdentifier identifier) where T : struct
         {
-            Assert.IsTrue(identifier.IsValid);
-
             var headerPtr = GetHeader(identifier);
+            if (headerPtr == null)
+            {
+                return MemoryArray<T>.Null;
+            }
 
             var length = headerPtr->length;
 
@@ -381,7 +447,10 @@ namespace Unity.Kinematica
         public void MarkForDelete(MemoryIdentifier identifier)
         {
             Header* header = GetHeader(identifier);
-            header->MarkForDelete();
+            if (header != null)
+            {
+                header->MarkForDelete();
+            }
         }
 
         public static MemoryHeader<MemoryChunk> Create(MemoryRequirements memoryRequirements, Allocator allocator)
@@ -456,7 +525,7 @@ namespace Unity.Kinematica
         {
             buffer.Write(numBytesAllocated);
             buffer.Write((short)tickFrame);
-            buffer.Write(root);
+            buffer.Write(root.uniqueIdentifier);
 
             buffer.Write(writeOffset);
             buffer.Write(version);
@@ -500,7 +569,7 @@ namespace Unity.Kinematica
             Assert.IsTrue(numBytesAllocated >= numBytes);
 
             tickFrame = (ushort)buffer.Read16();
-            root = buffer.Read16();
+            root.uniqueIdentifier = buffer.Read32();
 
             writeOffset = buffer.Read32();
             version = buffer.Read32();
@@ -540,17 +609,35 @@ namespace Unity.Kinematica
 
         public MemoryIdentifier Parent(MemoryIdentifier identifier)
         {
-            return GetHeader(identifier)->parent;
+            Header* header = GetHeader(identifier);
+            if (header == null)
+            {
+                return MemoryIdentifier.Invalid;
+            }
+
+            return header->parent;
         }
 
         public MemoryIdentifier FirstChild(MemoryIdentifier identifier)
         {
-            return GetHeader(identifier)->firstChild;
+            Header* header = GetHeader(identifier);
+            if (header == null)
+            {
+                return MemoryIdentifier.Invalid;
+            }
+
+            return header->firstChild;
         }
 
         public MemoryIdentifier NextSibling(MemoryIdentifier identifier)
         {
-            return GetHeader(identifier)->nextSibling;
+            Header* header = GetHeader(identifier);
+            if (header == null)
+            {
+                return MemoryIdentifier.Invalid;
+            }
+
+            return header->nextSibling;
         }
 
         public int NumChildren(MemoryIdentifier identifier)
@@ -593,12 +680,20 @@ namespace Unity.Kinematica
         public void BringToFront(MemoryIdentifier identifier)
         {
             var header = GetHeader(identifier);
+            if (header == null)
+            {
+                return;
+            }
 
             var parent = header->parent;
 
             Assert.IsTrue(parent.IsValid);
 
             var parentHeader = GetHeader(parent);
+            if (parentHeader == null)
+            {
+                return;
+            }
 
             if (parentHeader->firstChild != identifier)
             {
@@ -640,6 +735,10 @@ namespace Unity.Kinematica
         public MemoryIdentifier NextUntil(MemoryIdentifier current, MemoryIdentifier identifier)
         {
             var header = GetHeader(current);
+            if (header == null)
+            {
+                return MemoryIdentifier.Invalid;
+            }
 
             if (header->firstChild != MemoryIdentifier.Invalid)
             {
@@ -655,6 +754,10 @@ namespace Unity.Kinematica
                     }
 
                     header = GetHeader(header->parent);
+                    if (header == null)
+                    {
+                        return MemoryIdentifier.Invalid;
+                    }
                 }
 
                 return header->nextSibling;
@@ -664,6 +767,10 @@ namespace Unity.Kinematica
         MemoryIdentifier NextUntilUp(MemoryIdentifier current, MemoryIdentifier identifier)
         {
             var header = GetHeader(current);
+            if (header == null)
+            {
+                return MemoryIdentifier.Invalid;
+            }
 
             while (header->nextSibling == MemoryIdentifier.Invalid)
             {
@@ -673,6 +780,10 @@ namespace Unity.Kinematica
                 }
 
                 header = GetHeader(header->parent);
+                if (header == null)
+                {
+                    return MemoryIdentifier.Invalid;
+                }
             }
 
             return header->nextSibling;
@@ -683,7 +794,7 @@ namespace Unity.Kinematica
             int sizeOfType = UnsafeUtility.SizeOf<T>();
             int sizeOfHeader = sizeof(Header);
 
-            Assert.IsTrue(sizeOfHeader == 16);
+            Assert.IsTrue(sizeOfHeader == 28);
 
             int alignedSizeOfType = Memory.Align(sizeOfType, 4);
             int sizeOfElements = alignedSizeOfType * numElements;
@@ -873,10 +984,12 @@ namespace Unity.Kinematica
                     if (header->IsDisposed)
                     {
                         //
-                        // Mark the corresponding toc entry as invalid
+                        // Mark the corresponding toc entry as invalid and increment its version
+                        // so that next time it gets re-allocated, it will be referenced by a different
+                        // memory identifier than before to avoid confusion
                         //
 
-                        (tocPtr - header->self)->offset = -1;
+                        (tocPtr - header->self.index)->Invalidate();
 
                         //
                         // We remember the current cursor position for later pruning.
@@ -966,7 +1079,7 @@ namespace Unity.Kinematica
 
                     int offset = (int)(ptr - basePtr);
 
-                    (tocPtr - header->self)->offset = offset;
+                    (tocPtr - header->self.index)->offset = offset;
 
                     ptr += numBytesTotal;
 
@@ -1002,6 +1115,10 @@ namespace Unity.Kinematica
         void Unlink(MemoryIdentifier identifier)
         {
             var header = GetHeader(identifier);
+            if (header == null)
+            {
+                return;
+            }
 
             var parent = header->parent;
 
@@ -1138,7 +1255,7 @@ namespace Unity.Kinematica
 
                 var numBytesTotal = sizeOfHeader + numBytesPayload;
 
-                Assert.IsTrue((tocPtr - header->self)->offset == offset);
+                Assert.IsTrue((tocPtr - header->self.index)->offset == offset);
 
                 readPtr += numBytesTotal;
 
@@ -1147,11 +1264,11 @@ namespace Unity.Kinematica
 
             for (short i = 0; i < numElements; ++i)
             {
-                var tocEntry = GetTocEntry(i);
+                var tocEntry = GetTocEntryAtIndex(i);
 
                 if (tocEntry->offset >= 0)
                 {
-                    Assert.IsTrue(GetHeader(i)->self == i);
+                    Assert.IsTrue(GetHeader(MemoryIdentifier.Create(i, tocEntry->version))->self.index == i);
                 }
             }
         }

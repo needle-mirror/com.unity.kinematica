@@ -401,6 +401,12 @@ namespace Unity.Kinematica
                     ref synthesizer, candidate,
                     trajectory, timeIndex), action.self);
 
+            ref var task =
+                ref synthesizer.GetRef<TrajectoryHeuristicTask>(
+                    identifier).Ref;
+
+            task.self = Identifier<TrajectoryHeuristicTask>.Create(identifier);
+
             return ref synthesizer.GetRef<TrajectoryHeuristicTask>(identifier).Ref;
         }
 

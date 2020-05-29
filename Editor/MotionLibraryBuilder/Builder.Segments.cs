@@ -121,8 +121,8 @@ namespace Unity.Kinematica.Editor
                         continue;
                     }
 
-                    int firstFrame = animationClip.TimeInSecondsToIndex(startTime);
-                    int numFrames = animationClip.TimeInSecondsToIndex(duration);
+                    int firstFrame = animationClip.ClampedTimeInSecondsToIndex(startTime);
+                    int numFrames = animationClip.ClampedDurationInSecondsToFrames(duration);
 
                     int onePastLastFrame =
                         math.min(firstFrame + numFrames,
@@ -234,7 +234,7 @@ namespace Unity.Kinematica.Editor
                     TagAnnotation tag = segment.tags[j];
 
                     int firstFrame = segment.clip.ClipFramesToAssetFrames(asset, segment.clip.ClampedTimeInSecondsToIndex(tag.startTime));
-                    int onePastLastFrame = segment.clip.ClipFramesToAssetFrames(asset, segment.clip.ClampedTimeInSecondsToIndex(tag.startTime + tag.duration));
+                    int onePastLastFrame = firstFrame + segment.clip.ClipFramesToAssetFrames(asset, segment.clip.ClampedDurationInSecondsToFrames(tag.duration));
 
                     int firstValidFrame = math.max(firstFrame, segmentFirstFrame);
                     int onePastLastValidFrame = math.min(onePastLastFrame, segmentOnePastLastFrame);

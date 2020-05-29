@@ -14,6 +14,8 @@ namespace Unity.Kinematica
     [Data("TrajectoryHeuristic", "#2A3756"), BurstCompile]
     public struct TrajectoryHeuristicTask : Task
     {
+        public Identifier<TrajectoryHeuristicTask> self;
+
         internal MemoryRef<MotionSynthesizer> synthesizer;
 
         /// <summary>
@@ -165,12 +167,21 @@ namespace Unity.Kinematica
         {
             return new TrajectoryHeuristicTask
             {
+                self = Identifier<TrajectoryHeuristicTask>.Invalid,
                 synthesizer = synthesizer.self,
                 candidate = candidate,
                 desiredTrajectory = trajectory,
                 timeIndex = timeIndex,
                 threshold = 0.03f
             };
+        }
+
+        /// <summary>
+        /// Implicit cast operator that allows to convert a task reference into an typed identifier.
+        /// </summary>
+        public static implicit operator Identifier<TrajectoryHeuristicTask>(TrajectoryHeuristicTask task)
+        {
+            return task.self;
         }
     }
 }

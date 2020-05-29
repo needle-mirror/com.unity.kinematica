@@ -59,6 +59,8 @@ namespace SnappyLocomotion
                     synthesizer.Query.Where(
                         Locomotion.Default).Except(Idle.Default),
                             prediction.trajectory);
+
+                action.GetByType<ReduceTask>().responsiveness = 0.7f;
             }
 
             locomotion = selector;
@@ -70,16 +72,18 @@ namespace SnappyLocomotion
             {
                 ref MotionSynthesizer synthesizer = ref kinematica.Synthesizer.Ref;
 
-                AffineTransform rootDelta = synthesizer.SteerRootDeltaTransform(desiredTrajectory, snapTranslationFactor, snapRotationFactor);
+                AffineTransform rootDelta = synthesizer.SteerRootMotion(desiredTrajectory, snapTranslationFactor, snapRotationFactor);
 
+                float3 rootTranslation = transform.rotation * rootDelta.t;
                 transform.rotation *= rootDelta.q;
+                
     #if UNITY_EDITOR
                 if (Unity.SnapshotDebugger.Debugger.instance.rewind)
                 {
                     return;
                 }
     #endif
-                controller.Move(transform.TransformVector(rootDelta.t));
+                controller.Move(rootTranslation);
                 synthesizer.SetWorldTransform(AffineTransform.Create(transform.position, transform.rotation), true);
             }
         }

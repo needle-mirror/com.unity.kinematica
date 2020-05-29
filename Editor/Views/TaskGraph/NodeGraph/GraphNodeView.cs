@@ -190,6 +190,7 @@ namespace Unity.Kinematica.Editor
                 }
 
                 version = memoryChunk.Ref.Version;
+                return true;
             }
 
             version = -1;
@@ -207,6 +208,11 @@ namespace Unity.Kinematica.Editor
                 {
                     UpdateLayout();
                 }
+            }
+
+            if (!memoryChunk.IsValid || version != memoryChunk.Ref.Version)
+            {
+                return;
             }
 
             foreach (var graphNode in graphNodes)

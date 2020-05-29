@@ -15,7 +15,7 @@ namespace Unity.Kinematica.Editor
                     return 1f;
                 }
 
-                float duration = TaggedClip.AnimationClip.length * k_TimelineLengthMultiplier + SecondsBeforeZero;
+                float duration = TaggedClip.DurationInSeconds * k_TimelineLengthMultiplier + SecondsBeforeZero;
                 if (FloatComparer.AreEqual(duration, 0f, FloatComparer.kEpsilon) || float.IsNaN(m_TimelineScrollableArea.layout.width))
                 {
                     return 1f;

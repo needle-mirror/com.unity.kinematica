@@ -1,8 +1,3 @@
-using System;
-using Unity.Collections;
-using UnityEngine.Assertions;
-using Unity.Collections.LowLevel.Unsafe;
-
 namespace Unity.Kinematica
 {
     internal struct MemoryArrayIdentifier
@@ -14,23 +9,18 @@ namespace Unity.Kinematica
 
         public bool Equals(MemoryArrayIdentifier other)
         {
-            return identifier.Equals(other.identifier) && index == other.index;
+            return identifier == other.identifier && index == other.index;
         }
 
-        public static implicit operator MemoryArrayIdentifier(short index)
-        {
-            return Create(index);
-        }
-
-        public static MemoryArrayIdentifier Create(short identifier, short index = 0)
+        public static MemoryArrayIdentifier Create(short identifier, short version, short index = 0)
         {
             return new MemoryArrayIdentifier
             {
-                identifier = identifier,
+                identifier = MemoryIdentifier.Create(identifier, version),
                 index = index
             };
         }
 
-        public static MemoryArrayIdentifier Invalid => - 1;
+        public static MemoryArrayIdentifier Invalid => Create(-1, 0);
     }
 }

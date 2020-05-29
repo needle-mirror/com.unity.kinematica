@@ -203,16 +203,25 @@ namespace Unity.Kinematica.Editor
             }
         }
 
+        [SerializeField]
+        float m_CachedClipDuration;
+
         public float DurationInSeconds
         {
             get
             {
-                if (!Valid)
+                if (m_CachedClipDuration == 0.0f)
                 {
-                    return 0f;
+                    m_CachedClipDuration = Utility.ComputeAccurateClipDuration(AnimationClip);
                 }
+                ;
 
-                return AnimationClip.length;
+                return m_CachedClipDuration;
+            }
+
+            private set
+            {
+                m_CachedClipDuration = value;
             }
         }
 
@@ -233,17 +242,19 @@ namespace Unity.Kinematica.Editor
 
         public int NumFrames
         {
-            get { return Missing.roundToInt(SampleRate * DurationInSeconds); }
-        }
-
-        public int TimeInSecondsToIndex(float timeInSeconds)
-        {
-            return Missing.roundToInt(timeInSeconds * SampleRate);
+            get { return Missing.truncToInt(SampleRate * DurationInSeconds); }
         }
 
         public int ClampedTimeInSecondsToIndex(float timeInSeconds)
         {
-            return TimeInSecondsToIndex(Mathf.Clamp(timeInSeconds, 0.0f, DurationInSeconds));
+            int frameIndex = Missing.roundToInt(timeInSeconds * SampleRate);
+            return math.clamp(frameIndex, 0, NumFrames - 1);
+        }
+
+        public int ClampedDurationInSecondsToFrames(float durationInSeconds)
+        {
+            int frameIndex = Missing.roundToInt(durationInSeconds * SampleRate);
+            return math.clamp(frameIndex, 0, NumFrames);
         }
 
         public float IndexToTimeInSeconds(int index)
@@ -282,7 +293,7 @@ namespace Unity.Kinematica.Editor
 
             if (duration < 0)
             {
-                duration = AnimationClip.length - startTime;
+                duration = DurationInSeconds - startTime;
             }
 
             int existing = tags.Count(t => t.Type == tagType &&

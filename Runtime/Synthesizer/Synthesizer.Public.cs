@@ -49,6 +49,18 @@ namespace Unity.Kinematica
         }
 
         /// <summary>
+        /// Checks if a memory identifer is valid and bound to valid data (Task, array...) in the synthesizer.
+        /// You should always use this function before calling GetRef(), GetByType(), GetArray() functions if you are unsure
+        /// the memory identifier is valid
+        /// </summary>
+        /// <param name="identifier">Memory identifier to check for validity.</param>
+        /// <returns>True if a memory identifer is valid and bound to valid data in the synthesizer, false otherwise.</returns>
+        public bool IsIdentifierValid(MemoryIdentifier identifier)
+        {
+            return memoryChunk.Ref.IsIdentifierBound(identifier);
+        }
+
+        /// <summary>
         /// Retrieves the identifier of the parent node w.r.t. the identifier passed as argument.
         /// </summary>
         /// <remarks>

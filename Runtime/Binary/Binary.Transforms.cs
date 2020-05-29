@@ -653,7 +653,13 @@ namespace Unity.Kinematica
                 samplingTime, color);
         }
 
-        internal void DebugDrawPoseWorldSpace(AffineTransform rootTransform, int poseIndex, Color color)
+        /// <summary>
+        /// Debug visualization for animation poses.
+        /// </summary>
+        /// <param name="rootTransform">A world space transform that determines the position and orientation of the animation pose.</param>
+        /// <param name="poseIndex">The pose index for which the root transform is to be retrieved.</param>
+        /// <param name="color">The color that the pose should be drawn with.</param>
+        public void DebugDrawPoseWorldSpace(AffineTransform rootTransform, int poseIndex, Color color)
         {
             int numJoints = this.numJoints;
             for (int jointIndex = 1; jointIndex < numJoints; ++jointIndex)

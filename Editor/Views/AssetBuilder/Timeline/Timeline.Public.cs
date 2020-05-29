@@ -380,7 +380,7 @@ namespace Unity.Kinematica.Editor
         {
             if (Debugger.instance.rewind && TaggedClip != null && EditorApplication.isPlaying)
             {
-                float duration = TaggedClip.AnimationClip.length;
+                float duration = TaggedClip.DurationInSeconds;
 
                 time = Mathf.Clamp(time, 0f, duration);
 

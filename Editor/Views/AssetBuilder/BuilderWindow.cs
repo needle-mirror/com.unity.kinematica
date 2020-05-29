@@ -603,7 +603,7 @@ namespace Unity.Kinematica.Editor
             e.ElementAt(k_ClipWarningIndex).style.display = clipValid ? DisplayStyle.None : DisplayStyle.Flex;
             if (clipValid)
             {
-                e.tooltip = $"Duration {clip.length:F2}s/{Mathf.RoundToInt(clip.length * clip.frameRate)} frames";
+                e.tooltip = $"Duration {taggedClip.DurationInSeconds:F2}s/{Mathf.RoundToInt(taggedClip.DurationInSeconds * clip.frameRate)} frames";
             }
             else
             {

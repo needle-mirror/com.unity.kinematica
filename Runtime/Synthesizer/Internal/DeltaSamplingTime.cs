@@ -33,6 +33,8 @@ namespace Unity.Kinematica
         /// </summary>
         public BlittableBool crossedBoundary;
 
+        public static DeltaSamplingTime Invalid => Create(SamplingTime.Invalid, AffineTransform.identity, false);
+
         internal static DeltaSamplingTime Create(SamplingTime samplingTime, AffineTransform deltaTransform, BlittableBool crossedBoundary)
         {
             return new DeltaSamplingTime

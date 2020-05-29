@@ -4,6 +4,22 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/ )
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html ).
 
+## [0.6.0-preview] - 2020-05-29
+
+### Fixed
+- Fixed inaccurate animation clip length computation when clip was over 5 minutes long
+- Fixed memory corruption potentially happening if a memory identifier is invalid
+- Fixed NavigationTask desired trajectory not cleared when goal was reached
+- Fixed crash in Task Graph
+
+### Added
+- Added function to MotionSynthesizer to check a memory identifier is valid and prevent errors in client code
+- Added option to create TrajectoryPrediction with provided current velocity
+
+### Changed
+- Renamed SteerRootDeltaTransfrom into SteerRootMotion and expose intermediate function in API
+- Exposed MotionSynthesizer.CurrentVelocity in API
+
 ## [0.5.0-preview.1] - 2020-05-05
 
 ### Fixed

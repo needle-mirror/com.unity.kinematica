@@ -53,11 +53,11 @@ namespace Unity.Kinematica
                     }
                 }
 
-                if (missingJointsNames.Length > 0)
-                {
-                    // if some joints from the rig were not found in the character, we just send warning but still continue simulation with the existing joints
-                    Debug.LogWarning($"Joints {missingJointsNames} not bound on character {transforms[0].name}");
-                }
+                //if (missingJointsNames.Length > 0)
+                //{
+                //    // if some joints from the rig were not found in the character, we just send warning but still continue simulation with the existing joints
+                //    Debug.LogWarning($"Joints {missingJointsNames} not bound on character {transforms[0].name}");
+                //}
 
                 deltaTime = animator.BindSceneProperty(animator.gameObject.transform, typeof(Kinematica), "_deltaTime");
 

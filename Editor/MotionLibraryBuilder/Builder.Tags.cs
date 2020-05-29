@@ -233,7 +233,7 @@ namespace Unity.Kinematica.Editor
                 foreach (var marker in segment.clip.Markers)
                 {
                     int frameIndex =
-                        animationClip.TimeInSecondsToIndex(
+                        animationClip.ClampedTimeInSecondsToIndex(
                             marker.timeInSeconds);
 
                     if (segment.source.Contains(frameIndex))
@@ -315,8 +315,8 @@ namespace Unity.Kinematica.Editor
                     continue;
                 }
 
-                int firstFrame = animationClip.TimeInSecondsToIndex(startTime);
-                int numFrames = animationClip.TimeInSecondsToIndex(duration);
+                int firstFrame = animationClip.ClampedTimeInSecondsToIndex(startTime);
+                int numFrames = animationClip.ClampedDurationInSecondsToFrames(duration);
 
                 int onePastLastFrame =
                     math.min(firstFrame + numFrames,

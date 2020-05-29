@@ -85,7 +85,8 @@ namespace Unity.Kinematica.Editor
                 Assert.IsTrue(segment.destination.NumFrames == numFramesDestination);
 
                 float baseSampleTimeInSeconds = firstFrame / sourceSampleRate;
-                int numFrames = Missing.truncToInt(clip.frameRate * clip.length);
+                float clipDuration = segment.clip.DurationInSeconds;
+                int numFrames = Missing.truncToInt(clip.frameRate * clipDuration);
                 int lastKeyFrame = numFrames - 1;
                 float maximumSampleTimeInSeconds = numFrames / sourceSampleRate;
 

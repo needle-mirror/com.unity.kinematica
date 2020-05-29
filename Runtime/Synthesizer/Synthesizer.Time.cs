@@ -65,7 +65,7 @@ namespace Unity.Kinematica
             }
         }
 
-        void UpdateTime(float deltaTime)
+        DeltaSamplingTime UpdateTime(float deltaTime)
         {
             if (samplingTime.IsValid)
             {
@@ -126,7 +126,11 @@ namespace Unity.Kinematica
 
                     delayedPushTime = TimeIndex.Invalid;
                 }
+
+                return advance;
             }
+
+            return DeltaSamplingTime.Invalid;
         }
 
         /// <summary>

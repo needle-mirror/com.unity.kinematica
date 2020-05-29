@@ -95,12 +95,19 @@ namespace Unity.Kinematica
 
             UpdateTaskGraph();
 
-            UpdateTime(deltaTime);
+            SamplingTime prevSamplingTime = samplingTime;
+            DeltaSamplingTime deltaSamplingTime = UpdateTime(deltaTime);
 
             if (Time.IsValid)
             {
-                rootDeltaTransform =
-                    GetTrajectoryDeltaTransform(deltaTime);
+                if (prevSamplingTime.IsValid)
+                {
+                    AffineTransform referenceTransform =
+                        Binary.GetTrajectoryTransform(prevSamplingTime);
+
+                    rootDeltaTransform = referenceTransform.inverseTimes(
+                        Binary.GetTrajectoryTransform(deltaSamplingTime));
+                }
 
                 rootTransform *= rootDeltaTransform;
                 rootTransform.q = math.normalize(rootTransform.q);

@@ -249,7 +249,7 @@ namespace Unity.Kinematica.Editor
             {
                 AnimationClip animClip = TaggedClip.AnimationClip;
                 frameRate = animClip.frameRate;
-                clipLength = animClip.length;
+                clipLength = TaggedClip.DurationInSeconds;
                 minTime = -clipLength;
                 maxTime = 2 * clipLength;
             }
