@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Unity.Kinematica.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -16,7 +17,7 @@ namespace Unity.Kinematica.Editor
     internal class TaskGraphWindow : EditorWindow
     {
         [NonSerialized]
-        Kinematica kinematica;
+        IMotionSynthesizerProvider synthesizerProvider;
 
         readonly string styleSheet = "NodeGraphWindow.uss";
         readonly string toolbarStyleSheet = "NodeGraphToolbar.uss";
@@ -96,7 +97,7 @@ namespace Unity.Kinematica.Editor
                 return true;
             }
 
-            if (kinematica == null)
+            if (synthesizerProvider == null)
             {
                 playModeMessage.style.display = DisplayStyle.None;
                 selectionMessage.style.display = DisplayStyle.Flex;
@@ -113,12 +114,12 @@ namespace Unity.Kinematica.Editor
 
         void OnPreLateUpdate()
         {
-            if (EditorApplication.isPlaying && (kinematica != null))
+            if (EditorApplication.isPlaying && (synthesizerProvider != null))
             {
                 var graphNodeView =
                     rootVisualElement.Q<GraphNodeView>("graphNodeView");
 
-                var synthesizer = kinematica.Synthesizer;
+                var synthesizer = synthesizerProvider.Synthesizer;
 
                 foreach (var selectable in graphNodeView.selection)
                 {
@@ -139,12 +140,12 @@ namespace Unity.Kinematica.Editor
 
         void OnRender(Camera camera)
         {
-            if (EditorApplication.isPlaying && kinematica != null && !m_ExitingPlayMode)
+            if (EditorApplication.isPlaying && synthesizerProvider != null && !m_ExitingPlayMode)
             {
                 var graphNodeView =
                     rootVisualElement.Q<GraphNodeView>("graphNodeView");
 
-                var synthesizer = kinematica.Synthesizer;
+                var synthesizer = synthesizerProvider.Synthesizer;
 
                 DebugDraw.Begin(camera);
 
@@ -168,26 +169,22 @@ namespace Unity.Kinematica.Editor
         {
             var activeGameObject = Selection.activeGameObject;
 
-            if (!activeGameObject)
-            {
-                activeGameObject = FindKinematicaObject();
-            }
-
-            Kinematica component = null;
+            synthesizerProvider = null;
 
             if (activeGameObject)
             {
-                component =
-                    activeGameObject.GetComponent<Kinematica>();
+                synthesizerProvider = activeGameObject.GetComponent<IMotionSynthesizerProvider>();
+
+                //Look below in the hierarchy as well to help ease of use.
+                if (synthesizerProvider == null)
+                {
+                    synthesizerProvider = activeGameObject.GetComponentInChildren<IMotionSynthesizerProvider>();
+                }
             }
 
-            if (component != kinematica)
+            if (synthesizerProvider == null)
             {
-                kinematica = component;
-            }
-            else
-            {
-                kinematica = null;
+                synthesizerProvider = FindMotionSynthesizerObject();
             }
 
             DisplayMessages();
@@ -203,13 +200,15 @@ namespace Unity.Kinematica.Editor
             OnSelectionChange();
         }
 
-        GameObject FindKinematicaObject()
+        IMotionSynthesizerProvider FindMotionSynthesizerObject()
         {
-            var kinematica = FindObjectOfType(typeof(Kinematica)) as MonoBehaviour;
-
-            if (kinematica != null)
+            TypeCache.TypeCollection types = TypeCache.GetTypesDerivedFrom<IMotionSynthesizerProvider>();
+            foreach (var type in types)
             {
-                return kinematica.gameObject;
+                if (FindObjectOfType(type) is IMotionSynthesizerProvider candidateProvider)
+                {
+                    return candidateProvider;
+                }
             }
 
             return null;
@@ -217,7 +216,7 @@ namespace Unity.Kinematica.Editor
 
         void Update()
         {
-            if (EditorApplication.isPlaying && kinematica == null)
+            if (EditorApplication.isPlaying && synthesizerProvider == null)
             {
                 OnSelectionChange();
             }
@@ -241,9 +240,9 @@ namespace Unity.Kinematica.Editor
             var graphNodeView =
                 rootVisualElement.Q<GraphNodeView>("graphNodeView");
 
-            if (EditorApplication.isPlaying && (kinematica != null))
+            if (EditorApplication.isPlaying && (synthesizerProvider != null))
             {
-                var synthesizer = kinematica.Synthesizer;
+                var synthesizer = synthesizerProvider.Synthesizer;
 
                 var memoryChunk =
                     synthesizer.Ref.memoryChunk;

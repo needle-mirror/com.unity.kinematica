@@ -7,9 +7,9 @@ namespace Unity.Kinematica
     /// based on the current sampling time of the motion synthesizer.
     /// </summary>
     [Data("CurrentPose", "#2A3756"), BurstCompile]
-    public struct CurrentPoseTask : Task
+    public struct CurrentPoseTask : Task, GenericTask<CurrentPoseTask>
     {
-        internal Identifier<CurrentPoseTask> self;
+        public Identifier<CurrentPoseTask> self { get; set; }
 
         internal MemoryRef<MotionSynthesizer> synthesizer;
 
@@ -44,7 +44,7 @@ namespace Unity.Kinematica
         /// <param name="self">Task reference that is supposed to be executed.</param>
         /// <returns>Result of the task execution.</returns>
         [BurstCompile]
-        public static Result ExecuteSelf(ref TaskRef self)
+        public static Result ExecuteSelf(ref TaskPointer self)
         {
             return self.Cast<CurrentPoseTask>().Execute();
         }

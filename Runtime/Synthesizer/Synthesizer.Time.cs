@@ -19,9 +19,9 @@ namespace Unity.Kinematica
         /// handles any discrepancies between the old and the new pose.
         /// </remarks>
         /// <param name="timeIndex">New starting time index for the pose generation.</param>
-        public void Push(TimeIndex timeIndex)
+        public void PlayAtTime(TimeIndex timeIndex)
         {
-            Push(
+            PlayAtTime(
                 SamplingTime.Create(
                     timeIndex, Time.theta));
         }
@@ -37,7 +37,7 @@ namespace Unity.Kinematica
         /// handles any discrepancies between the old and the new pose.
         /// </remarks>
         /// <param name="samplingTime">New sampling time for the pose generation.</param>
-        public void Push(SamplingTime samplingTime)
+        public void PlayAtTime(SamplingTime samplingTime)
         {
             if (updateInProgress)
             {
@@ -91,7 +91,7 @@ namespace Unity.Kinematica
                     TriggerMarkers(
                         samplingTime.timeIndex, remainder);
 
-                    Push(advance.samplingTime);
+                    PlayAtTime(advance.samplingTime);
 
                     lastSamplingTime = TimeIndex.Invalid;
 
@@ -120,7 +120,7 @@ namespace Unity.Kinematica
 
                 if (delayedPushTime.IsValid)
                 {
-                    Push(delayedPushTime);
+                    PlayAtTime(delayedPushTime);
 
                     poseGenerator.TriggerTransition();
 
@@ -211,9 +211,5 @@ namespace Unity.Kinematica
         /// Denotes the current sampling time of the motion synthesizer.
         /// </summary>
         public SamplingTime Time => samplingTime;
-
-        public int CurrentPushIndex => poseGenerator.CurrentPushIndex;
-
-        public float ApproximateTransitionProgression => poseGenerator.ApproximateTransitionProgression;
     }
 }

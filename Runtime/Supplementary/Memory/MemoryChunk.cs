@@ -374,7 +374,7 @@ namespace Unity.Kinematica
             return identifier;
         }
 
-        public MemoryRef<T> GetByType<T>(DataTypeIndex typeIndex, MemoryIdentifier identifier) where T : struct
+        public MemoryRef<T> GetChildByType<T>(DataTypeIndex typeIndex, MemoryIdentifier identifier) where T : struct
         {
             var headerPtr = GetHeader(identifier);
             if (headerPtr == null)
@@ -396,7 +396,7 @@ namespace Unity.Kinematica
 
             while (node.IsValid)
             {
-                var result = GetByType<T>(typeIndex, node);
+                var result = GetChildByType<T>(typeIndex, node);
 
                 if (result.IsValid)
                 {

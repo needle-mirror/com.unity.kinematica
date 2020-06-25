@@ -168,6 +168,7 @@ namespace Unity.Kinematica.Editor
                     m_TargetLabel.text = m_PreviewTarget == null ? k_DefaultLabelText : m_PreviewTarget.name;
 
                     UpdateTargetStyleClass();
+                    SceneView.RepaintAll();
                 }
             }
         }

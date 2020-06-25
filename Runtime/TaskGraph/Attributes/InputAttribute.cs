@@ -11,7 +11,7 @@ namespace Unity.Kinematica
     /// is used for such properties.
     /// <example>
     /// <code>
-    /// public struct ReduceTask : Task
+    /// public struct MatchFragmentTask : Task
     /// {
     ///     [Input("Trajectory")]
     ///     Identifier<Trajectory> trajectory;

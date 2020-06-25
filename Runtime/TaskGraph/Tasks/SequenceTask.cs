@@ -7,9 +7,9 @@ namespace Unity.Kinematica
     /// until it encounters a success status.
     /// </summary>
     [Data("Sequence", "#2A5637"), BurstCompile]
-    public struct SequenceTask : Task
+    public struct SequenceTask : Task, GenericTask<SequenceTask>
     {
-        internal MemoryIdentifier self;
+        public Identifier<SequenceTask> self { get; set; }
 
         internal MemoryRef<MotionSynthesizer> synthesizer;
 
@@ -87,7 +87,7 @@ namespace Unity.Kinematica
         /// <param name="self">Task reference that is supposed to be executed.</param>
         /// <returns>Result of the task execution.</returns>
         [BurstCompile]
-        public static Result ExecuteSelf(ref TaskRef self)
+        public static Result ExecuteSelf(ref TaskPointer self)
         {
             return self.Cast<SequenceTask>().Execute();
         }
@@ -96,7 +96,7 @@ namespace Unity.Kinematica
         {
             this.synthesizer = synthesizer.self;
 
-            self = MemoryIdentifier.Invalid;
+            self = Identifier<SequenceTask>.Invalid;
 
             this.loop = loop;
             this.resetWhenNotExecuted = resetWhenNotExecuted;
@@ -105,48 +105,31 @@ namespace Unity.Kinematica
             expectedTickFrame = -1;
         }
 
-        /// <summary>
-        /// Creates a new condition task as a child of the sequence task.
-        /// </summary>
-        /// <returns>Reference to the newly created condition task.</returns>
+        [System.Obsolete("Please use similar function from TaskReference.")]
         public ref ConditionTask Condition()
         {
             return ref synthesizer.Ref.Condition(self);
         }
 
-        /// <summary>
-        /// Creates a new action task as a child of the sequence task.
-        /// </summary>
-        /// <returns>Reference to the newly created action task.</returns>
+        [System.Obsolete("Please use similar function from TaskReference.")]
         public ref ActionTask Action()
         {
             return ref synthesizer.Ref.Action(self);
         }
 
-        /// <summary>
-        /// Creates a new selector task as a child of the sequence task.
-        /// </summary>
-        /// <returns>Reference to the newly created selector task.</returns>
+        [System.Obsolete("Please use similar function from TaskReference.")]
         public ref SelectorTask Selector()
         {
             return ref synthesizer.Ref.Selector(self);
         }
 
-        /// <summary>
-        /// Creates a new sequence task as a child of the sequence task.
-        /// </summary>
-        /// <param name="loop">If false, once the sequence has finished executing all its children, it will do nothing and just return success. If true, sequence will reexecute all its children tasks indefinitely.</param>
-        /// <param name="resetWhenNotExecuted">If true, and if the sequence isn't executed during one task graph pass, next time the sequence will be executed again, it will restart execution from its first child.</param>
-        /// <returns>Reference to the newly created sequence task.</returns>
+        [System.Obsolete("Please use similar function from TaskReference.")]
         public ref SequenceTask Sequence(bool loop = false, bool resetWhenNotExecuted = true)
         {
             return ref synthesizer.Ref.Sequence(self, loop, resetWhenNotExecuted);
         }
 
-        /// <summary>
-        /// Creates a new parallel task as a child of the sequence task.
-        /// </summary>
-        /// <returns>Reference to the newly created parallel task.</returns>
+        [System.Obsolete("Please use similar function from TaskReference.")]
         public ref ParallelTask Parallel()
         {
             return ref synthesizer.Ref.Parallel(self);

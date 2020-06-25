@@ -1,16 +1,17 @@
 using System;
 
-using UnityEngine.Assertions;
-
-using UnityEditor;
-
 using Unity.Mathematics;
+
+using UnityEngine;
+using Unity.Collections;
+using static AnimationCurveBake;
+using System.Collections;
 
 namespace Unity.Kinematica.Editor
 {
     internal partial class Builder
     {
-        public void BuildTransforms()
+        public IEnumerator BuildTransforms()
         {
             //
             // Now re-sample all animations according to the target
@@ -18,22 +19,6 @@ namespace Unity.Kinematica.Editor
             // reference the transforms array.
             //
 
-            var transforms = GenerateTransforms();
-
-            int numTransforms = transforms.Length;
-
-            ref Binary binary = ref Binary;
-
-            allocator.Allocate(numTransforms, ref binary.transforms);
-
-            for (int i = 0; i < numTransforms; ++i)
-            {
-                binary.transforms[i] = transforms[i];
-            }
-        }
-
-        AffineTransform[] GenerateTransforms()
-        {
             //
             // Calculate total number of poses to be generated
             // (based on previously generated segments)
@@ -45,142 +30,86 @@ namespace Unity.Kinematica.Editor
                 throw new ArgumentException($"Rig does not have enough joints. Only {numJoints} present.");
             }
 
-            if (segments.NumFrames == 0)
+            if (numFrames == 0)
             {
                 throw new Exception("No animation frame to process, please make sure there is at least one single non-empty tag in your Kinematica asset.");
             }
 
-            int numTransforms = segments.NumFrames * numJoints;
+            int numTransforms = numFrames * numJoints;
 
-            var transforms = new AffineTransform[numTransforms];
-
-            ref AffineTransform JointTransform(int jointIndex, int frameIndex)
+            using (NativeArray<AffineTransform> transforms = new NativeArray<AffineTransform>(numTransforms, Allocator.Persistent))
             {
-                Assert.IsTrue(jointIndex < numJoints);
-                Assert.IsTrue(frameIndex < segments.NumFrames);
-
-                return ref transforms[jointIndex * segments.NumFrames + frameIndex];
-            }
-
-            int destinationIndex = 0;
-
-            AnimationSampler sampler = null;
-
-            foreach (var segment in segments.ToArray())
-            {
-                sampler = GetAnimationSampler(segment, sampler);
-
-                var clip = sampler.AnimationClip;
-
-                float sourceSampleRate = clip.frameRate;
-                float targetSampleRate = asset.SampleRate;
-                float sampleRateRatio = sourceSampleRate / targetSampleRate;
-
-                int firstFrame = segment.source.FirstFrame;
-                int numFramesSource = segment.source.NumFrames;
-                int numFramesDestination =
-                    Missing.roundToInt(numFramesSource / sampleRateRatio);
-
-                Assert.IsTrue(segment.destination.FirstFrame == destinationIndex);
-                Assert.IsTrue(segment.destination.NumFrames == numFramesDestination);
-
-                float baseSampleTimeInSeconds = firstFrame / sourceSampleRate;
-                float clipDuration = segment.clip.DurationInSeconds;
-                int numFrames = Missing.truncToInt(clip.frameRate * clipDuration);
-                int lastKeyFrame = numFrames - 1;
-                float maximumSampleTimeInSeconds = numFrames / sourceSampleRate;
-
-                float SampleTimeInSeconds(float sampleTimeInSeconds)
+                int globalSegmentIndex = 0;
+                int destinationFrameIndex = 0;
+                for (int clipIndex = 0; clipIndex < clipSegments.Count; ++clipIndex)
                 {
-                    Assert.IsTrue(sampleTimeInSeconds <= maximumSampleTimeInSeconds);
-                    int sampleKeyFrame = Missing.truncToInt(sampleTimeInSeconds * sourceSampleRate);
-                    Assert.IsTrue(sampleKeyFrame < numFrames);
-                    if (sampleKeyFrame == lastKeyFrame)
+                    ClipSegments segments = clipSegments[clipIndex];
+                    AnimationClip clip = segments.Clip.GetOrLoadClipSync();
+
+                    using (AnimationSampler animSampler = new AnimationSampler(rig, clip))
                     {
-                        return sampleKeyFrame / sourceSampleRate;
+                        float sourceSampleRate = clip.frameRate;
+                        float targetSampleRate = asset.SampleRate;
+                        float sampleRateRatio = sourceSampleRate / targetSampleRate;
+
+                        int numFrameResampledClip = (int)math.ceil(targetSampleRate * segments.Clip.DurationInSeconds);
+
+                        for (int segmentIndex = 0; segmentIndex < segments.NumSegments; ++segmentIndex, ++globalSegmentIndex)
+                        {
+                            Segment segment = segments[segmentIndex];
+
+                            int firstFrame = Missing.roundToInt(segment.source.FirstFrame / sampleRateRatio);
+                            firstFrame = math.min(firstFrame, numFrameResampledClip - 1);
+
+                            SampleRange sampleRange = new SampleRange()
+                            {
+                                startFrameIndex = firstFrame,
+                                numFrames = segment.destination.NumFrames
+                            };
+
+                            using (AnimationSampler.RangeSampler rangeSampler = animSampler.PrepareRangeSampler(asset.SampleRate, sampleRange, destinationFrameIndex, transforms))
+                            {
+                                rangeSampler.Schedule();
+
+                                progressFeedback?.Invoke(new ProgressInfo()
+                                {
+                                    title = $"Sample clip {clip.name}",
+                                    progress = (float)globalSegmentIndex / numSegments
+                                });
+
+                                while (!rangeSampler.IsComplete)
+                                {
+                                    yield return null;
+                                    if (bCancel)
+                                    {
+                                        rangeSampler.Complete();
+                                        yield break;
+                                    }
+                                }
+
+                                rangeSampler.Complete();
+                            }
+
+                            destinationFrameIndex += segment.destination.NumFrames;
+                        }
                     }
-                    return sampleTimeInSeconds;
                 }
 
-                ref TransformBuffer transformBuffer = ref sampler.TransformBuffer;
-
-                for (int i = 0; i < numFramesDestination; ++i)
-                {
-                    float progress = (float)destinationIndex / (float)segments.NumFrames;
-                    EditorUtility.DisplayProgressBar("Motion Synthesizer Asset",
-                        "Building joint transforms", progress);
-
-                    float offsetSampleTimeInSeconds = i * sampleRateRatio / sourceSampleRate;
-                    float sampleTimeInSeconds = SampleTimeInSeconds(
-                        baseSampleTimeInSeconds + offsetSampleTimeInSeconds);
-
-                    sampler.SamplePose(sampleTimeInSeconds);
-
-                    //
-                    // Now accumulate all transforms in the transform buffer
-                    // and output them into the final transforms array.
-                    //
-
-                    JointTransform(0, destinationIndex) = transformBuffer[0];
-
-                    transformBuffer[0] = AffineTransform.identity;
-                    AccumulateTransforms(ref transformBuffer, rig);
-
-                    for (int k = 1; k < numJoints; ++k)
-                    {
-                        JointTransform(k, destinationIndex) = transformBuffer[k];
-                    }
-
-                    destinationIndex++;
-                }
+                WriteTransformsToBinary(transforms);
             }
-
-            sampler.Dispose();
-
-            Assert.IsTrue(destinationIndex == segments.NumFrames);
-
-            return transforms;
         }
 
-        AnimationSampler GetAnimationSampler(Segment segment, AnimationSampler sampler)
+        void WriteTransformsToBinary(NativeArray<AffineTransform> transforms)
         {
-            var avatar = segment.GetSourceAvatar(asset);
+            int numTransforms = transforms.Length;
 
-            Assert.IsTrue(factories.ContainsKey(avatar));
+            ref Binary binary = ref Binary;
 
-            var factory = factories[avatar];
+            allocator.Allocate(numTransforms, ref binary.transforms);
 
-            var animationClip = segment.clip.AnimationClip;
-
-            if (sampler == null || sampler.AnimationClip != animationClip)
+            for (int i = 0; i < numTransforms; ++i)
             {
-                if (sampler != null)
-                {
-                    sampler.Dispose();
-                }
-
-                sampler = factory.Create(animationClip);
-            }
-
-            return sampler;
-        }
-
-        static void AccumulateTransforms(ref TransformBuffer transformBuffer, AnimationRig rig)
-        {
-            Assert.IsTrue(transformBuffer.Length == rig.NumJoints);
-            Assert.IsTrue(rig.GetParentJointIndex(0) == -1);
-
-            for (int i = 1; i < rig.NumJoints; ++i)
-            {
-                int parentJointIndex = rig.GetParentJointIndex(i);
-                Assert.IsTrue(parentJointIndex < i);
-
-                AffineTransform src = transformBuffer[i];
-                AffineTransform dst = transformBuffer[parentJointIndex];
-
-                transformBuffer[i] = new AffineTransform(
-                    dst.t + Missing.rotateVector(dst.q, src.t),
-                    math.mul(dst.q, src.q));
+                binary.transforms[i] = transforms[i];
             }
         }
     }

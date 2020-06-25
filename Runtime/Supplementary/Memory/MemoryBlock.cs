@@ -183,6 +183,12 @@ namespace Unity.Kinematica
 #endif
 
         /// <summary>
+        /// Create invalid memory header that don't point to any data
+        /// </summary>
+        /// <returns></returns>
+        public static MemoryHeader<T> CreateInvalid() => new MemoryHeader<T>() { ptr = null };
+
+        /// <summary>
         /// Constructs a new memory reference from a ref value.
         /// </summary>
         /// <param name="target">The ref value that this memory reference should be constructed for.</param>

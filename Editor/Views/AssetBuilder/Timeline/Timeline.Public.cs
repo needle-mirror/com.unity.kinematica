@@ -12,13 +12,6 @@ namespace Unity.Kinematica.Editor
         public const string k_Stylesheet = "Timeline.uss";
         public const string k_timelineCellStyleKey = "timelineCell";
 
-        public enum PreviewState
-        {
-            Disabled,
-            Enabled,
-            Active
-        }
-
         public VisualElement m_TimelineScrollableArea;
         public VisualElement m_ScrollViewContainer;
 
@@ -34,6 +27,15 @@ namespace Unity.Kinematica.Editor
                     if (m_TaggedClip != null)
                     {
                         UnsubFromClip();
+
+                        if (value != null)
+                        {
+                            if (m_TaggedClip.Asset != value.Asset && m_SelectionContainer != null)
+                            {
+                                UnityEngine.Object.DestroyImmediate(m_SelectionContainer);
+                                m_SelectionContainer = null;
+                            }
+                        }
                     }
 
                     m_TaggedClip = value;
@@ -170,7 +172,7 @@ namespace Unity.Kinematica.Editor
 
         public bool CanPreview()
         {
-            if (TargetAsset == null || TargetAsset.DestinationAvatar == null || PreviewTarget == null || TaggedClip == null || TaggedClip.AnimationClip == null || EditorApplication.isPlaying)
+            if (TargetAsset == null || TargetAsset.DestinationAvatar == null || PreviewTarget == null || TaggedClip == null || !TaggedClip.Valid || EditorApplication.isPlaying)
             {
                 return false;
             }
@@ -220,6 +222,7 @@ namespace Unity.Kinematica.Editor
                     if (m_Target != null)
                     {
                         m_Target.AssetWasDeserialized -= OnAssetDeserialized;
+                        m_Target.MarkedDirty -= OnAssetModified;
                     }
 
                     m_Target = null;
@@ -228,24 +231,24 @@ namespace Unity.Kinematica.Editor
                     if (m_Target != null)
                     {
                         m_Target.AssetWasDeserialized += OnAssetDeserialized;
+                        m_Target.MarkedDirty += OnAssetModified;
                     }
                 }
             }
         }
 
-        public void OnPlayModeStateChanged(PlayModeStateChange stateChange, GameObject target)
+        public void SetTimelineEditingEnabled(bool enabled)
         {
-            PreviewTarget = target;
-            if (stateChange == PlayModeStateChange.ExitingPlayMode || stateChange == PlayModeStateChange.EnteredEditMode)
+            if (enabled)
             {
                 HideDebugPlayhead();
                 ActiveTick.ShowHandle = true;
-                EnableEdit();
+                m_TrackElements.ForEach(t => t.EnableEdit());
             }
-            else if (stateChange == PlayModeStateChange.EnteredPlayMode || stateChange == PlayModeStateChange.ExitingEditMode)
+            else
             {
                 ActiveTick.ShowHandle = false;
-                DisableEdit();
+                m_TrackElements.ForEach(t => t.DisableEdit());
             }
         }
 
@@ -362,7 +365,6 @@ namespace Unity.Kinematica.Editor
 
         public void SetTimeRange(float startTime, float endTime)
         {
-            float sampleRate = TaggedClip != null ? TaggedClip.SampleRate : 60f;
             m_TimeRange.SetTimeRange(new Vector2(startTime - 1, endTime + 1));
         }
 

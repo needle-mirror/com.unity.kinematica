@@ -87,11 +87,11 @@ namespace Unity.Kinematica
 
             public void Display(ref Binary binary, AffineTransform anchorTransform, Options options)
             {
+                DeltaSamplingTime currentSamplingTime;
+                AffineTransform deltaTransform;
+                AffineTransform referenceTransform = binary.GetTrajectoryTransform(samplingTime);
                 if (options.showTimeSpan)
                 {
-                    var referenceTransform =
-                        binary.GetTrajectoryTransform(samplingTime);
-
                     ref var metric = ref binary.GetMetric(metricIndex);
 
                     var halfTimeSpan = metric.poseTimeSpan * 0.5f;
@@ -104,11 +104,11 @@ namespace Unity.Kinematica
 
                     for (int j = 0; j <= numSamples; ++j)
                     {
-                        var currentSamplingTime =
+                        currentSamplingTime =
                             binary.Advance(samplingTime,
                                 currentTime);
 
-                        var deltaTransform = referenceTransform.inverseTimes(
+                        deltaTransform = referenceTransform.inverseTimes(
                             binary.GetTrajectoryTransform(currentSamplingTime));
 
                         var rootTransform = anchorTransform * deltaTransform;
@@ -116,25 +116,23 @@ namespace Unity.Kinematica
                         float x = currentTime / halfTimeSpan;
 
                         float sigma = Missing.inverseAbsHat(
-                            x, options.timeOffset);
+                            x, 0.0f);
 
                         Assert.IsTrue(sigma >= -1.0f && sigma <= 1.0f);
 
-                        color.a = 0.1f + (sigma * 0.9f);
+                        color.a = 0.1f + (sigma * 0.5f);
 
                         binary.DebugDrawPoseWorldSpace(
                             rootTransform, currentSamplingTime.samplingTime, color);
 
                         currentTime += deltaTime;
                     }
+                }
 
-                    DisplayPoseAtOffset(ref binary, anchorTransform, options);
-                }
-                else
-                {
-                    binary.DebugDrawPoseWorldSpace(
-                        anchorTransform, samplingTime, options.poseColor);
-                }
+                currentSamplingTime = binary.Advance(samplingTime, options.timeOffset * binary.TimeHorizon);
+                deltaTransform = referenceTransform.inverseTimes(binary.GetTrajectoryTransform(currentSamplingTime));
+                binary.DebugDrawPoseWorldSpace(anchorTransform * deltaTransform, currentSamplingTime.samplingTime, options.poseColor);
+
 
                 if (options.showDetails)
                 {

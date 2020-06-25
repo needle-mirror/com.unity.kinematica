@@ -171,7 +171,11 @@ namespace Unity.SnapshotDebugger
                     {
                         var provider = aggregate[reference.identifier];
 
-                        reference.customPayload = provider.OnPostProcess();
+                        if (provider.RequirePostProcess)
+                        {
+                            reference.customPayload = Buffer.Create();
+                            provider.OnWritePostProcess(reference.customPayload);
+                        }
                     }
                 }
             }

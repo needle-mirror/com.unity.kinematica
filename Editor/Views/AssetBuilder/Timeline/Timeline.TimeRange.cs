@@ -247,8 +247,7 @@ namespace Unity.Kinematica.Editor
 
             if (TaggedClip != null && TaggedClip.Valid)
             {
-                AnimationClip animClip = TaggedClip.AnimationClip;
-                frameRate = animClip.frameRate;
+                frameRate = TaggedClip.SampleRate;
                 clipLength = TaggedClip.DurationInSeconds;
                 minTime = -clipLength;
                 maxTime = 2 * clipLength;

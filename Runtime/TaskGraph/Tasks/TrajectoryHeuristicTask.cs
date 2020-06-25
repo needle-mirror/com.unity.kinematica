@@ -12,9 +12,9 @@ namespace Unity.Kinematica
     /// and candidate pose to a desired trajectory.
     /// </summary>
     [Data("TrajectoryHeuristic", "#2A3756"), BurstCompile]
-    public struct TrajectoryHeuristicTask : Task
+    public struct TrajectoryHeuristicTask : Task, GenericTask<TrajectoryHeuristicTask>
     {
-        public Identifier<TrajectoryHeuristicTask> self;
+        public Identifier<TrajectoryHeuristicTask> self { get; set; }
 
         internal MemoryRef<MotionSynthesizer> synthesizer;
 
@@ -158,7 +158,7 @@ namespace Unity.Kinematica
         /// <param name="self">Task reference that is supposed to be executed.</param>
         /// <returns>Result of the task execution.</returns>
         [BurstCompile]
-        public static Result ExecuteSelf(ref TaskRef self)
+        public static Result ExecuteSelf(ref TaskPointer self)
         {
             return self.Cast<TrajectoryHeuristicTask>().Execute();
         }

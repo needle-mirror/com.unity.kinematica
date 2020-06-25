@@ -7,8 +7,22 @@ using UnityEngine;
 
 namespace Unity.Kinematica.Editor
 {
-    internal partial class Asset : ScriptableObject
+    partial class Asset : ScriptableObject
     {
+        public string AssetPath
+        {
+            get { return AssetDatabase.GetAssetPath(this); }
+        }
+
+        public string BinaryPath
+        {
+            get
+            {
+                string assetGuid = AssetDatabase.AssetPathToGUID(AssetPath);
+                return Path.GetFullPath(Binary.GetBinaryFilePathFromAssetGuid(assetGuid));
+            }
+        }
+
         /// <summary>
         /// TaggedAnimationClip that corresponds to the supplied AnimationClip
         /// </summary>
@@ -16,7 +30,8 @@ namespace Unity.Kinematica.Editor
         /// <returns>Returns the TaggedAnimationClip associated with the supplied AnimationClip</returns>
         public bool ContainsAnimationClip(AnimationClip clip)
         {
-            return AnimationLibrary.Any((TaggedAnimationClip taggedClip) => { return taggedClip.AnimationClip == clip; });
+            SerializableGuid clipGuid = SerializableGuidUtility.GetSerializableGuidFromAsset(clip);
+            return AnimationLibrary.Any((TaggedAnimationClip taggedClip) => { return taggedClip.AnimationClipGuid == clipGuid; });
         }
 
         /// <summary>
@@ -26,7 +41,8 @@ namespace Unity.Kinematica.Editor
         /// <returns>Returns the TaggedAnimationClip associated with the supplied AnimationClip</returns>
         internal TaggedAnimationClip FindTaggedAnimationClip(AnimationClip clip)
         {
-            return AnimationLibrary.FirstOrDefault((TaggedAnimationClip taggedClip) => { return taggedClip.AnimationClip == clip; });
+            SerializableGuid clipGuid = SerializableGuidUtility.GetSerializableGuidFromAsset(clip);
+            return AnimationLibrary.FirstOrDefault((TaggedAnimationClip taggedClip) => { return taggedClip.AnimationClipGuid == clipGuid; });
         }
 
         /// <summary>
@@ -44,8 +60,14 @@ namespace Unity.Kinematica.Editor
 
             TaggedAnimationClip taggedAnimationClip = null;
 
+            SerializableGuid clipGuid = SerializableGuidUtility.GetSerializableGuidFromAsset(clip);
+            if (!clipGuid.IsSet())
+            {
+                throw new ArgumentException("argument \"clip\" must be an asset on the disk");
+            }
+
             //Don't add existing AnimationClip to library
-            if (AnimationLibrary.Any((TaggedAnimationClip taggedClip) => { return taggedClip.AnimationClip == clip; }))
+            if (AnimationLibrary.Any((TaggedAnimationClip taggedClip) => { return taggedClip.AnimationClipGuid == clipGuid; }))
                 return null;
 
             try
@@ -75,9 +97,11 @@ namespace Unity.Kinematica.Editor
             if (clip == null)
                 throw new ArgumentNullException("clip");
 
+            SerializableGuid clipGuid = SerializableGuidUtility.GetSerializableGuidFromAsset(clip);
+
             Undo.RecordObject(this, string.Format("Remove Animation Clip {0}", clip.name));
 
-            int removed = AnimationLibrary.RemoveAll((TaggedAnimationClip tagged) => { return tagged.AnimationClip == clip; });
+            int removed = AnimationLibrary.RemoveAll((TaggedAnimationClip tagged) => { return tagged.AnimationClipGuid == clipGuid; });
 
             if (removed > 0)
             {
@@ -87,55 +111,64 @@ namespace Unity.Kinematica.Editor
             return removed > 0;
         }
 
-        /// <summary>
-        /// Builds the binary for this asset
-        /// </summary>
-        public void Build()
+        public event Action BuildStarted;
+        public event Action BuildStopped;
+
+
+        BuildProcess m_CurrentBuildProcess;
+
+        public bool BuildInProgress => m_CurrentBuildProcess != null;
+
+        public BuildProcess BuildAsync()
         {
             string errors = null;
             if (!CanBuild(ref errors))
             {
                 Debug.LogError(errors);
-                return;
+                return null;
             }
 
-            try
-            {
-                var builder = Builder.Create(this);
+            BuildStarted?.Invoke();
 
-                try
+            m_CurrentBuildProcess = new BuildProcess(this);
+            m_CurrentBuildProcess.BuildStopped += OnBuildStopped;
+            return m_CurrentBuildProcess;
+        }
+
+        void OnBuildStopped()
+        {
+            m_CurrentBuildProcess.BuildStopped -= OnBuildStopped;
+            m_CurrentBuildProcess = null;
+            BuildStopped?.Invoke();
+        }
+
+        /// <summary>
+        /// Builds the binary for this asset
+        /// </summary>
+        public void BuildSync()
+        {
+            EditorUtility.DisplayProgressBar($"Building Kinematica Asset {name}.asset", "", 0.0f);
+
+            using (BuildProcess buildProcess = BuildAsync())
+            {
+                BuildStarted?.Invoke();
+                buildProcess.Builder.progressFeedback += progressInfo => EditorUtility.DisplayProgressBar($"Building Kinematica Asset {name}.asset", progressInfo.title, progressInfo.progress);
+
+                while (!buildProcess.IsFinished)
                 {
-                    string assetPath = AssetDatabase.GetAssetPath(this);
-                    string assetGuid = AssetDatabase.AssetPathToGUID(assetPath);
-                    string filePath = Path.GetFullPath(Binary.GetBinaryFilePathFromAssetGuid(assetGuid));
-
-                    var fileDirectory = Path.GetDirectoryName(filePath);
-                    if (!Directory.Exists(fileDirectory))
-                    {
-                        Directory.CreateDirectory(fileDirectory);
-                    }
-
-                    if (builder.Build(filePath))
-                    {
-                        builder.Binary.GenerateDebugDocument().Save(
-                            Path.ChangeExtension(assetPath, ".debug.xml"));
-                        MarkDirty(false);
-                        m_Data.syncedWithBinary = true;
-                    }
+                    buildProcess.FrameUpdate();
                 }
-                finally
-                {
-                    builder.Dispose();
-                }
+
+                BuildStopped?.Invoke();
             }
-            catch (Exception e)
-            {
-                Debug.LogError($"{e.Message} : {e.InnerException}");
-            }
-            finally
-            {
-                EditorUtility.ClearProgressBar();
-            }
+
+            EditorUtility.ClearProgressBar();
+        }
+
+        public void OnAssetBuilt()
+        {
+            MarkDirty(false);
+            m_Data.syncedWithBinary = true;
         }
     }
 }

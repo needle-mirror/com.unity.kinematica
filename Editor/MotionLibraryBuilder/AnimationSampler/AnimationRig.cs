@@ -7,6 +7,7 @@ using UnityEngine.Assertions;
 using Unity.Mathematics;
 
 using UnityEditor;
+using Unity.Collections;
 
 namespace Unity.Kinematica.Editor
 {
@@ -22,8 +23,7 @@ namespace Unity.Kinematica.Editor
         Joint[] joints;
         string[] jointPaths;
 
-        // by default the body joint is the second joint
-        int bodyJointIndex = 1;
+        int bodyJointIndex = -1;
 
         Avatar avatar;
 
@@ -66,6 +66,19 @@ namespace Unity.Kinematica.Editor
             for (int i = 0; i < Joints.Length; ++i)
             {
                 if (Joints[i].name == name)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        public int GetJointIndexFromPath(string path)
+        {
+            for (int i = 0; i < Joints.Length; ++i)
+            {
+                if (jointPaths[i] == path)
                 {
                     return i;
                 }
@@ -124,6 +137,18 @@ namespace Unity.Kinematica.Editor
             return transforms;
         }
 
+        public NativeArray<int> GenerateParentIndices()
+        {
+            NativeArray<int> parents = new NativeArray<int>(NumJoints, Allocator.Persistent);
+
+            for (int jointIndex = 0; jointIndex < NumJoints; ++jointIndex)
+            {
+                parents[jointIndex] = joints[jointIndex].parentIndex;
+            }
+
+            return parents;
+        }
+
         AnimationRig(Avatar avatar)
         {
             this.avatar = avatar;
@@ -148,6 +173,18 @@ namespace Unity.Kinematica.Editor
                         bodyJointIndex = GetJointIndexFromName(humanBone.boneName);
                         break;
                     }
+                }
+            }
+            else
+            {
+                string rootJointName = Utility.GetImporterRootJointName(assetPath);
+                if (rootJointName == null)
+                {
+                    bodyJointIndex = -1;
+                }
+                else
+                {
+                    bodyJointIndex = GetJointIndexFromName(rootJointName);
                 }
             }
         }

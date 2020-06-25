@@ -31,16 +31,16 @@ namespace SnappyLocomotion
 
             ref var synthesizer = ref kinematica.Synthesizer.Ref;
 
-            synthesizer.Push(
+            synthesizer.PlayFirstSequence(
                 synthesizer.Query.Where(
                     Locomotion.Default).And(Idle.Default));
 
-            ref var selector = ref synthesizer.Selector();
+            var selector = synthesizer.Root.Selector();
 
             {
-                ref var sequence = ref selector.Condition().Sequence();
+                var sequence = selector.Condition().Sequence();
 
-                sequence.Action().PushConstrained(
+                sequence.Action().MatchPose(
                     synthesizer.Query.Where(
                         Locomotion.Default).And(Idle.Default), 0.01f);
 
@@ -48,22 +48,22 @@ namespace SnappyLocomotion
             }
 
             {
-                ref var action = ref selector.Action();
+                var action = selector.Action();
 
-                ref var prediction = ref action.TrajectoryPrediction();
+                ref var prediction = ref action.TrajectoryPrediction().GetAs<TrajectoryPredictionTask>();
                 prediction.velocityFactor = 0.2f;
                 prediction.rotationFactor = 0.1f;
                 desiredTrajectory = prediction.trajectory;
 
-                action.PushConstrained(
+                action.MatchPoseAndTrajectory(
                     synthesizer.Query.Where(
                         Locomotion.Default).Except(Idle.Default),
                             prediction.trajectory);
 
-                action.GetByType<ReduceTask>().responsiveness = 0.7f;
+                action.GetChildByType<MatchFragmentTask>().trajectoryWeight = 0.7f;
             }
 
-            locomotion = selector;
+            locomotion = selector.GetAs<SelectorTask>();
         }
 
         public virtual void OnAnimatorMove()
@@ -72,7 +72,11 @@ namespace SnappyLocomotion
             {
                 ref MotionSynthesizer synthesizer = ref kinematica.Synthesizer.Ref;
 
-                AffineTransform rootDelta = synthesizer.SteerRootMotion(desiredTrajectory, snapTranslationFactor, snapRotationFactor);
+                ref var idle = ref synthesizer.GetChildByType<ConditionTask>(locomotion).Ref;
+
+                AffineTransform rootDelta = synthesizer.SteerRootMotion(desiredTrajectory,
+                    idle.value ? 0.0f : snapTranslationFactor,
+                    idle.value ? 0.0f : snapRotationFactor);
 
                 float3 rootTranslation = transform.rotation * rootDelta.t;
                 transform.rotation *= rootDelta.q;
@@ -93,8 +97,8 @@ namespace SnappyLocomotion
             ref var synthesizer = ref kinematica.Synthesizer.Ref;
             synthesizer.Tick(locomotion);
 
-            ref var prediction = ref synthesizer.GetByType<TrajectoryPredictionTask>(locomotion).Ref;
-            ref var idle = ref synthesizer.GetByType<ConditionTask>(locomotion).Ref;
+            ref var prediction = ref synthesizer.GetChildByType<TrajectoryPredictionTask>(locomotion).Ref;
+            ref var idle = ref synthesizer.GetChildByType<ConditionTask>(locomotion).Ref;
 
             var horizontal = InputUtility.GetMoveHorizontalInput();
             var vertical = InputUtility.GetMoveVerticalInput();

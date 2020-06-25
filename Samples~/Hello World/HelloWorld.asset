@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 67ddb658bcc363b4bbf299214cfbe711, type: 3}
   m_Name: HelloWorld
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   animationLibrary: []
   destinationAvatar: {fileID: 0}
   timeHorizon: -1
@@ -19,18 +19,18 @@ MonoBehaviour:
   m_Data:
     syncedWithBinary: 0
     animationLibrary:
-    - m_PreBoundaryClip: {fileID: 0}
-      m_PreBoundaryClipGuid:
+    - m_PreBoundaryClipGuid:
         val0: 0
         val1: 0
         val2: 0
         val3: 0
-      m_PostBoundaryClip: {fileID: 0}
       m_PostBoundaryClipGuid:
         val0: 0
         val1: 0
         val2: 0
         val3: 0
+      m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
       m_AnimationClipReference: {fileID: 1827226128182048838, guid: ecd415726dd25244f83d0bafba00ca5d,
         type: 3}
       m_AnimationClipGuid:
@@ -39,6 +39,8 @@ MonoBehaviour:
         val2: -1358217736
         val3: 1573519546
       m_CachedClipName: Idle
+      m_CachedClipDuration: 10.033334
+      m_CachedSampleRate: 30
       m_RetargetSourceAvatar: {fileID: 0}
       tags:
       - startTime: 0
@@ -47,28 +49,28 @@ MonoBehaviour:
           serializedData: '{}'
           assemblyQualifiedTypeName: HelloWorld.LocomotionTag, Assembly-CSharp-Editor,
             Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-        name:
+        name: 
       - startTime: 0
         duration: 10.033334
         payload:
           serializedData: '{}'
           assemblyQualifiedTypeName: HelloWorld.IdleTag, Assembly-CSharp-Editor,
             Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-        name:
+        name: 
       markers: []
       m_Asset: {fileID: 11400000}
-    - m_PreBoundaryClip: {fileID: 0}
-      m_PreBoundaryClipGuid:
+    - m_PreBoundaryClipGuid:
         val0: 0
         val1: 0
         val2: 0
         val3: 0
-      m_PostBoundaryClip: {fileID: 0}
       m_PostBoundaryClipGuid:
         val0: 0
         val1: 0
         val2: 0
         val3: 0
+      m_PreBoundaryClip: {fileID: 0}
+      m_PostBoundaryClip: {fileID: 0}
       m_AnimationClipReference: {fileID: 1827226128182048838, guid: c31dea1727bf78c4c9d05e3650d70314,
         type: 3}
       m_AnimationClipGuid:
@@ -77,6 +79,8 @@ MonoBehaviour:
         val2: 912183497
         val3: 335796048
       m_CachedClipName: Start_Stop_1
+      m_CachedClipDuration: 70.1
+      m_CachedSampleRate: 30
       m_RetargetSourceAvatar: {fileID: 0}
       tags:
       - startTime: 1.5
@@ -85,11 +89,11 @@ MonoBehaviour:
           serializedData: '{}'
           assemblyQualifiedTypeName: HelloWorld.LocomotionTag, Assembly-CSharp-Editor,
             Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-        name:
+        name: 
       markers: []
       m_Asset: {fileID: 11400000}
     destinationAvatar: {fileID: 9000000, guid: 74cebad771d996c4cb5b49a97f4a567a, type: 3}
     metrics: []
     timeHorizon: 1
     sampleRate: 30
-  m_SerializeVersion: 2
+  m_SerializeVersion: 3

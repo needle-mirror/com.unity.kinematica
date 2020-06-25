@@ -19,12 +19,15 @@ namespace Unity.Kinematica
         public float                            startTime;
         public float                            endTime;
 
+        public float                            blendOutDuration;
+        public float                            blendOutTime;
+
         public int                              rank;
 
         public CircularList<AnimationFrameInfo> animFrames;
 
 
-        public void AddAnimationFrame(float endTime, float weight, float animFrame)
+        public void AddAnimationFrame(float endTime, float weight, float animFrame, float blendOutDuration)
         {
             animFrames.PushBack(new AnimationFrameInfo()
             {
@@ -32,6 +35,12 @@ namespace Unity.Kinematica
                 weight = weight,
                 animFrame = animFrame
             });
+
+            if (blendOutDuration > 0.0f)
+            {
+                this.blendOutDuration = blendOutDuration;
+                blendOutTime = blendOutDuration;
+            }
 
             Assert.IsTrue(endTime <= this.endTime);
         }

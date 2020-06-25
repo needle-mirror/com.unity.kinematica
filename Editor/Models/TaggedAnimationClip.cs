@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityEngine.Assertions.Comparers;
 using Unity.Mathematics;
 using UnityEditor;
+using NUnit.Framework;
+using System.IO;
 
 namespace Unity.Kinematica.Editor
 {
@@ -18,71 +20,93 @@ namespace Unity.Kinematica.Editor
     internal partial class TaggedAnimationClip : IDisposable
     {
         [SerializeField]
-        LazyLoadReference<AnimationClip> m_AnimationClipReference;
-
-        [SerializeField]
         SerializableGuid m_AnimationClipGuid;
 
-        public SerializableGuid AnimationClipGuid
-        {
-            get
-            {
-                return m_AnimationClipGuid;
-            }
-        }
+        public SerializableGuid AnimationClipGuid => m_AnimationClipGuid;
+
+        public string AnimationClipPath => m_AnimationClipGuid.IsSet() ? AssetDatabase.GUIDToAssetPath(m_AnimationClipGuid.GetGuidStr()) : null;
 
         AnimationClip m_Clip;
 
-        public AnimationClip AnimationClip
+        public bool IsClipLoaded => m_Clip != null;
+
+        public AnimationClip GetOrLoadClipSync(bool bDisplayProgress = true)
         {
-            get
+            if (m_Clip == null)
             {
-                if (m_Clip == null)
+                m_Clip = LoadClipSync(bDisplayProgress);
+            }
+
+            return m_Clip;
+        }
+
+        AnimationClip LoadClipSync(bool bDisplayProgress = true)
+        {
+            AnimationClip clip = null;
+
+            Assert.IsTrue(Valid);
+            if (Valid)
+            {
+                if (bDisplayProgress)
                 {
-                    m_Clip = LoadAnimationClipFromGuid(m_AnimationClipGuid);
-                    if (m_Clip != null)
-                    {
-                        ClipName = m_Clip.name;
-                    }
+                    EditorUtility.DisplayProgressBar($"Loading clip {ClipName}", string.Empty, 1.0f);
                 }
 
-                return m_Clip;
-            }
-            set
-            {
-                if (m_Clip != value)
+                clip = LoadAnimationClipFromGuid(m_AnimationClipGuid);
+
+                if (bDisplayProgress)
                 {
-                    m_Clip = value;
-                    SerializeGuidStr(m_Clip, ref m_AnimationClipGuid);
+                    EditorUtility.ClearProgressBar();
                 }
             }
+
+            return clip;
         }
+
+        void SetClip(AnimationClip clip)
+        {
+            if (clip == null)
+            {
+                m_Clip = null;
+                return;
+            }
+
+            AnimationClipPostprocessor.RemoveOnImport(m_AnimationClipGuid, ReloadClipAndMarkDirty);
+            AnimationClipPostprocessor.RemoveOnDelete(m_AnimationClipGuid, OnDeleteClip);
+
+            m_AnimationClipGuid = SerializableGuidUtility.GetSerializableGuidFromAsset(clip);
+
+            AnimationClipPostprocessor.AddOnImport(m_AnimationClipGuid, ReloadClipAndMarkDirty);
+            AnimationClipPostprocessor.AddOnDelete(m_AnimationClipGuid, OnDeleteClip);
+
+            m_Clip = clip;
+            m_CachedClipVersion = AnimationClipPostprocessor.GetClipVersion(clip);
+            m_CachedClipName = clip.name;
+            m_CachedClipDuration = Utility.ComputeAccurateClipDuration(clip);
+            m_CachedSampleRate = clip.frameRate;
+        }
+
+        internal const string k_MissingClipText = "Missing Animation Clip";
+
+        [SerializeField]
+        int m_CachedClipVersion;
+
+        public int ClipVersion => m_CachedClipVersion;
 
         [SerializeField]
         string m_CachedClipName;
 
-        internal const string k_MissingClipText = "Missing Animation Clip";
+        public string ClipName => Valid ? m_CachedClipName : m_CachedClipName + " (not found)";
 
-        public string ClipName
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(m_CachedClipName))
-                {
-                    ClipName = AnimationClip == null ? k_MissingClipText :  AnimationClip.name;
-                }
+        [SerializeField]
+        float m_CachedClipDuration;
 
-                return m_CachedClipName;
-            }
-            private set
-            {
-                if (m_CachedClipName != value)
-                {
-                    m_CachedClipName = value;
-                    NotifyChanged();
-                }
-            }
-        }
+        public float DurationInSeconds => m_CachedClipDuration;
+
+        [SerializeField]
+        float m_CachedSampleRate;
+
+        public float SampleRate => m_CachedSampleRate;
 
         [SerializeField]
         private Avatar m_RetargetSourceAvatar;
@@ -93,10 +117,18 @@ namespace Unity.Kinematica.Editor
             set { m_RetargetSourceAvatar = value; NotifyChanged(); }
         }
 
-        // Triggers loading clip
         public bool Valid
         {
-            get { return m_AnimationClipGuid.IsSet() && AnimationClip != null; }
+            get
+            {
+                if (m_AnimationClipGuid.IsSet())
+                {
+                    string assetPath = AssetDatabase.GUIDToAssetPath(m_AnimationClipGuid.GetGuidStr());
+                    return !string.IsNullOrEmpty(assetPath) && File.Exists(assetPath);
+                }
+
+                return false;
+            }
         }
 
         [SerializeField]
@@ -184,7 +216,7 @@ namespace Unity.Kinematica.Editor
         TaggedAnimationClip(AnimationClip animationClip, Asset asset, ETagImportOption tagImportOption)
         {
             m_Asset = asset;
-            AnimationClip = animationClip;
+            SetClip(animationClip);
 
             foreach (var method in Utility.GetExtensionMethods(GetType()))
             {
@@ -196,48 +228,21 @@ namespace Unity.Kinematica.Editor
                 object tag = DefaultTagAttribute.CreateDefaultTag();
                 if (tag != null)
                 {
-                    TagAnnotation tagAnnotation = TagAnnotation.Create(tag.GetType(), 0.0f, DurationInSeconds, this);
+                    TagAnnotation tagAnnotation = TagAnnotation.Create(tag.GetType(), 0.0f, DurationInSeconds);
                     tagAnnotation.payload.SetValueObject(tag);
                     AddTag(tagAnnotation);
                 }
             }
-        }
 
-        [SerializeField]
-        float m_CachedClipDuration;
-
-        public float DurationInSeconds
-        {
-            get
+            if (animationClip.isLooping)
             {
-                if (m_CachedClipDuration == 0.0f)
-                {
-                    m_CachedClipDuration = Utility.ComputeAccurateClipDuration(AnimationClip);
-                }
-                ;
-
-                return m_CachedClipDuration;
+                TaggedPreBoundaryClip = this;
+                TaggedPostBoundaryClip = this;
             }
 
-            private set
-            {
-                m_CachedClipDuration = value;
-            }
-        }
-
-        const float k_DefaultFrameRate = 30f;
-
-        public float SampleRate
-        {
-            get
-            {
-                if (!Valid)
-                {
-                    return k_DefaultFrameRate;
-                }
-
-                return AnimationClip.frameRate;
-            }
+            // Obsolete V1 variables
+            m_PreBoundaryClip = null;
+            m_PostBoundaryClip = null;
         }
 
         public int NumFrames
@@ -306,7 +311,7 @@ namespace Unity.Kinematica.Editor
 
             Undo.RecordObject(m_Asset, $"Add {TagAttribute.GetDescription(tagType)} tag");
 
-            TagAnnotation newTag = TagAnnotation.Create(tagType, startTime, duration, this);
+            TagAnnotation newTag = TagAnnotation.Create(tagType, startTime, duration);
             tags.Add(newTag);
 
             NotifyChanged();
@@ -385,12 +390,22 @@ namespace Unity.Kinematica.Editor
 
         public MarkerAnnotation AddMarker(Type type, float timeInSeconds)
         {
-            Undo.RecordObject(m_Asset, $"Add {TagAttribute.GetDescription(type)}");
             MarkerAnnotation marker = MarkerAnnotation.Create(type, timeInSeconds);
+            AddMarker(marker);
+            return marker;
+        }
+
+        public void AddMarker(MarkerAnnotation marker)
+        {
+            if (!Valid)
+            {
+                return;
+            }
+
+            Undo.RecordObject(m_Asset, $"Add {TagAttribute.GetDescription(marker.payload.Type)}");
             markers.Add(marker);
             MarkerAdded?.Invoke(marker);
             NotifyChanged();
-            return marker;
         }
 
         public event Action<MarkerAnnotation> MarkerRemoved;
@@ -490,6 +505,9 @@ namespace Unity.Kinematica.Editor
             }
 
             tags.Clear();
+
+            AnimationClipPostprocessor.RemoveOnImport(m_AnimationClipGuid, ReloadClipAndMarkDirty);
+            AnimationClipPostprocessor.RemoveOnDelete(m_AnimationClipGuid, OnDeleteClip);
         }
 
         static AnimationClip LoadAnimationClipFromGuid(SerializableGuid guid)

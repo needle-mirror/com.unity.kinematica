@@ -30,12 +30,17 @@ namespace Unity.Kinematica
     /// and rewind functionality, i.e. no additional user code is required
     /// to support snapshot debugging of the Kinematica component.
     /// </para>
+    /// <para>
+    /// The Kinematica component is not necessary to run Kinematica and all its
+    /// associated tools (task graph, snapshot debugger...), it is provided as an
+    /// example on how to use Kinematica inside a component.
+    /// </para>
     /// </remarks>
     /// <seealso cref="MotionSynthesizer"/>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Animator))]
     [AddComponentMenu("Kinematica/Kinematica")]
-    public partial class Kinematica : SnapshotProvider, FrameDebugProvider<AnimationFrameDebugInfo>
+    public partial class Kinematica : SnapshotProvider, FrameDebugProvider<AnimationFrameDebugInfo>, IMotionSynthesizerProvider
     {
         /// <summary>
         /// Allows access to the underlying Kinematica runtime asset.
@@ -71,25 +76,16 @@ namespace Unity.Kinematica
         [HideInInspector]
         protected float _deltaTime;
 
-        MemoryHeader<MotionSynthesizer> synthesizer;
-
-        MemoryHeader<MemoryChunk> memoryChunk;
-
-#if UNITY_EDITOR
-        MemoryHeader<MemoryChunk> memoryChunkShadow;
-#endif
+        MotionSynthesizerHolder synthesizerHolder = MotionSynthesizerHolder.CreateInvalid();
 
         PlayableGraph playableGraph;
 
-        Job job;
+        KinematicaJob job;
 
         /// <summary>
         /// Allows direct access to the underlying Kinematica runtime asset.
         /// </summary>
-        public ref Binary Binary
-        {
-            get { return ref synthesizer.Ref.Binary; }
-        }
+        public ref Binary Binary => ref synthesizerHolder.Binary;
 
         /// <summary>
         /// Allows direct access to the motion synthesizer.
@@ -104,44 +100,12 @@ namespace Unity.Kinematica
         {
             get
             {
-                if (synthesizer.IsValid)
+                if (!synthesizerHolder.IsValid)
                 {
-                    return synthesizer;
+                    synthesizerHolder = MotionSynthesizerHolder.Create(transform, resource, blendDuration);
                 }
 
-                var memoryRequirements =
-                    MemoryRequirements.Create(1024);
-
-                memoryChunk = MemoryChunk.Create(
-                    memoryRequirements, Allocator.Persistent);
-
-#if UNITY_EDITOR
-                memoryChunkShadow = MemoryChunk.Create(
-                    memoryRequirements, Allocator.Persistent);
-#endif
-                var rootTransform =
-                    new AffineTransform(
-                        transform.localPosition, transform.localRotation);
-
-                synthesizer = MotionSynthesizer.Create(
-                    resource, rootTransform, blendDuration);
-
-                synthesizer.Ref.self = synthesizer;
-                synthesizer.Ref.memoryChunk = memoryChunk;
-#if UNITY_EDITOR
-                synthesizer.Ref.memoryChunkShadow = memoryChunkShadow;
-#endif
-
-                var typeIndex =
-                    synthesizer.Ref.GetDataTypeIndex<RootTask>();
-
-                var root = memoryChunk.Ref.Allocate(
-                    RootTask.Create(ref synthesizer.Ref),
-                    typeIndex, MemoryIdentifier.Invalid);
-
-                synthesizer.Ref.GetRef<RootTask>(root).Ref.self = root;
-
-                return synthesizer;
+                return synthesizerHolder.Synthesizer;
             }
         }
 
@@ -199,23 +163,8 @@ namespace Unity.Kinematica
 #if UNITY_EDITOR
             Debugger.frameDebugger.RemoveFrameDebugProvider(this);
 #endif
-            synthesizer.Dispose();
+            synthesizerHolder.Dispose();
 
-            if (memoryChunk.IsValid)
-            {
-                memoryChunk.Ref.Dispose();
-            }
-
-            memoryChunk.Dispose();
-
-#if UNITY_EDITOR
-            if (memoryChunkShadow.IsValid)
-            {
-                memoryChunkShadow.Ref.Dispose();
-            }
-
-            memoryChunkShadow.Dispose();
-#endif
             job.Dispose();
 
             if (playableGraph.IsValid())
@@ -247,12 +196,7 @@ namespace Unity.Kinematica
                 EarlyUpdate();
             }
 
-#if UNITY_EDITOR
-            if (synthesizer.IsValid)
-            {
-                synthesizer.Ref.immutable = rewind;
-            }
-#endif
+            synthesizerHolder.OnEarlyUpdate(rewind);
         }
 
         /// <summary>
@@ -260,10 +204,7 @@ namespace Unity.Kinematica
         /// </summary>
         public void Update()
         {
-            if (synthesizer.IsValid)
-            {
-                synthesizer.Ref.UpdateFrameCount(Time.frameCount);
-            }
+            synthesizerHolder.Update();
         }
 
         /// <summary>
@@ -276,10 +217,10 @@ namespace Unity.Kinematica
         /// </remarks>
         public virtual void OnAnimatorMove()
         {
-            if (applyRootMotion && synthesizer.IsValid)
+            if (applyRootMotion && synthesizerHolder.IsValid)
             {
-                transform.position = synthesizer.Ref.WorldRootTransform.t;
-                transform.rotation = synthesizer.Ref.WorldRootTransform.q;
+                transform.position = Synthesizer.Ref.WorldRootTransform.t;
+                transform.rotation = Synthesizer.Ref.WorldRootTransform.q;
             }
         }
 
@@ -292,9 +233,11 @@ namespace Unity.Kinematica
                 animator.avatar.name = "Avatar";
             }
 
-            job = new Job();
+            var deltaTimeProperty = animator.BindSceneProperty(transform, typeof(Kinematica), "_deltaTime");
+
+            job = new KinematicaJob();
             if (!job.Setup(animator,
-                GetComponentsInChildren<Transform>(), ref Synthesizer.Ref))
+                GetComponentsInChildren<Transform>(), ref Synthesizer.Ref, deltaTimeProperty))
             {
                 return false;
             }
@@ -303,7 +246,7 @@ namespace Unity.Kinematica
                 PlayableGraph.Create(
                     $"Kinematica_{animator.transform.name}");
 
-            var output = AnimationPlayableOutput.Create(playableGraph, "ouput", animator);
+            var output = AnimationPlayableOutput.Create(playableGraph, "output", animator);
 
             var playable = AnimationScriptPlayable.Create(playableGraph, job);
 

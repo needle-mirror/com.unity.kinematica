@@ -54,21 +54,30 @@ namespace Unity.Kinematica
     }
 
     /// <summary>
-    /// Generic reference to a task.
+    /// Generic task interface allowing to do operations specifically on the task type
     /// </summary>
-    public unsafe struct TaskRef
+    /// <typeparam name="T"></typeparam>
+    public interface GenericTask<T> where T : struct
     {
-        internal static TaskRef CreateTaskRef<TaskType>(ref TaskType task) where TaskType : struct, Task
+        Identifier<T> self { get; set; }
+    }
+
+    /// <summary>
+    /// Generic pointer to a task.
+    /// </summary>
+    public unsafe struct TaskPointer
+    {
+        internal static TaskPointer CreateTaskPointer<TaskType>(ref TaskType task) where TaskType : struct, Task
         {
-            return new TaskRef()
+            return new TaskPointer()
             {
                 ptr = UnsafeUtility.AddressOf<TaskType>(ref task)
             };
         }
 
-        internal static TaskRef CreateFromPayload(byte* payload)
+        internal static TaskPointer CreateFromPayload(byte* payload)
         {
-            return new TaskRef()
+            return new TaskPointer()
             {
                 ptr = (void*)payload
             };
@@ -89,7 +98,7 @@ namespace Unity.Kinematica
 
     internal unsafe struct ExecuteFunction
     {
-        internal delegate Result ExecuteDelegate(ref TaskRef taskRef);
+        internal delegate Result ExecuteDelegate(ref TaskPointer taskRef);
         internal FunctionPointer<ExecuteDelegate>  functionPointer;
 
         public static ExecuteFunction CompileStaticMemberFunction(Type taskType)
@@ -108,7 +117,7 @@ namespace Unity.Kinematica
 
         public Result Invoke(byte* taskPayload)
         {
-            TaskRef taskRef = TaskRef.CreateFromPayload(taskPayload);
+            TaskPointer taskRef = TaskPointer.CreateFromPayload(taskPayload);
             return functionPointer.Invoke(ref taskRef);
         }
     }

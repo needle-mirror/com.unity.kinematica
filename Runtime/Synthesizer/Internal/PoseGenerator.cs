@@ -46,6 +46,11 @@ namespace Unity.Kinematica
                 if (v0 < -epsilon)
                 {
                     t1 = math.min(t1, -5.0f * x0 / v0);
+
+                    if (t1 <= epsilon)
+                    {
+                        return new ScalarTransition();
+                    }
                 }
 
                 float a0 = (-8.0f * v0 * t1 - 20.0f * x0) / Missing.squared(t1);
@@ -299,6 +304,8 @@ namespace Unity.Kinematica
         }
 
         internal TransformBuffer LocalSpaceTransformBuffer => currentPose;
+
+        public float BlendDuration => blendDuration;
 
         public int CurrentPushIndex => currentPushIndex;
         public float ApproximateTransitionProgression => approximateTransitionProgression;

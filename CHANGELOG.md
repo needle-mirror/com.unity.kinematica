@@ -4,6 +4,33 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/ )
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html ).
 
+## [0.7.0-preview] - 2020-06-25
+
+### Fixed
+- Fixed possible NaN in ScalarTransition
+- Fixed borders of metric visualization so it is now possible to differentiate between adjacent metrics
+- The Asset Builder will now properly update when changes are made in the inspector window
+
+### Added
+- Added fragment comparison debug info (including pose & trajectory cost) in task graph for match fragment task
+- Added SynthesizerHolder to regroup all memory allocators related to the synthesizer and add required methods to forward to the synthesizer
+- The Kinematica Job write the root motion into the AnimationStream in order to be able to use the normal deltaPosition and deltaRotation in the OnAnimatorMove()
+- Added procedural notations to allow for example converting AnimationEvents to Marker or Tag Annotations at build time or as a right-click option in the Asset Builder.
+- Added limited debug draw lines in the TaskGraph for HDRP
+- Added version control checks prior to build to ensure that the binary and debug file can be written to
+- Context menu options to add new Markers on the marker track
+- Body joint index automatically computed from avatar import options
+
+### Changed
+- Renamed task creation functions for clarity and gather them into a single place inside TaskReference struct
+- Kinematica Job made public and independent from the Kinematica component (deltatime propery handle)
+- The TaskGraph and Asset Builder uses the ISynthesizerProvider interface and no longer refer to the Kinematica component
+- When initilizing the MotionSynthesizer we use the world transform instead of local tranform to support nested animator component in the hierarchy and because the root motion is applied in world in the Kinematica component
+- Removing unused parameter from TaggedAnimationClip.Create
+- Animation clips are loaded only when necessary and a progress bar is displayed
+- Kinematica Asset build process is asynchronous, cancellable and done in burst jobs
+- Improved selection of overlaping Marker elements to include markers that are very close to each other in the timeline
+
 ## [0.6.0-preview] - 2020-05-29
 
 ### Fixed
@@ -11,14 +38,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed memory corruption potentially happening if a memory identifier is invalid
 - Fixed NavigationTask desired trajectory not cleared when goal was reached
 - Fixed crash in Task Graph
+- Fixed bug when deleting selected marker and then trying to manipulate another marker on the same animation clip
 
 ### Added
 - Added function to MotionSynthesizer to check a memory identifier is valid and prevent errors in client code
 - Added option to create TrajectoryPrediction with provided current velocity
+- Added tag deletion button to the inspector window
+- Added a ping in the project window when double clicking on an animation clip in the animation library
+- Added message in the inspector window that tags and markers cannot be edited when multi-selecting
+- Added an introductory guide to the Hello World sample instructing users how to get started with Kinematica
+- Added preview playback controls to the asset builder
 
 ### Changed
 - Renamed SteerRootDeltaTransfrom into SteerRootMotion and expose intermediate function in API
 - Exposed MotionSynthesizer.CurrentVelocity in API
+- Animation clips with looping flag set will automatically set their boundary clips to themselves when added to the animation library
 
 ## [0.5.0-preview.1] - 2020-05-05
 
@@ -52,6 +86,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added current clip name and frame debug information to TaskGraph TimeIndex nodes.
 - Added mouse hover highlighting to Preview Selector element clarifying how it can be interacted with
 - Added a Scene Hierarchy ping to the current Preview Target
+- Added context menu option to the Animation library to manage boundary clips on multiple AnimationClips at the same time
 - Added explicit loop and reset when executed options to SequenceTask to make it more intuitive
 - Added "none" option to the preview/debug target dropdown
 - Added readmes to samples

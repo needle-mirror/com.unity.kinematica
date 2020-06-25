@@ -4,6 +4,7 @@ using UnityEngine.Assertions;
 
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.SnapshotDebugger;
+using Unity.Collections;
 
 namespace Unity.Kinematica
 {
@@ -30,6 +31,42 @@ namespace Unity.Kinematica
 
             ptr = UnsafeUtility.AddressOf<T>(ref array[0]);
             length = array.Length;
+        }
+
+        public MemoryArray(NativeArray<T> array, int startIndex = 0, int subLength = -1)
+        {
+            System.Int64 address = (System.Int64)array.GetUnsafePtr();
+            address += UnsafeUtility.SizeOf<T>() * startIndex;
+            ptr = (void*)address;
+            length = subLength >= 0 ? subLength : array.Length;
+        }
+
+        public MemoryArray(MemoryArray<T> array, int startIndex = 0, int subLength = -1)
+        {
+            System.Int64 address = (System.Int64)array.ptr;
+            address += UnsafeUtility.SizeOf<T>() * startIndex;
+            ptr = (void*)address;
+            length = subLength >= 0 ? subLength : array.Length;
+        }
+
+        public MemoryArray(NativeSlice<T> array)
+        {
+            ptr = array.GetUnsafePtr();
+            length = array.Length;
+        }
+
+        public MemoryArray<U> Reinterpret<U>() where U : struct
+        {
+            int sizeT = UnsafeUtility.SizeOf<T>();
+            int sizeU = UnsafeUtility.SizeOf<U>();
+            int bufferSize = sizeT * Length;
+            Assert.IsTrue(sizeU <= bufferSize && (bufferSize % sizeU == 0));
+
+            return new MemoryArray<U>()
+            {
+                ptr = ptr,
+                length = bufferSize / sizeU
+            };
         }
 
         /// <summary>

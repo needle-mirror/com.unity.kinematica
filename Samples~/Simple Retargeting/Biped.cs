@@ -27,7 +27,7 @@ namespace SimpleRetargeting
 
         [Tooltip("Relative weighting for pose and trajectory matching.")]
         [Range(0.0f, 1.0f)]
-        public float responsiveness = 0.5f;
+        public float trajectoryWeight = 0.5f;
 
         Identifier<ActionTask> locomotion;
 
@@ -41,18 +41,18 @@ namespace SimpleRetargeting
 
             ref var synthesizer = ref kinematica.Synthesizer.Ref;
 
-            synthesizer.Push(
+            synthesizer.PlayFirstSequence(
                 synthesizer.Query.Where(
                     Locomotion.Default).And(Idle.Default));
 
-            var action = synthesizer.Action();
+            var action = synthesizer.Root.Action();
 
-            action.PushConstrained(
+            action.MatchPoseAndTrajectory(
                 synthesizer.Query.Where(
                     Locomotion.Default).Except(Idle.Default),
-                action.TrajectoryPrediction().trajectory);
+                action.TrajectoryPrediction().GetAs<TrajectoryPredictionTask>().trajectory);
 
-            locomotion = action;
+            locomotion = action.GetAs<ActionTask>();
         }
 
         void Update()
@@ -63,11 +63,11 @@ namespace SimpleRetargeting
 
             synthesizer.Tick(locomotion);
 
-            ref var prediction = ref synthesizer.GetByType<TrajectoryPredictionTask>(locomotion).Ref;
+            ref var prediction = ref synthesizer.GetChildByType<TrajectoryPredictionTask>(locomotion).Ref;
 
-            ref var reduce = ref synthesizer.GetByType<ReduceTask>(locomotion).Ref;
+            ref var matchFragment = ref synthesizer.GetChildByType<MatchFragmentTask>(locomotion).Ref;
 
-            reduce.responsiveness = responsiveness;
+            matchFragment.trajectoryWeight = trajectoryWeight;
 
             var horizontal = InputUtility.GetMoveHorizontalInput();
             ;

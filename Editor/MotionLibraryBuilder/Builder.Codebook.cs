@@ -11,6 +11,8 @@ using UnityEngine.Assertions;
 using PoseFragment = Unity.Kinematica.Binary.PoseFragment;
 using TrajectoryFragment = Unity.Kinematica.Binary.TrajectoryFragment;
 using MetricIndex = Unity.Kinematica.Binary.MetricIndex;
+using Unity.Jobs;
+using System.Collections;
 
 namespace Unity.Kinematica.Editor
 {
@@ -71,6 +73,44 @@ namespace Unity.Kinematica.Editor
             TrajectoryFragment fragment;
         }
 
+        internal struct FragmentArray : IDisposable
+        {
+            public int metricIndex;
+            public int numFragments;
+            public int numFeatures;
+            public NativeArray<SamplingTime> samplingTimes;
+            public NativeArray<float3> features; // flat array of fragments features
+
+            public static FragmentArray Create(int metricIndex, int numFragments, int numFeatures)
+            {
+                return new FragmentArray()
+                {
+                    metricIndex = metricIndex,
+                    numFragments = numFragments,
+                    numFeatures = numFeatures,
+                    samplingTimes = new NativeArray<SamplingTime>(numFragments, Allocator.Persistent),
+                    features = new NativeArray<float3>(numFragments * numFeatures, Allocator.Persistent)
+                };
+            }
+
+            public MemoryArray<float3> Features => new MemoryArray<float3>(features);
+
+            public MemoryArray<float3> FragmentFeatures(int fragmentIndex) => new MemoryArray<float3>(features, fragmentIndex * numFeatures, numFeatures);
+
+            public float3 Feature(int fragmentIndex, int featureIndex) => features[fragmentIndex * numFeatures + featureIndex];
+
+            public void Dispose()
+            {
+                samplingTimes.Dispose();
+                features.Dispose();
+            }
+        }
+
+        public interface ICreateFragmentsJob
+        {
+            JobHandle Schedule();
+        }
+
         public interface FragmentFactory
         {
             int GetNumFeatures(ref Binary binary, MetricIndex metricIndex);
@@ -80,7 +120,10 @@ namespace Unity.Kinematica.Editor
             int GetNumNormalizedFeatures(ref Binary binary, MetricIndex metricIndex);
 
             Fragment Create(ref Binary binary, MetricIndex metricIndex, SamplingTime samplingTime);
+
+            ICreateFragmentsJob PrepareFragmentCreateJob(ref FragmentArray fragmentArray, ref Binary binary);
         }
+
 
         struct PoseFragmentFactory : FragmentFactory
         {
@@ -102,6 +145,11 @@ namespace Unity.Kinematica.Editor
             public Fragment Create(ref Binary binary, MetricIndex metricIndex, SamplingTime samplingTime)
             {
                 return PoseFragmentWrapper.Create(ref binary, metricIndex, samplingTime);
+            }
+
+            public ICreateFragmentsJob PrepareFragmentCreateJob(ref FragmentArray fragmentArray, ref Binary binary)
+            {
+                return CreatePoseFragmentsJob.Prepare(ref fragmentArray, ref binary);
             }
 
             public static FragmentFactory Create()
@@ -132,6 +180,11 @@ namespace Unity.Kinematica.Editor
                 return TrajectoryFragmentWrapper.Create(ref binary, metricIndex, samplingTime);
             }
 
+            public ICreateFragmentsJob PrepareFragmentCreateJob(ref FragmentArray fragmentArray, ref Binary binary)
+            {
+                return CreateTrajectoryFragmentsJob.Prepare(ref fragmentArray, ref binary);
+            }
+
             public static FragmentFactory Create()
             {
                 return new TrajectoryFragmentFactory();
@@ -150,17 +203,26 @@ namespace Unity.Kinematica.Editor
 
             public class FragmentEncoder : IDisposable
             {
-                public NativeArray<byte> codes;
+                public NativeArray<byte>? codes;
+                public NativeArray<byte> Codes => codes.Value;
 
-                public NativeArray<byte> quantizedValues;
+                public NativeArray<byte>? quantizedValues;
+                public NativeArray<byte> QuantizedValues => quantizedValues.Value;
 
-                public NativeArray<float3> codeWords;
+                public NativeArray<float3>? codeWords;
+                public NativeArray<float3> CodeWords => codeWords.Value;
 
-                public NativeArray<BoundingBox> boundingBoxes;
+                public NativeArray<BoundingBox>? boundingBoxes;
+                public NativeArray<BoundingBox> BoundingBoxes => boundingBoxes.Value;
 
-                public NativeArray<Quantizer> quantizers;
+                public NativeArray<Quantizer>? quantizers;
+                public NativeArray<Quantizer> Quantizers => quantizers.Value;
 
                 public int numFragments;
+
+                Settings settings;
+
+                bool bCancel;
 
                 public struct Settings
                 {
@@ -173,37 +235,58 @@ namespace Unity.Kinematica.Editor
                     public static Settings Default => new Settings();
                 }
 
-                public static FragmentEncoder Create(ref Binary binary, Settings settings, TaggedInterval[] intervals, FragmentFactory factory)
+                public static FragmentEncoder Create(FragmentEncoder.Settings settings)
                 {
-                    return new FragmentEncoder(ref binary, settings, intervals, factory);
+                    return new FragmentEncoder(settings);
                 }
 
                 public void Dispose()
                 {
-                    codes.Dispose();
+                    codes?.Dispose();
 
-                    quantizedValues.Dispose();
+                    quantizedValues?.Dispose();
 
-                    codeWords.Dispose();
+                    codeWords?.Dispose();
 
-                    boundingBoxes.Dispose();
+                    boundingBoxes?.Dispose();
 
-                    quantizers.Dispose();
+                    quantizers?.Dispose();
                 }
 
-                FragmentEncoder(ref Binary binary, Settings settings, TaggedInterval[] intervals, FragmentFactory factory)
+                FragmentEncoder(FragmentEncoder.Settings settings)
                 {
+                    this.settings = settings;
+                    codes = null;
+                    quantizedValues = null;
+                    codeWords = null;
+                    boundingBoxes = null;
+                    quantizers = null;
+                    bCancel = false;
+                }
+
+                public void CancelEncoding()
+                {
+                    bCancel = true;
+                }
+
+                public IEnumerator EncodeFragments(MemoryRef<Binary> binary, TaggedInterval[] intervals, FragmentFactory factory, string fragmentTypeName, Action<ProgressInfo> progressFeedback)
+                {
+                    progressFeedback.Invoke(new ProgressInfo()
+                    {
+                        title = $"Start {fragmentTypeName} fragment encoder",
+                        progress = 0.0f
+                    });
                     //
                     // Prologue
                     //
 
                     int metricIndex = settings.metricIndex;
 
-                    var numFeatures = factory.GetNumFeatures(ref binary, metricIndex);
+                    var numFeatures = factory.GetNumFeatures(ref binary.Ref, metricIndex);
 
-                    var numQuantizedFeatures = factory.GetNumQuantizedFeatures(ref binary, metricIndex);
+                    var numQuantizedFeatures = factory.GetNumQuantizedFeatures(ref binary.Ref, metricIndex);
 
-                    var numNormalizedFeatures = factory.GetNumNormalizedFeatures(ref binary, metricIndex);
+                    var numNormalizedFeatures = factory.GetNumNormalizedFeatures(ref binary.Ref, metricIndex);
 
                     var numTransformedFeatures = numFeatures - numQuantizedFeatures - numNormalizedFeatures;
 
@@ -218,7 +301,7 @@ namespace Unity.Kinematica.Editor
                     // Generate fragments
                     //
 
-                    var fragments = new Fragment[numFragments];
+                    FragmentArray fragmentArray = FragmentArray.Create(metricIndex, numFragments, numFeatures);
 
                     int writeIndex = 0;
 
@@ -251,12 +334,37 @@ namespace Unity.Kinematica.Editor
                             var samplingTime =
                                 SamplingTime.Create(timeIndex);
 
-                            fragments[writeIndex++] =
-                                factory.Create(ref binary, metricIndex, samplingTime);
+
+                            fragmentArray.samplingTimes[writeIndex++] = samplingTime;
                         }
                     }
 
                     Assert.IsTrue(writeIndex == numFragments);
+
+                    progressFeedback.Invoke(new ProgressInfo()
+                    {
+                        title = $"Create {fragmentTypeName} fragments",
+                        progress = 0.0f
+                    });
+
+                    ICreateFragmentsJob createFragmentsJob = factory.PrepareFragmentCreateJob(ref fragmentArray, ref binary.Ref);
+                    JobHandle createFragmentsHandle = createFragmentsJob.Schedule();
+
+                    yield return null;
+                    if (bCancel)
+                    {
+                        createFragmentsHandle.Complete();
+                        fragmentArray.Dispose();
+                        yield break;
+                    }
+
+                    createFragmentsHandle.Complete();
+
+                    progressFeedback.Invoke(new ProgressInfo()
+                    {
+                        title = $"Quantize {fragmentTypeName} fragments",
+                        progress = 0.0f
+                    });
 
                     //
                     // Generate feature quantizers
@@ -264,27 +372,17 @@ namespace Unity.Kinematica.Editor
 
                     quantizers =
                         new NativeArray<Quantizer>(
-                            numQuantizedFeatures, Allocator.Temp);
+                            numQuantizedFeatures, Allocator.Persistent);
 
-                    for (int i = 0; i < numQuantizedFeatures; ++i)
+                    ComputeQuantizersJob computeQuantizersJob = new ComputeQuantizersJob()
                     {
-                        float minimum = float.MaxValue;
-                        float maximum = float.MinValue;
+                        fragmentArray = fragmentArray,
+                        quantizers = Quantizers
+                    };
 
-                        for (int j = 0; j < numFragments; ++j)
-                        {
-                            var length =
-                                math.length(
-                                    fragments[j].Feature(i));
+                    JobHandle computeQuantizersHandle = computeQuantizersJob.Schedule(numQuantizedFeatures, 1);
+                    computeQuantizersHandle.Complete();
 
-                            minimum = math.min(minimum, length);
-                            maximum = math.max(maximum, length);
-                        }
-
-                        float range = maximum - minimum;
-
-                        quantizers[i] = Quantizer.Create(minimum, range);
-                    }
 
                     //
                     // Quantize magnitudes and normalize fragments
@@ -294,40 +392,18 @@ namespace Unity.Kinematica.Editor
 
                     quantizedValues =
                         new NativeArray<byte>(
-                            numQuantizedValues, Allocator.Temp);
+                            numQuantizedValues, Allocator.Persistent);
 
-                    writeIndex = 0;
-
-                    for (int i = 0; i < numFragments; ++i)
+                    NormalizeFeaturesJob normalizeFeaturesJob = new NormalizeFeaturesJob()
                     {
-                        var features = fragments[i].Features();
+                        numQuantizedFeatures = numQuantizedFeatures,
+                        quantizers = Quantizers,
+                        quantizedValues = new MemoryArray<byte>(QuantizedValues),
+                        fragmentArray = fragmentArray
+                    };
 
-                        Assert.IsTrue(features.Length == numFeatures);
-
-                        for (int j = 0; j < numQuantizedFeatures; ++j)
-                        {
-                            var featureValue = features[j];
-
-                            var length = math.length(featureValue);
-
-                            var code = quantizers[j].Encode(length);
-
-                            quantizedValues[writeIndex++] = code;
-
-                            var defaultDirection = Missing.zero;
-
-                            if (length < 0.02f)
-                            {
-                                features[j] = defaultDirection;
-                            }
-                            else
-                            {
-                                features[j] =
-                                    math.normalizesafe(
-                                        featureValue, defaultDirection);
-                            }
-                        }
-                    }
+                    JobHandle normalizeFeaturesHandle = normalizeFeaturesJob.Schedule(numFragments, 1);
+                    normalizeFeaturesHandle.Complete();
 
                     //
                     // Generate bounding boxes for feature normalization
@@ -335,59 +411,51 @@ namespace Unity.Kinematica.Editor
 
                     boundingBoxes =
                         new NativeArray<BoundingBox>(
-                            numTransformedFeatures, Allocator.Temp);
+                            numTransformedFeatures, Allocator.Persistent);
 
-                    var transformedIndex = numFeatures - numTransformedFeatures;
-
-                    for (int i = 0; i < numTransformedFeatures; ++i)
+                    ComputeBoundingBoxesJob computeBoundingBoxesJob = new ComputeBoundingBoxesJob()
                     {
-                        var pointCloud = new float3[numFragments];
+                        fragmentArray = fragmentArray,
+                        numTransformedFeatures = numTransformedFeatures,
+                        transformedIndex = numFeatures - numTransformedFeatures,
+                        boundingBoxes = BoundingBoxes
+                    };
 
-                        for (int j = 0; j < numFragments; ++j)
-                        {
-                            pointCloud[j] =
-                                fragments[j].Feature(
-                                    transformedIndex + i);
-                        }
-
-                        var boundingBox =
-                            BoundingBox.Create(pointCloud);
-
-                        boundingBoxes[i] = boundingBox;
-                    }
+                    JobHandle computeBoundingBoxesHandle = computeBoundingBoxesJob.Schedule(numTransformedFeatures, 1);
+                    computeBoundingBoxesHandle.Complete();
 
                     //
                     // Normalize fragments
                     //
 
-                    for (int i = 0; i < numFragments; ++i)
+                    NormalizeFragmentsJob normalizeFragmentsJob = new NormalizeFragmentsJob()
                     {
-                        var features = fragments[i].Features();
+                        numTransformedFeatures = numTransformedFeatures,
+                        transformedIndex = numFeatures - numTransformedFeatures,
+                        boundingBoxes = BoundingBoxes,
+                        fragmentArray = fragmentArray
+                    };
 
-                        Assert.IsTrue(features.Length == numFeatures);
+                    JobHandle normalizeFragmentsHandle = normalizeFragmentsJob.Schedule(numFragments, 1);
+                    normalizeFragmentsHandle.Complete();
 
-                        for (int j = 0; j < numTransformedFeatures; ++j)
-                        {
-                            features[transformedIndex + j] =
-                                boundingBoxes[j].normalize(
-                                    features[transformedIndex + j]);
-                        }
-                    }
-
-                    //
-                    // Arrange fragment features in a single array for PQ encoding
-                    //
-
-                    var fragmentFeatures = new NativeSlice<float3>[numFragments];
-
-                    for (int i = 0; i < numFragments; ++i)
-                    {
-                        fragmentFeatures[i] = fragments[i].Features();
-                    }
 
                     //
                     // Product Quantization
                     //
+
+                    progressFeedback.Invoke(new ProgressInfo()
+                    {
+                        title = $"Prepare training {fragmentTypeName} fragments",
+                        progress = 0.0f
+                    });
+
+                    yield return null;
+                    if (bCancel)
+                    {
+                        fragmentArray.Dispose();
+                        yield break;
+                    }
 
                     int numCodes = numFragments * numFeatures;
 
@@ -404,45 +472,57 @@ namespace Unity.Kinematica.Editor
                     pqs.minimumNumberSamples = settings.minimumNumberSamples;
                     pqs.maximumNumberSamples = settings.maximumNumberSamples;
 
-                    var pq =
-                        new ProductQuantizer(
-                            numFeatures * 3, numFeatures, pqs);
-
-                    pq.Train(fragmentFeatures, feedback =>
+                    using (var pq = new ProductQuantizer(numFeatures * 3, numFeatures, pqs))
                     {
-                        EditorUtility.DisplayProgressBar("Motion Synthesizer Asset",
-                            feedback.info, feedback.percentage);
-                    });
+                        using (ProductQuantizer.TrainingData trainingData = pq.ScheduleTraining(ref fragmentArray))
+                        {
+                            float progression = 0.0f;
+                            do
+                            {
+                                progression = trainingData.FrameUpdate();
 
-                    pq.ComputeCodes(fragmentFeatures, codes, feedback =>
-                    {
-                        EditorUtility.DisplayProgressBar("Motion Synthesizer Asset",
-                            feedback.info, feedback.percentage);
-                    });
+                                progressFeedback.Invoke(new ProgressInfo()
+                                {
+                                    title = $"Train {fragmentTypeName} fragments",
+                                    progress = progression
+                                });
 
-                    Assert.IsTrue(pq.centroids.Length == numCodeWords * 3);
+                                yield return null;
+                                if (bCancel)
+                                {
+                                    trainingData.ForceCompleteCurrentBatch();
+                                    fragmentArray.Dispose();
+                                    yield break;
+                                }
+                            }
+                            while (progression < 1.0f);
 
-                    for (int i = 0; i < numCodeWords; ++i)
-                    {
-                        float x = pq.centroids[i * 3 + 0];
-                        float y = pq.centroids[i * 3 + 1];
-                        float z = pq.centroids[i * 3 + 2];
+                            trainingData.ForceCompleteCurrentBatch();
+                        }
 
-                        var centroid = new float3(x, y, z);
+                        progressFeedback.Invoke(new ProgressInfo()
+                        {
+                            title = $"Compute {fragmentTypeName} codes",
+                            progress = 0.0f
+                        });
+                        pq.ComputeCodes(ref fragmentArray, Codes);
 
-                        codeWords[i] = centroid;
+                        Assert.IsTrue(pq.centroids.Length == numCodeWords * 3);
+
+                        for (int i = 0; i < numCodeWords; ++i)
+                        {
+                            float x = pq.centroids[i * 3 + 0];
+                            float y = pq.centroids[i * 3 + 1];
+                            float z = pq.centroids[i * 3 + 2];
+
+                            var centroid = new float3(x, y, z);
+
+                            var words = CodeWords;
+                            words[i] = centroid;
+                        }
                     }
 
-                    pq.Dispose();
-
-                    //
-                    // Epilogue
-                    //
-
-                    for (int i = 0; i < numFragments; ++i)
-                    {
-                        fragments[i].Dispose();
-                    }
+                    fragmentArray.Dispose();
                 }
             }
 
@@ -455,7 +535,7 @@ namespace Unity.Kinematica.Editor
                 };
             }
 
-            public FragmentEncoder Generate(ref Binary binary, FragmentFactory factory)
+            public FragmentEncoder CreateEncoder(ref Binary binary)
             {
                 var settings = FragmentEncoder.Settings.Default;
 
@@ -465,19 +545,17 @@ namespace Unity.Kinematica.Editor
                 settings.minimumNumberSamples = metric.minimumNumberSamples;
                 settings.maximumNumberSamples = metric.maximumNumberSamples;
 
-                return FragmentEncoder.Create(ref binary, settings, intervals.ToArray(), factory);
+                return FragmentEncoder.Create(settings);
             }
         }
 
         List<CodeBook> codeBooks = new List<CodeBook>();
 
-        public void BuildFragments()
+        IEnumerator BuildFragments()
         {
             GenerateCodeBooks();
 
-            ref Binary binary = ref Binary;
-
-            allocator.Allocate(codeBooks.Count, ref binary.codeBooks);
+            allocator.Allocate(codeBooks.Count, ref Binary.codeBooks);
 
             int codeBookIndex = 0;
 
@@ -486,22 +564,20 @@ namespace Unity.Kinematica.Editor
                 var metricIndex = codeBook.metric.index;
                 var traitIndex = codeBook.traitIndex;
 
-                ref var metric = ref binary.GetMetric(metricIndex);
+                MemoryRef<Binary.CodeBook> destination = new MemoryRef<Binary.CodeBook>(ref Binary.codeBooks[codeBookIndex]);
 
-                ref var destination = ref binary.codeBooks[codeBookIndex];
-
-                destination.metricIndex = metricIndex;
-                destination.traitIndex = traitIndex;
+                destination.Ref.metricIndex = metricIndex;
+                destination.Ref.traitIndex = traitIndex;
 
                 var numIntervals = codeBook.intervals.Count;
 
-                allocator.Allocate(numIntervals, ref destination.intervals);
+                allocator.Allocate(numIntervals, ref destination.Ref.intervals);
 
                 int intervalIndex = 0;
 
                 foreach (var interval in codeBook.intervals)
                 {
-                    destination.intervals[intervalIndex] = interval.index;
+                    destination.Ref.intervals[intervalIndex] = interval.index;
 
                     intervalIndex++;
                 }
@@ -509,171 +585,199 @@ namespace Unity.Kinematica.Editor
                 Assert.IsTrue(intervalIndex == codeBook.intervals.Count);
 
                 {
-                    var factory = codeBook.Generate(ref binary, PoseFragmentFactory.Create());
+                    FragmentFactory fragmentFactory = PoseFragmentFactory.Create();
 
-                    int numFragments = factory.numFragments;
-
-                    Assert.IsTrue(destination.numFragments == 0);
-
-                    destination.numFragments = numFragments;
-
-                    var numFeatures = PoseFragment.GetNumFeatures(ref binary, metricIndex);
-
-                    var numQuantizedFeatures = PoseFragment.GetNumQuantizedFeatures(ref binary, metricIndex);
-
-                    var numNormalizedFeatures = PoseFragment.GetNumNormalizedFeatures(ref binary, metricIndex);
-
-                    var numTransformedFeatures = numFeatures - numQuantizedFeatures - numNormalizedFeatures;
-
-                    destination.poses.numFragments = numFragments;
-                    destination.poses.numFeatures = (short)numFeatures;
-                    destination.poses.numFeaturesQuantized = (short)numQuantizedFeatures;
-                    destination.poses.numFeaturesNormalized = (short)numNormalizedFeatures;
-                    destination.poses.numFeaturesTransformed = (short)numTransformedFeatures;
-
-                    var numCodes = factory.codes.Length + factory.quantizedValues.Length;
-
-                    allocator.Allocate(numCodes, ref destination.poses.codes);
-
-                    int writeIndex = 0;
-                    int readIndexQuantized = 0;
-                    int readIndex = 0;
-
-                    for (int i = 0; i < numFragments; ++i)
+                    using (CodeBook.FragmentEncoder factory = codeBook.CreateEncoder(ref Binary))
                     {
-                        for (int j = 0; j < numQuantizedFeatures; ++j)
+                        IEnumerator fragmentEncoder = factory.EncodeFragments(binary, codeBook.intervals.ToArray(), fragmentFactory, "pose", progressInfo => progressFeedback?.Invoke(progressInfo));
+                        while (fragmentEncoder.MoveNext())
                         {
-                            var quantizedValue = factory.quantizedValues[readIndexQuantized++];
+                            yield return null;
+                            if (bCancel)
+                            {
+                                factory.CancelEncoding();
+                                fragmentEncoder.MoveNext(); // release resources
 
-                            destination.poses.codes[writeIndex++] = quantizedValue;
+                                yield break;
+                            }
                         }
 
-                        for (int j = 0; j < numFeatures; ++j)
-                        {
-                            var code = factory.codes[readIndex++];
+                        int numFragments = factory.numFragments;
 
-                            destination.poses.codes[writeIndex++] = code;
+                        Assert.IsTrue(destination.Ref.numFragments == 0);
+
+                        destination.Ref.numFragments = numFragments;
+
+                        var numFeatures = PoseFragment.GetNumFeatures(ref Binary, metricIndex);
+
+                        var numQuantizedFeatures = PoseFragment.GetNumQuantizedFeatures(ref Binary, metricIndex);
+
+                        var numNormalizedFeatures = PoseFragment.GetNumNormalizedFeatures(ref Binary, metricIndex);
+
+                        var numTransformedFeatures = numFeatures - numQuantizedFeatures - numNormalizedFeatures;
+
+                        destination.Ref.poses.numFragments = numFragments;
+                        destination.Ref.poses.numFeatures = (short)numFeatures;
+                        destination.Ref.poses.numFeaturesQuantized = (short)numQuantizedFeatures;
+                        destination.Ref.poses.numFeaturesNormalized = (short)numNormalizedFeatures;
+                        destination.Ref.poses.numFeaturesTransformed = (short)numTransformedFeatures;
+
+                        var numCodes = factory.Codes.Length + factory.QuantizedValues.Length;
+
+                        allocator.Allocate(numCodes, ref destination.Ref.poses.codes);
+
+                        int writeIndex = 0;
+                        int readIndexQuantized = 0;
+                        int readIndex = 0;
+
+                        for (int i = 0; i < numFragments; ++i)
+                        {
+                            for (int j = 0; j < numQuantizedFeatures; ++j)
+                            {
+                                var quantizedValue = factory.QuantizedValues[readIndexQuantized++];
+
+                                destination.Ref.poses.codes[writeIndex++] = quantizedValue;
+                            }
+
+                            for (int j = 0; j < numFeatures; ++j)
+                            {
+                                var code = factory.Codes[readIndex++];
+
+                                destination.Ref.poses.codes[writeIndex++] = code;
+                            }
+                        }
+
+                        Assert.IsTrue(readIndexQuantized == factory.QuantizedValues.Length);
+                        Assert.IsTrue(readIndex == factory.Codes.Length);
+                        Assert.IsTrue(writeIndex == numCodes);
+
+                        var numCodeWords = factory.CodeWords.Length;
+
+                        allocator.Allocate(numCodeWords, ref destination.Ref.poses.centroids);
+
+                        for (int i = 0; i < numCodeWords; ++i)
+                        {
+                            destination.Ref.poses.centroids[i] = factory.CodeWords[i];
+                        }
+
+                        allocator.Allocate(numTransformedFeatures, ref destination.Ref.poses.boundingBoxes);
+
+                        Assert.IsTrue(numTransformedFeatures == factory.BoundingBoxes.Length);
+
+                        for (int i = 0; i < numTransformedFeatures; ++i)
+                        {
+                            destination.Ref.poses.boundingBoxes[i].transform = factory.BoundingBoxes[i].transform;
+                            destination.Ref.poses.boundingBoxes[i].extent = factory.BoundingBoxes[i].extent;
+                            destination.Ref.poses.boundingBoxes[i].inverseDiagonal = factory.BoundingBoxes[i].inverseDiagonal;
+                        }
+
+                        allocator.Allocate(numQuantizedFeatures, ref destination.Ref.poses.quantizers);
+
+                        Assert.IsTrue(numQuantizedFeatures == factory.Quantizers.Length);
+
+                        for (int i = 0; i < numQuantizedFeatures; ++i)
+                        {
+                            destination.Ref.poses.quantizers[i].minimum = factory.Quantizers[i].minimum;
+                            destination.Ref.poses.quantizers[i].range = factory.Quantizers[i].range;
                         }
                     }
-
-                    Assert.IsTrue(readIndexQuantized == factory.quantizedValues.Length);
-                    Assert.IsTrue(readIndex == factory.codes.Length);
-                    Assert.IsTrue(writeIndex == numCodes);
-
-                    var numCodeWords = factory.codeWords.Length;
-
-                    allocator.Allocate(numCodeWords, ref destination.poses.centroids);
-
-                    for (int i = 0; i < numCodeWords; ++i)
-                    {
-                        destination.poses.centroids[i] = factory.codeWords[i];
-                    }
-
-                    allocator.Allocate(numTransformedFeatures, ref destination.poses.boundingBoxes);
-
-                    Assert.IsTrue(numTransformedFeatures == factory.boundingBoxes.Length);
-
-                    for (int i = 0; i < numTransformedFeatures; ++i)
-                    {
-                        destination.poses.boundingBoxes[i].transform = factory.boundingBoxes[i].transform;
-                        destination.poses.boundingBoxes[i].extent = factory.boundingBoxes[i].extent;
-                        destination.poses.boundingBoxes[i].inverseDiagonal = factory.boundingBoxes[i].inverseDiagonal;
-                    }
-
-                    allocator.Allocate(numQuantizedFeatures, ref destination.poses.quantizers);
-
-                    Assert.IsTrue(numQuantizedFeatures == factory.quantizers.Length);
-
-                    for (int i = 0; i < numQuantizedFeatures; ++i)
-                    {
-                        destination.poses.quantizers[i].minimum = factory.quantizers[i].minimum;
-                        destination.poses.quantizers[i].range = factory.quantizers[i].range;
-                    }
-
-                    factory.Dispose();
                 }
 
                 {
-                    var factory = codeBook.Generate(ref binary, TrajectoryFragmentFactory.Create());
+                    FragmentFactory fragmentFactory = TrajectoryFragmentFactory.Create();
 
-                    int numFragments = factory.numFragments;
-
-                    Assert.IsTrue(destination.numFragments == numFragments);
-
-                    var numFeatures = TrajectoryFragment.GetNumFeatures(ref binary, metricIndex);
-
-                    var numQuantizedFeatures = TrajectoryFragment.GetNumQuantizedFeatures(ref binary, metricIndex);
-
-                    var numNormalizedFeatures = TrajectoryFragment.GetNumNormalizedFeatures(ref binary, metricIndex);
-
-                    var numTransformedFeatures = numFeatures - numQuantizedFeatures - numNormalizedFeatures;
-
-                    destination.trajectories.numFragments = numFragments;
-                    destination.trajectories.numFeatures = (short)numFeatures;
-                    destination.trajectories.numFeaturesQuantized = (short)numQuantizedFeatures;
-                    destination.trajectories.numFeaturesNormalized = (short)numNormalizedFeatures;
-                    destination.trajectories.numFeaturesTransformed = (short)numTransformedFeatures;
-
-                    var numCodes = factory.codes.Length + factory.quantizedValues.Length;
-
-                    allocator.Allocate(numCodes, ref destination.trajectories.codes);
-
-                    int writeIndex = 0;
-                    int readIndexQuantized = 0;
-                    int readIndex = 0;
-
-                    for (int i = 0; i < numFragments; ++i)
+                    using (CodeBook.FragmentEncoder factory = codeBook.CreateEncoder(ref Binary))
                     {
-                        for (int j = 0; j < numQuantizedFeatures; ++j)
+                        IEnumerator fragmentEncoder = factory.EncodeFragments(binary, codeBook.intervals.ToArray(), fragmentFactory, "trajectory", progressInfo => progressFeedback?.Invoke(progressInfo));
+                        while (fragmentEncoder.MoveNext())
                         {
-                            var quantizedValue = factory.quantizedValues[readIndexQuantized++];
+                            yield return null;
+                            if (bCancel)
+                            {
+                                factory.CancelEncoding();
+                                fragmentEncoder.MoveNext(); // release resources
 
-                            destination.trajectories.codes[writeIndex++] = quantizedValue;
+                                yield break;
+                            }
                         }
 
-                        for (int j = 0; j < numFeatures; ++j)
-                        {
-                            var code = factory.codes[readIndex++];
+                        int numFragments = factory.numFragments;
 
-                            destination.trajectories.codes[writeIndex++] = code;
+                        Assert.IsTrue(destination.Ref.numFragments == numFragments);
+
+                        var numFeatures = TrajectoryFragment.GetNumFeatures(ref Binary, metricIndex);
+
+                        var numQuantizedFeatures = TrajectoryFragment.GetNumQuantizedFeatures(ref Binary, metricIndex);
+
+                        var numNormalizedFeatures = TrajectoryFragment.GetNumNormalizedFeatures(ref Binary, metricIndex);
+
+                        var numTransformedFeatures = numFeatures - numQuantizedFeatures - numNormalizedFeatures;
+
+                        destination.Ref.trajectories.numFragments = numFragments;
+                        destination.Ref.trajectories.numFeatures = (short)numFeatures;
+                        destination.Ref.trajectories.numFeaturesQuantized = (short)numQuantizedFeatures;
+                        destination.Ref.trajectories.numFeaturesNormalized = (short)numNormalizedFeatures;
+                        destination.Ref.trajectories.numFeaturesTransformed = (short)numTransformedFeatures;
+
+                        var numCodes = factory.Codes.Length + factory.QuantizedValues.Length;
+
+                        allocator.Allocate(numCodes, ref destination.Ref.trajectories.codes);
+
+                        int writeIndex = 0;
+                        int readIndexQuantized = 0;
+                        int readIndex = 0;
+
+                        for (int i = 0; i < numFragments; ++i)
+                        {
+                            for (int j = 0; j < numQuantizedFeatures; ++j)
+                            {
+                                var quantizedValue = factory.QuantizedValues[readIndexQuantized++];
+
+                                destination.Ref.trajectories.codes[writeIndex++] = quantizedValue;
+                            }
+
+                            for (int j = 0; j < numFeatures; ++j)
+                            {
+                                var code = factory.Codes[readIndex++];
+
+                                destination.Ref.trajectories.codes[writeIndex++] = code;
+                            }
+                        }
+
+                        Assert.IsTrue(readIndexQuantized == factory.QuantizedValues.Length);
+                        Assert.IsTrue(readIndex == factory.Codes.Length);
+                        Assert.IsTrue(writeIndex == numCodes);
+
+                        var numCodeWords = factory.CodeWords.Length;
+
+                        allocator.Allocate(numCodeWords, ref destination.Ref.trajectories.centroids);
+
+                        for (int i = 0; i < numCodeWords; ++i)
+                        {
+                            destination.Ref.trajectories.centroids[i] = factory.CodeWords[i];
+                        }
+
+                        allocator.Allocate(numTransformedFeatures, ref destination.Ref.trajectories.boundingBoxes);
+
+                        Assert.IsTrue(numTransformedFeatures == factory.BoundingBoxes.Length);
+
+                        for (int i = 0; i < numTransformedFeatures; ++i)
+                        {
+                            destination.Ref.trajectories.boundingBoxes[i].transform = factory.BoundingBoxes[i].transform;
+                            destination.Ref.trajectories.boundingBoxes[i].extent = factory.BoundingBoxes[i].extent;
+                            destination.Ref.trajectories.boundingBoxes[i].inverseDiagonal = factory.BoundingBoxes[i].inverseDiagonal;
+                        }
+
+                        allocator.Allocate(numQuantizedFeatures, ref destination.Ref.trajectories.quantizers);
+
+                        Assert.IsTrue(numQuantizedFeatures == factory.Quantizers.Length);
+
+                        for (int i = 0; i < numQuantizedFeatures; ++i)
+                        {
+                            destination.Ref.trajectories.quantizers[i].minimum = factory.Quantizers[i].minimum;
+                            destination.Ref.trajectories.quantizers[i].range = factory.Quantizers[i].range;
                         }
                     }
-
-                    Assert.IsTrue(readIndexQuantized == factory.quantizedValues.Length);
-                    Assert.IsTrue(readIndex == factory.codes.Length);
-                    Assert.IsTrue(writeIndex == numCodes);
-
-                    var numCodeWords = factory.codeWords.Length;
-
-                    allocator.Allocate(numCodeWords, ref destination.trajectories.centroids);
-
-                    for (int i = 0; i < numCodeWords; ++i)
-                    {
-                        destination.trajectories.centroids[i] = factory.codeWords[i];
-                    }
-
-                    allocator.Allocate(numTransformedFeatures, ref destination.trajectories.boundingBoxes);
-
-                    Assert.IsTrue(numTransformedFeatures == factory.boundingBoxes.Length);
-
-                    for (int i = 0; i < numTransformedFeatures; ++i)
-                    {
-                        destination.trajectories.boundingBoxes[i].transform = factory.boundingBoxes[i].transform;
-                        destination.trajectories.boundingBoxes[i].extent = factory.boundingBoxes[i].extent;
-                        destination.trajectories.boundingBoxes[i].inverseDiagonal = factory.boundingBoxes[i].inverseDiagonal;
-                    }
-
-                    allocator.Allocate(numQuantizedFeatures, ref destination.trajectories.quantizers);
-
-                    Assert.IsTrue(numQuantizedFeatures == factory.quantizers.Length);
-
-                    for (int i = 0; i < numQuantizedFeatures; ++i)
-                    {
-                        destination.trajectories.quantizers[i].minimum = factory.quantizers[i].minimum;
-                        destination.trajectories.quantizers[i].range = factory.quantizers[i].range;
-                    }
-
-                    factory.Dispose();
                 }
 
                 codeBookIndex++;

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using UnityEngine.UIElements;
 
 namespace Unity.Kinematica.Editor
@@ -19,8 +20,8 @@ namespace Unity.Kinematica.Editor
         {
             ValidateFrameRate(frameRate);
 
-            var frameBefore = (int)Math.Floor(time * frameRate) / frameRate;
-            var frameAfter = (int)Math.Ceiling(time * frameRate) / frameRate;
+            double frameBefore = (int)Math.Floor(time * frameRate) / frameRate;
+            double frameAfter = (int)Math.Ceiling(time * frameRate) / frameRate;
 
             return Math.Abs(time - frameBefore) < Math.Abs(time - frameAfter) ? frameBefore : frameAfter;
         }
@@ -41,7 +42,7 @@ namespace Unity.Kinematica.Editor
             switch (mode)
             {
                 case TimelineViewMode.frames:
-                    str = ((int)(time * sampleRate)).ToString();
+                    str = TimeToFrameStr(time, sampleRate);
                     break;
                 case TimelineViewMode.secondsFrames:
                     str = TimeToTimeFrameStr(time, sampleRate);
@@ -49,6 +50,19 @@ namespace Unity.Kinematica.Editor
                 case TimelineViewMode.seconds:
                     str = TimeToTimeStr(time);
                     break;
+            }
+
+
+            return str;
+        }
+
+        public static string TimeToFrameStr(float time, int frameRate)
+        {
+            int frameDigits = frameRate != 0 ? (frameRate - 1).ToString().Length : 1;
+            string str = ((int)Math.Abs(time * frameRate)).ToString();
+            if (time >= frameRate)
+            {
+                str = str.PadLeft(frameDigits, '0');
             }
 
             return str;
@@ -61,8 +75,7 @@ namespace Unity.Kinematica.Editor
 
         public static string TimeToTimeFrameStr(float time, int frameRate)
         {
-            int frameDigits = frameRate != 0 ? (frameRate - 1).ToString().Length : 1;
-            return time.ToString("0.00") + ":" + ((int)Math.Abs(time * frameRate)).ToString().PadLeft(frameDigits, '0');
+            return time.ToString("0.00") + ":" + TimeToFrameStr(time, frameRate);
         }
     }
 }

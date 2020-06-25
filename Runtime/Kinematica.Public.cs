@@ -6,23 +6,23 @@ using Unity.SnapshotDebugger;
 
 namespace Unity.Kinematica
 {
-    public partial class Kinematica : SnapshotProvider
+    public partial class Kinematica : SnapshotProvider, IMotionSynthesizerProvider
     {
         //
         // Kinematica Public API
         //
 
         /// <summary>
-        /// Pushes a pose sequence to the motion synthesizer.
+        /// Play the first sequence from <code>queryResult</code>
         /// </summary>
         /// <remarks>
         /// Forwards the call to the motion synthesizer.
         /// </remarks>
         /// <param name="queryResult">Pose sequence that should be pushed to the motion synthesizer.</param>
         /// <seealso cref="MotionSynthesizer.Push"/>
-        public void Push(QueryResult queryResult)
+        public void PlayFirstSequence(QueryResult queryResult)
         {
-            synthesizer.Ref.Push(queryResult);
+            Synthesizer.Ref.PlayFirstSequence(queryResult);
         }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace Unity.Kinematica
         /// <seealso cref="MotionSynthesizer.Query"/>
         public Query Query
         {
-            get => synthesizer.Ref.Query;
+            get => Synthesizer.Ref.Query;
         }
 
         /// <summary>

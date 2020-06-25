@@ -20,13 +20,13 @@ namespace HelloWorld
 
                 if (idle)
                 {
-                    synthesizer.Action().Push(
+                    synthesizer.Root.Action().PlayFirstSequence(
                         synthesizer.Query.Where(
                             Locomotion.Default).And(Idle.Default));
                 }
                 else
                 {
-                    synthesizer.Action().Push(
+                    synthesizer.Root.Action().PlayFirstSequence(
                         synthesizer.Query.Where(
                             Locomotion.Default).Except(Idle.Default));
                 }

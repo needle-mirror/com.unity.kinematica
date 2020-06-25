@@ -37,16 +37,16 @@ namespace BipedLocomotion
 
             ref var synthesizer = ref kinematica.Synthesizer.Ref;
 
-            synthesizer.Push(
+            synthesizer.PlayFirstSequence(
                 synthesizer.Query.Where(
                     Locomotion.Default).And(Idle.Default));
 
-            var selector = synthesizer.Selector();
+            var selector = synthesizer.Root.Selector();
 
             {
                 var sequence = selector.Condition().Sequence();
 
-                sequence.Action().PushConstrained(
+                sequence.Action().MatchPose(
                     synthesizer.Query.Where(
                         Locomotion.Default).And(Idle.Default), 0.01f);
 
@@ -56,13 +56,13 @@ namespace BipedLocomotion
             {
                 var action = selector.Action();
 
-                action.PushConstrained(
+                action.MatchPoseAndTrajectory(
                     synthesizer.Query.Where(
                         Locomotion.Default).Except(Idle.Default),
-                    action.TrajectoryPrediction().trajectory);
+                    action.TrajectoryPrediction().GetAs<TrajectoryPredictionTask>().trajectory);
             }
 
-            locomotion = selector;
+            locomotion = selector.GetAs<SelectorTask>();
         }
 
         void Update()
@@ -73,8 +73,8 @@ namespace BipedLocomotion
 
             synthesizer.Tick(locomotion);
 
-            ref var prediction = ref synthesizer.GetByType<TrajectoryPredictionTask>(locomotion).Ref;
-            ref var idle = ref synthesizer.GetByType<ConditionTask>(locomotion).Ref;
+            ref var prediction = ref synthesizer.GetChildByType<TrajectoryPredictionTask>(locomotion).Ref;
+            ref var idle = ref synthesizer.GetChildByType<ConditionTask>(locomotion).Ref;
 
             var horizontal = InputUtility.GetMoveHorizontalInput();
             var vertical = InputUtility.GetMoveVerticalInput();

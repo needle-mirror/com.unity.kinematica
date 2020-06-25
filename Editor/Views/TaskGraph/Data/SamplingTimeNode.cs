@@ -12,13 +12,13 @@ namespace Unity.Kinematica.Editor
             return memoryChunk.GetRef<SamplingTime>(identifier).Ref;
         }
 
-        public unsafe override void SetSamplingTime(ref MotionSynthesizer synthesizer, SamplingTime samplingTime)
-        {
-            ref var memoryChunk = ref synthesizer.memoryChunkShadow.Ref;
+        //public unsafe override void SetSamplingTime(ref MotionSynthesizer synthesizer, SamplingTime samplingTime)
+        //{
+        //    ref var memoryChunk = ref synthesizer.memoryChunkShadow.Ref;
 
-            memoryChunk.GetRef<SamplingTime>(identifier).Ref = samplingTime;
+        //    memoryChunk.GetRef<SamplingTime>(identifier).Ref = samplingTime;
 
-            memoryChunk.GetHeader(identifier)->SetDirty();
-        }
+        //    memoryChunk.GetHeader(identifier)->SetDirty();
+        //}
     }
 }

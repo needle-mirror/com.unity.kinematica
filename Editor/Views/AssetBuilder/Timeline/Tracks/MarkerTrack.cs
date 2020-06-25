@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -9,7 +10,10 @@ namespace Unity.Kinematica.Editor
 {
     class MarkerTrack : GutterTrack
     {
-        static FloatComparer k_MarkerTimelineComparer = new FloatComparer(0.0001f);
+        static float k_MarkerPositionEpsilon = 5f;
+        static FloatComparer k_MarkerTimelinePositionComparer = new FloatComparer(k_MarkerPositionEpsilon);
+
+        List<MarkerOverlapIndicator> m_MarkerOverlapIndicators;
 
         public MarkerTrack(Timeline owner) : base(owner)
         {
@@ -18,6 +22,34 @@ namespace Unity.Kinematica.Editor
 
             RegisterCallback<AttachToPanelEvent>(OnAttachToPanel);
             RegisterCallback<DetachFromPanelEvent>(OnDetachFromPanel);
+
+            m_MarkerOverlapIndicators = new List<MarkerOverlapIndicator>();
+            var manipulator = new ContextualMenuManipulator(evt =>
+            {
+                DropdownMenu menu = evt.menu;
+                float time = m_Owner.WorldPositionToTime(evt.mousePosition.x);
+                if (m_Owner.ViewMode == TimelineViewMode.frames)
+                {
+                    time = (float)TimelineUtility.RoundToFrame(time, Clip.SampleRate);
+                }
+
+                string timeStr = TimelineUtility.GetTimeString(m_Owner.ViewMode, time, (int)Clip.SampleRate);
+
+                menu.AppendAction($"Add Marker at {timeStr}", null, DropdownMenuAction.Status.Disabled);
+                menu.AppendSeparator();
+                var menuStatus = EditorApplication.isPlaying ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal;
+                foreach (Type markerType in MarkerAttribute.GetMarkerTypes())
+                {
+                    evt.menu.AppendAction(MarkerAttribute.GetDescription(markerType), action => OnAddAnnotationSelection(markerType, time), a => menuStatus, markerType);
+                }
+            });
+
+            this.AddManipulator(manipulator);
+        }
+
+        void OnAddAnnotationSelection(Type type, float time)
+        {
+            m_TaggedClip.AddMarker(type, time);
         }
 
         void OnAttachToPanel(AttachToPanelEvent evt)
@@ -38,11 +70,12 @@ namespace Unity.Kinematica.Editor
                 m_TaggedClip.MarkerRemoved -= OnMarkerRemoved;
             }
 
-            var markers = GetMarkerElements().ToList();
-            foreach (var mte in markers)
+            List<MarkerElement> markers = GetMarkerElements().ToList();
+            foreach (MarkerElement markerElement in markers)
             {
-                mte.MarkerTimelineElementMoved -= OnMarkerTimelineElementMoved;
-                mte.RemoveFromHierarchy();
+                markerElement.MarkerElementDragged -= OnMarkerElementDragged;
+                markerElement.Selected -= OnMarkerSelected;
+                markerElement.RemoveFromHierarchy();
             }
 
             base.SetClip(taggedClip);
@@ -63,54 +96,163 @@ namespace Unity.Kinematica.Editor
 
             if (m_TaggedClip != null)
             {
-                foreach (var m in m_TaggedClip.Markers)
+                for (var index = 0; index < m_TaggedClip.Markers.Count; index++)
                 {
-                    CreateMarkerElement(m);
+                    var me = CreateMarkerElement(m_TaggedClip.Markers[index]);
+                    if (index == 0)
+                    {
+                        me.RegisterCallback<GeometryChangedEvent>(OnAttachToPanelCreateOverlapIndicators);
+                    }
                 }
             }
 
             SetDisplay(style.display.value);
+
+            ResizeContents();
 
             Profiler.EndSample();
         }
 
         public override void ResizeContents()
         {
-            foreach (MarkerElement visualElement in GetMarkerElements())
+            Profiler.BeginSample("MarkerTrack::ResizeContents");
+
+            foreach (var visualElement in GetMarkerElements())
             {
-                visualElement.Reposition();
+                visualElement.Reposition(false);
             }
+
+            CreateMarkerOverlapIndicators();
+            Profiler.EndSample();
         }
 
-        void OnMarkerTimelineElementMoved(float previous, float current)
+        // We assume that `elements` are already sorted by position left to right
+        static float Mid(List<MarkerElement> elements)
         {
-            var elementsAtPreviousTime = GetMarkersAtTime(previous).ToList();
-            if (elementsAtPreviousTime.Count() == 1)
+            var sameTime = true;
+            for (int i = 0, j = 1; j < elements.Count; ++i, ++j)
             {
-                elementsAtPreviousTime.First().HideMultiple();
+                if (!FloatComparer.s_ComparerWithDefaultTolerance.Equals(elements[i].XPos, elements[j].XPos))
+                {
+                    sameTime = false;
+                    break;
+                }
             }
 
-            var elementsAtCurrentTime = GetMarkersAtTime(current).ToList();
-            if (elementsAtCurrentTime.Count() > 1)
+            if (sameTime)
             {
-                elementsAtCurrentTime.ForEach(me => me.ShowMultiple());
+                return elements.First().XPos;
             }
-            else
+
+            List<float> positions = elements.Select(me => me.XPos).ToList();
+            if (!positions.Any())
             {
-                elementsAtCurrentTime.ForEach(me => me.HideMultiple());
+                return 0f;
             }
+
+            float min = positions.First();
+            float max = positions.Last();
+            if (FloatComparer.s_ComparerWithDefaultTolerance.Equals(min, max))
+            {
+                return min; //reduces flickering with overlapping elements
+            }
+
+            return min + (max - min) / 2f;
         }
 
-        void CreateMarkerElement(MarkerAnnotation marker)
+        void OnAttachToPanelCreateOverlapIndicators(GeometryChangedEvent evt)
+        {
+            (evt.target as MarkerElement).UnregisterCallback<GeometryChangedEvent>(OnAttachToPanelCreateOverlapIndicators);
+            CreateMarkerOverlapIndicators();
+        }
+
+        void CreateMarkerOverlapIndicators()
+        {
+            Profiler.BeginSample("MarkerTrack::ComputeInitialOverlaps");
+            foreach (var indicator in m_MarkerOverlapIndicators)
+            {
+                indicator.RemoveFromHierarchy();
+            }
+
+            m_MarkerOverlapIndicators.Clear();
+
+            if (Clip != null)
+            {
+                List<MarkerElement> elements = GetMarkerElements().OrderBy(me => me.style.left.value.value).ToList();
+                List<Tuple<float, List<MarkerElement>>> positions = new List<Tuple<float, List<MarkerElement>>>();
+                if (elements.Any())
+                {
+                    MarkerElement currentElement = elements[0];
+                    if (elements.Count == 1)
+                    {
+                        positions.Add(new Tuple<float, List<MarkerElement>>(currentElement.XPos, elements));
+                    }
+                    else
+                    {
+                        List<MarkerElement> grouped = new List<MarkerElement>();
+                        grouped.Add(currentElement);
+                        for (var index = 1; index < elements.Count; index++)
+                        {
+                            MarkerElement marker = elements[index];
+                            float pos = marker.XPos;
+
+                            if (pos - currentElement.XPos < k_MarkerPositionEpsilon)
+                            {
+                                //add nearby position
+                                grouped.Add(marker);
+                            }
+                            else
+                            {
+                                //close group
+                                positions.Add(new Tuple<float, List<MarkerElement>>(Mid(grouped), grouped));
+                                currentElement = marker;
+                                grouped = new List<MarkerElement>();
+                                grouped.Add(currentElement);
+                            }
+                        }
+
+                        //close final group
+                        positions.Add(new Tuple<float, List<MarkerElement>>(Mid(grouped), grouped));
+                    }
+                }
+
+                foreach ((float overlapPosition, List<MarkerElement> markerElements) in positions)
+                {
+                    if (markerElements.Count > 1)
+                    {
+                        var indicator = new MarkerOverlapIndicator(this, overlapPosition);
+                        m_MarkerOverlapIndicators.Add(indicator);
+                        Add(indicator);
+                        indicator.Reposition();
+                    }
+                }
+            }
+
+            Profiler.EndSample();
+        }
+
+        void OnMarkerElementDragged(MarkerElement marker, float previousTime, float newTime, float previousX, float newX)
+        {
+            CreateMarkerOverlapIndicators();
+        }
+
+        MarkerElement CreateMarkerElement(MarkerAnnotation marker)
         {
             var me = new MarkerElement(marker, this);
-            me.MarkerTimelineElementMoved += OnMarkerTimelineElementMoved;
+
             AddElement(me);
+
+            me.Reposition();
 
             if (m_Owner.SelectionContainer.m_Markers.Contains(marker) && !m_Owner.SelectionContainer.m_FullClipSelection)
             {
                 MarkerElement.SelectMarkerElement(me, m_Owner.SelectionContainer.Count > 1);
             }
+
+            me.MarkerElementDragged += OnMarkerElementDragged;
+            me.Selected += OnMarkerSelected;
+
+            return me;
         }
 
         void OnMarkerAdded(MarkerAnnotation marker)
@@ -135,16 +277,33 @@ namespace Unity.Kinematica.Editor
             m_Owner.SelectionContainer.Remove(marker);
         }
 
+        void OnMarkerSelected()
+        {
+            // When Markers are selected they are brought to the front (to show in case of overlap)
+            // However, this puts them in front of overlap indicators
+            var overlapIndicators = Children().OfType<MarkerOverlapIndicator>().ToList();
+            foreach (var multipleMarker in overlapIndicators)
+            {
+                multipleMarker.BringToFront();
+            }
+        }
+
         internal IEnumerable<MarkerElement> GetMarkerElements()
         {
             return Children().OfType<MarkerElement>();
         }
 
-        internal IEnumerable<MarkerElement> GetMarkersAtTime(float time)
+        internal IEnumerable<MarkerElement> GetMarkersNearX(float x)
         {
             foreach (var e in GetMarkerElements())
             {
-                if (k_MarkerTimelineComparer.Equals(e.marker.timeInSeconds, time))
+                float left = e.XPos;
+                if (float.IsNaN(left))
+                {
+                    continue;
+                }
+
+                if (k_MarkerTimelinePositionComparer.Equals(left, x))
                 {
                     yield return e;
                 }

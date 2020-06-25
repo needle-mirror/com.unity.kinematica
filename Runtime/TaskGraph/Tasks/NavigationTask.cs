@@ -6,9 +6,9 @@ using UnityEngine.Assertions;
 namespace Unity.Kinematica
 {
     [Data("TrajectoryPath", "#2A3756"), BurstCompile]
-    public struct NavigationTask : Task
+    public struct NavigationTask : Task, GenericTask<NavigationTask>
     {
-        public Identifier<NavigationTask> self;
+        public Identifier<NavigationTask> self { get; set; }
 
         public MemoryRef<MotionSynthesizer> synthesizer;
 
@@ -53,7 +53,7 @@ namespace Unity.Kinematica
         }
 
         [BurstCompile]
-        public static Result ExecuteSelf(ref TaskRef self)
+        public static Result ExecuteSelf(ref TaskPointer self)
         {
             return self.Cast<NavigationTask>().Execute();
         }

@@ -33,7 +33,7 @@ namespace Unity.Kinematica
             };
         }
 
-        internal bool IsSet()
+        public bool IsSet()
         {
             return assetGuid.IsSet();
         }

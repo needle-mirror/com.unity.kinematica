@@ -2,39 +2,40 @@ using UnityEngine;
 
 namespace Unity.Kinematica.Editor
 {
-    class MetricBorderElement : TimeRangeElement
-    {
-        public float m_OffsetTime;
-        public float m_Duration;
-
-        public MetricBorderElement(float offsetTime, float duration, Track track) : base(track)
-        {
-            m_OffsetTime = offsetTime;
-            m_Duration = duration;
-
-            style.backgroundColor = Color.black;
-
-            AddToClassList("metricBorderElement");
-            SetEnabled(true);
-
-            Resize();
-        }
-
-        public override void Resize()
-        {
-            float widthMultiplier = Timeline.WidthMultiplier;
-            float start = m_OffsetTime * widthMultiplier;
-            style.left = start;
-            float end = (m_OffsetTime + m_Duration) * widthMultiplier;
-            style.width = end - start;
-
-            style.backgroundColor = Color.black;
-            style.color = Color.black;
-        }
-    }
-
     class MetricElement : TimeRangeElement
     {
+        const float k_BorderWidth = 1f;
+
+        class MetricBorderElement : TimeRangeElement
+        {
+            float m_OffsetTime;
+            float m_Duration;
+
+            public MetricBorderElement(float offsetTime, float duration, Track track) : base(track)
+            {
+                m_OffsetTime = offsetTime;
+                m_Duration = duration;
+
+                style.backgroundColor = Color.black;
+
+                AddToClassList("metricBorderElement");
+                SetEnabled(true);
+
+                Resize();
+            }
+
+            public override void Resize()
+            {
+                float widthMultiplier = Timeline.WidthMultiplier;
+                float start = m_OffsetTime * widthMultiplier;
+                style.left = start;
+                float end = (m_OffsetTime + m_Duration) * widthMultiplier;
+                style.width = end - start;
+
+                style.backgroundColor = Color.black;
+                style.color = Color.black;
+            }
+        }
         public string MetricName { get; }
 
         public float m_StartTime;
@@ -70,9 +71,10 @@ namespace Unity.Kinematica.Editor
                     Add(m_LeftBorder);
                 }
 
-                if (activeEnd < end)
+                if (activeEnd < end && activeEnd > activeStart)
                 {
-                    m_RightBorder = new MetricBorderElement(end - start - (end - activeEnd), end - activeEnd, track);
+                    float rightBorderStart = Mathf.Clamp(end - start - (end - activeEnd), 0f, end);
+                    m_RightBorder = new MetricBorderElement(rightBorderStart, Mathf.Clamp(end - activeEnd, 0f, end - start) , track);
                     Add(m_RightBorder);
                 }
             }
@@ -85,7 +87,7 @@ namespace Unity.Kinematica.Editor
             float start = Timeline.TimeToLocalPos(m_StartTime, Track);
             style.left = start;
             float end = Timeline.TimeToLocalPos(m_EndTime, Track);
-            style.width = end - start;
+            style.width = end - start - k_BorderWidth;
 
             if (m_LeftBorder != null)
             {

@@ -103,9 +103,9 @@ namespace Unity.Kinematica.Editor
             return typeof(T).GetCustomAttributes(typeof(TraitAttribute), true).Length > 0;
         }
 
-        Trait BuildTraitGenericPayload<T>(Payload<T> tag, PayloadBuilder builder) where T : struct
+        Trait BuildTraitGenericPayload<T>(Payload<T> payload, PayloadBuilder builder) where T : struct
         {
-            var trait = Trait.Create(tag.Build(builder));
+            var trait = Trait.Create(payload.Build(builder));
 
             bool isValueType = trait.type.IsValueType;
             bool isBlittable = UnsafeUtility.IsBlittable(trait.type);

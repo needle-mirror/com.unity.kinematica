@@ -1,5 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -7,6 +11,8 @@ namespace Unity.Kinematica.Editor
 {
     internal partial class Builder : IDisposable
     {
+        public event Action<ProgressInfo> progressFeedback;
+
         public Builder(Asset asset)
         {
             allocator = new BlobAllocator(-1);
@@ -19,49 +25,75 @@ namespace Unity.Kinematica.Editor
 
             stringTable = StringTable.Create();
 
-            segments = Segments.Create();
-
             rig = AnimationRig.Create(asset.DestinationAvatar);
-
-            factories = new Dictionary<Avatar, AnimationSamplerFactory>();
         }
 
         public void Dispose()
         {
             allocator.Dispose();
-
-            foreach (var factory in factories)
-            {
-                factory.Value.Dispose();
-            }
         }
 
-        public bool Build(string filePath)
+        public IEnumerator BuildAsync(string filePath)
         {
-            if (!PrepareSamplerFactories())
+            binary.Ref.FileVersion = Binary.s_CodeVersion;
+            binary.Ref.SampleRate = asset.SampleRate;
+            binary.Ref.TimeHorizon = asset.TimeHorizon;
+
+            IEnumerator state = null;
+
+            state = LoadAnimationClips();
+            while (state.MoveNext())
             {
-                return false;
+                yield return null;
+                if (bCancel)
+                {
+                    yield break;
+                }
             }
-
-            ref Binary binary = ref Binary;
-
-            binary.FileVersion = Binary.s_CodeVersion;
-            binary.SampleRate = asset.SampleRate;
-            binary.TimeHorizon = asset.TimeHorizon;
 
             BuildAnimationRig();
             BuildSegments();
-            BuildTransforms();
+
+            state = BuildTransforms();
+            while (state.MoveNext())
+            {
+                yield return null;
+                if (bCancel)
+                {
+                    state.MoveNext(); // give opportunity to enumerator to release resources
+                    yield break;
+                }
+            }
+
             BuildTags();
             BuildMetrics();
-            BuildFragments();
+
+            state = BuildFragments();
+            while (state.MoveNext())
+            {
+                yield return null;
+                if (bCancel)
+                {
+                    state.MoveNext(); // give opportunity to enumerator to release resources
+                    yield break;
+                }
+            }
+
             BuildStringTable();
 
             VerifyIntegrity();
 
-            BlobFile.WriteBlobAsset(allocator, ref binary, filePath);
+            BlobFile.WriteBlobAsset(allocator, ref Binary, filePath);
 
-            return true;
+            Binary.GenerateDebugDocument().Save(
+                Path.ChangeExtension(filePath, ".debug.xml"));
+        }
+
+        public bool Cancelled => bCancel;
+
+        public void Cancel()
+        {
+            bCancel = true;
         }
 
         public static Builder Create(Asset asset)
@@ -143,25 +175,25 @@ namespace Unity.Kinematica.Editor
             }
         }
 
-        bool PrepareSamplerFactories()
+        IEnumerator LoadAnimationClips()
         {
-            foreach (var avatar in asset.GetAvatars())
-            {
-                try
-                {
-                    var factory =
-                        AnimationSamplerFactory.Create(
-                            avatar, rig);
-                    factories.Add(avatar, factory);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError($"Animation sampler error for avatar {avatar.name} : {e.Message}");
-                    return false;
-                }
-            }
+            IEnumerable<TaggedAnimationClip> taggedClips = asset.AnimationLibrary.Where(c => !c.IsClipLoaded);
+            int clipCount = taggedClips.Count();
+            int clipIndex = 0;
 
-            return true;
+            foreach (TaggedAnimationClip taggedClip in taggedClips)
+            {
+                ++clipIndex;
+
+                progressFeedback?.Invoke(new ProgressInfo()
+                {
+                    title = $"Loading clip {taggedClip.ClipName}",
+                    progress = clipIndex / (float)clipCount
+                });
+
+                taggedClip.GetOrLoadClipSync(false);
+                yield return null;
+            }
         }
 
         //
@@ -174,13 +206,15 @@ namespace Unity.Kinematica.Editor
         // Intermediate representation
         //
 
-        Segments segments;
+        List<ClipSegments> clipSegments;
+
+        int numFrames;
+
+        int numSegments;
 
         StringTable stringTable;
 
         AnimationRig rig;
-
-        Dictionary<Avatar, AnimationSamplerFactory> factories;
 
         //
         // Final memory-ready representation
@@ -189,5 +223,11 @@ namespace Unity.Kinematica.Editor
         MemoryRef<Binary> binary;
 
         BlobAllocator allocator;
+
+        //
+        // Misc
+        //
+
+        bool bCancel = false;
     }
 }

@@ -53,7 +53,7 @@ namespace Unity.Kinematica.Editor
 
         public override void SetClip(TaggedAnimationClip taggedClip)
         {
-            m_TaggedClip = taggedClip;
+            base.SetClip(taggedClip);
             if (m_TaggedClip != null)
             {
                 m_PreBoundaryClipElement.style.display = DisplayStyle.Flex;

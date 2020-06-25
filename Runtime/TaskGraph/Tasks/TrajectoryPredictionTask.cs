@@ -9,9 +9,9 @@ namespace Unity.Kinematica
     /// and desired linear speed.
     /// </summary>
     [Data("TrajectoryPrediction", "#2A3756"), BurstCompile]
-    public struct TrajectoryPredictionTask : Task
+    public struct TrajectoryPredictionTask : Task, GenericTask<TrajectoryPredictionTask>
     {
-        internal Identifier<TrajectoryPredictionTask> self;
+        public Identifier<TrajectoryPredictionTask> self { get; set; }
 
         internal MemoryRef<MotionSynthesizer> synthesizer;
 
@@ -72,7 +72,7 @@ namespace Unity.Kinematica
         /// a pose reduction (pose matching).
         /// </remarks>
         /// <returns>Always returns a success status.</returns>
-        /// <seealso cref="ReduceTask"/>
+        /// <seealso cref="MatchFragmentTask"/>
         public unsafe Result Execute()
         {
             ref var synthesizer = ref this.synthesizer.Ref;
@@ -103,7 +103,7 @@ namespace Unity.Kinematica
         /// <param name="self">Task reference that is supposed to be executed.</param>
         /// <returns>Result of the task execution.</returns>
         [BurstCompile]
-        public static Result ExecuteSelf(ref TaskRef self)
+        public static Result ExecuteSelf(ref TaskPointer self)
         {
             return self.Cast<TrajectoryPredictionTask>().Execute();
         }

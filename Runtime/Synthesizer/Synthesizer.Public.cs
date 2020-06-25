@@ -14,6 +14,11 @@ namespace Unity.Kinematica
         //
 
         /// <summary>
+        /// Return blend duration between segments in seconds
+        /// </summary>
+        public float BlendDuration => poseGenerator.BlendDuration;
+
+        /// <summary>
         /// Denotes the identifier of the root task.
         /// </summary>
         /// <remarks>
@@ -21,7 +26,8 @@ namespace Unity.Kinematica
         /// and output data will be a direct or indirect child of
         /// the root task.
         /// </remarks>
-        public MemoryIdentifier Root => memoryChunk.Ref.Root;
+        public TaskReference Root => TaskReference.Create(memoryChunk.Ref.Root, MemoryRef<MotionSynthesizer>.Create(ref this));
+
 
         internal void UpdateFrameCount(int frameCount)
         {
@@ -50,7 +56,7 @@ namespace Unity.Kinematica
 
         /// <summary>
         /// Checks if a memory identifer is valid and bound to valid data (Task, array...) in the synthesizer.
-        /// You should always use this function before calling GetRef(), GetByType(), GetArray() functions if you are unsure
+        /// You should always use this function before calling GetRef(), GetChildByType(), GetArray() functions if you are unsure
         /// the memory identifier is valid
         /// </summary>
         /// <param name="identifier">Memory identifier to check for validity.</param>
@@ -121,7 +127,7 @@ namespace Unity.Kinematica
         /// </remarks>
         /// <param name="parent">The start node to be used for the search.</param>
         /// <returns>Memory reference of the result.</returns>
-        public MemoryRef<T> GetByType<T>(MemoryIdentifier parent) where T : struct
+        public MemoryRef<T> GetChildByType<T>(MemoryIdentifier parent) where T : struct
         {
             var typeIndex = GetDataTypeIndex<T>();
 
@@ -129,7 +135,7 @@ namespace Unity.Kinematica
 
             Assert.IsTrue(parent.IsValid);
 
-            return memoryChunk.Ref.GetByType<T>(typeIndex, parent);
+            return memoryChunk.Ref.GetChildByType<T>(typeIndex, parent);
         }
 
         /// <summary>
@@ -269,7 +275,7 @@ namespace Unity.Kinematica
         }
 
         /// <summary>
-        /// Pushes a new sampling time into the pose stream.
+        /// Play the first sequence from <code>queryResult</code>
         /// </summary>
         /// <remarks>
         /// This method accepts a query result (most likely obtained from
@@ -279,7 +285,7 @@ namespace Unity.Kinematica
         /// </remarks>
         /// <param name="queryResult">Query result obtained from a semantic query.</param>
         /// <seealso cref="Query"/>
-        public void Push(QueryResult queryResult)
+        public void PlayFirstSequence(QueryResult queryResult)
         {
             if (queryResult.length > 0)
             {
@@ -288,7 +294,7 @@ namespace Unity.Kinematica
                 ref var interval = ref binary.GetInterval(
                     queryResult[0].intervalIndex);
 
-                Push(interval.GetTimeIndex(interval.firstFrame));
+                PlayAtTime(interval.GetTimeIndex(interval.firstFrame));
             }
 
             queryResult.Dispose();

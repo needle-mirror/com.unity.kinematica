@@ -12,13 +12,13 @@ namespace Unity.Kinematica
     /// </remarks>
     /// <seealso cref="Task"/>
     [Data("Action", "#372A56", DataType.Flag.TopologySort), BurstCompile]
-    public struct ActionTask : Task
+    public struct ActionTask : Task, GenericTask<ActionTask>
     {
         /// <summary>
         /// Identifier that represents the instance of this action task.
         /// </summary>
         /// <seealso cref="Identifier"/>
-        public Identifier<ActionTask> self;
+        public Identifier<ActionTask> self { get; set; }
 
         internal MemoryRef<MotionSynthesizer> synthesizer;
 
@@ -61,7 +61,7 @@ namespace Unity.Kinematica
         /// <param name="self">Task reference that is supposed to be executed.</param>
         /// <returns>Result of the task execution.</returns>
         [BurstCompile]
-        public static Result ExecuteSelf(ref TaskRef self)
+        public static Result ExecuteSelf(ref TaskPointer self)
         {
             return self.Cast<ActionTask>().Execute();
         }

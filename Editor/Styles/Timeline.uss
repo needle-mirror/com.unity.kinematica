@@ -141,8 +141,6 @@
     flex-direction: column;
     justify-content: center;
     flex: 1;
-    left: -4px;
-    margin-right: -8px;
 }
 
 .timelineTimeRangeLabel {
@@ -252,6 +250,7 @@
     min-height: 21px;
     position: absolute;
     -unity-font-style: italic;
+    overflow: hidden;
 }
 
 .metricBorderElement {

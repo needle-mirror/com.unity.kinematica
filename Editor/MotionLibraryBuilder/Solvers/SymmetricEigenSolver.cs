@@ -2,13 +2,16 @@ using Unity.Mathematics;
 
 namespace Unity.Kinematica.Editor
 {
-    internal class SymmetricEigenSolver
+    internal struct SymmetricEigenSolver
     {
         public double3x3 evec;
         public double3 eval;
 
         public SymmetricEigenSolver(double a00, double a01, double a02, double a11, double a12, double a22)
         {
+            evec = new double3x3();
+            eval = new double3();
+
             //
             // Precondition the matrix by factoring out the maximum absolute value
             // of the components. This guards against floating-point overflow when
@@ -204,8 +207,10 @@ namespace Unity.Kinematica.Editor
             //
             // Robustly compute a right-handed orthonormal set { U, V, evec0 }.
             //
+            double3 U;
+            double3 V;
 
-            (var U, var V) = ComputeOrthogonalComplement(evec0);
+            ComputeOrthogonalComplement(evec0, out U, out V);
 
             //
             // Let e be eval1 and let E be a corresponding eigenvector which is a
@@ -307,7 +312,7 @@ namespace Unity.Kinematica.Editor
             }
         }
 
-        (double3, double3) ComputeOrthogonalComplement(double3 W)
+        void ComputeOrthogonalComplement(double3 W, out double3 U, out double3 V)
         {
             //
             // Robustly compute a right-handed orthonormal set { U, V, W }. The
@@ -322,9 +327,8 @@ namespace Unity.Kinematica.Editor
                 //
 
                 var invLength = 1 / math.sqrt(W[0] * W[0] + W[2] * W[2]);
-                var U = new double3(-W[2] * invLength, 0, +W[0] * invLength);
-                var V = math.cross(W, U);
-                return (U, V);
+                U = new double3(-W[2] * invLength, 0, +W[0] * invLength);
+                V = math.cross(W, U);
             }
             else
             {
@@ -333,9 +337,8 @@ namespace Unity.Kinematica.Editor
                 //
 
                 var invLength = 1 / math.sqrt(W[1] * W[1] + W[2] * W[2]);
-                var U = new double3(0, +W[2] * invLength, -W[1] * invLength);
-                var V = math.cross(W, U);
-                return (U, V);
+                U = new double3(0, +W[2] * invLength, -W[1] * invLength);
+                V = math.cross(W, U);
             }
         }
     }

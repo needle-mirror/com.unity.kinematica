@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -277,9 +278,29 @@ namespace Unity.Kinematica.Editor
 
         void OnEnable()
         {
+            UpdateObsoleteClips();
+
             foreach (var clip in AnimationLibrary)
             {
                 clip.DataChanged += MarkDirty;
+            }
+        }
+
+        // Check if some animation clips have been reimported while the asset was not used.
+        // If so, we must update concerned tagged clip cache information
+        void UpdateObsoleteClips()
+        {
+            foreach (TaggedAnimationClip taggedClip in AnimationLibrary)
+            {
+                string clipPath = taggedClip.AnimationClipPath;
+                if (clipPath != null)
+                {
+                    int clipVersion = AnimationClipPostprocessor.GetClipVersion(clipPath);
+                    if (taggedClip.ClipVersion != clipVersion)
+                    {
+                        taggedClip.ReloadClipAndMarkDirty();
+                    }
+                }
             }
         }
 
@@ -350,6 +371,19 @@ namespace Unity.Kinematica.Editor
             {
                 string markerTypeNames = string.Join(",", missingMarkerTypes.ToList());
                 errors.Add($"{markerTypeNames} marker definition(s) missing and referenced in asset. Please restore Marker type definition(s) or remove references");
+            }
+
+            string binaryPath = BinaryPath;
+
+            if (File.Exists(binaryPath) && !AssetDatabase.MakeEditable(binaryPath))
+            {
+                errors.Add($"Cannot write to Kinematica binary asset : {binaryPath}");
+            }
+
+            string debugFilePath = Path.ChangeExtension(AssetPath, ".debug.xml");
+            if (File.Exists(debugFilePath) && !AssetDatabase.MakeEditable(debugFilePath))
+            {
+                errors.Add($"Unable to write to Kinematica debug file : {debugFilePath}");
             }
 
             if (errors.Any())

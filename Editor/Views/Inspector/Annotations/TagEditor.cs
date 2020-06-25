@@ -27,6 +27,10 @@ namespace Unity.Kinematica.Editor
             UIElementsUtils.CloneTemplateInto("Inspectors/TagEditor.uxml", this);
             UIElementsUtils.ApplyStyleSheet(AnnotationsEditor.k_AnnotationsEditorStyle, this);
             AddToClassList(AnnotationsEditor.k_AnnotationsContainer);
+            AddToClassList("drawerElement");
+
+            var deleteButton = this.Q<Button>("deleteButton");
+            deleteButton.clickable.clicked += () => { RemoveTag(m_Tag); };
 
             if (!tag.payload.ValidPayloadType)
             {
@@ -65,7 +69,7 @@ namespace Unity.Kinematica.Editor
             }
             else
             {
-                Remove(metricLabel);
+                metricLabel.style.display = DisplayStyle.None;
             }
 
             FloatField startTime = this.Q<FloatField>("startTime");
@@ -153,6 +157,11 @@ namespace Unity.Kinematica.Editor
             {
                 m_Clip.Asset.AssetWasDeserialized -= Refresh;
             }
+        }
+
+        void RemoveTag(TagAnnotation tag)
+        {
+            m_Clip.RemoveTag(tag);
         }
     }
 }

@@ -27,6 +27,8 @@ namespace Unity.Kinematica.Editor
         FloatField m_TimeHorizonInput;
         Slider m_TimeHorizonSlider;
 
+        Asset m_Asset;
+
         public override VisualElement CreateInspectorGUI()
         {
             m_Root = new VisualElement();
@@ -34,28 +36,30 @@ namespace Unity.Kinematica.Editor
             UIElementsUtils.CloneTemplateInto(k_TemplatePath, m_Root);
             m_Root.AddToClassList("mainContainer");
 
-            Asset asset = target as Asset;
+            m_Asset = target as Asset;
+            m_Asset.BuildStarted += BuildStarted;
+            m_Asset.BuildStopped += BuildStopped;
 
             m_AssetSettingsInput = m_Root.Q<VisualElement>("assetSettings");
             //set restrictions on asset settings
             var sampleRateInput = m_AssetSettingsInput.Q<FloatField>("sampleRate");
             sampleRateInput.isDelayed = true;
             var sampleRateSlider = m_AssetSettingsInput.Q<Slider>("sampleRateSlider");
-            float sampleRate = Mathf.Clamp(asset.SampleRate, 1f, asset.SampleRate);
+            float sampleRate = Mathf.Clamp(m_Asset.SampleRate, 1f, m_Asset.SampleRate);
 
             sampleRateInput.value = sampleRate;
             sampleRateSlider.value = sampleRate;
             sampleRateInput.RegisterValueChangedCallback(evt =>
             {
                 float newSampleRate = Mathf.Clamp(evt.newValue, k_MinSampleRate, k_MaxSampleRate);
-                asset.SampleRate = newSampleRate;
+                m_Asset.SampleRate = newSampleRate;
                 sampleRateSlider.SetValueWithoutNotify(newSampleRate);
                 ClampTimeHorizonInput(1f / newSampleRate);
             });
             sampleRateSlider.RegisterValueChangedCallback(evt =>
             {
                 float newSampleRate = Mathf.Clamp(evt.newValue, k_MinSampleRate, k_MaxSampleRate);
-                asset.SampleRate = newSampleRate;
+                m_Asset.SampleRate = newSampleRate;
                 sampleRateInput.SetValueWithoutNotify(newSampleRate);
                 ClampTimeHorizonInput(1f / newSampleRate);
             });
@@ -64,18 +68,18 @@ namespace Unity.Kinematica.Editor
             m_TimeHorizonInput = m_AssetSettingsInput.Q<FloatField>("timeHorizon");
             m_TimeHorizonInput.isDelayed = true;
             m_TimeHorizonSlider = m_AssetSettingsInput.Q<Slider>("timeHorizonSlider");
-            m_TimeHorizonSlider.value = asset.TimeHorizon;
-            m_TimeHorizonInput.value = asset.TimeHorizon;
+            m_TimeHorizonSlider.value = m_Asset.TimeHorizon;
+            m_TimeHorizonInput.value = m_Asset.TimeHorizon;
             m_TimeHorizonInput.RegisterValueChangedCallback(evt =>
             {
                 float newTimeHorizon = Mathf.Clamp(evt.newValue, k_MinTimeHorizon, k_MaxTimeHorizon);
-                asset.TimeHorizon = newTimeHorizon;
+                m_Asset.TimeHorizon = newTimeHorizon;
                 m_TimeHorizonSlider.SetValueWithoutNotify(newTimeHorizon);
             });
             m_TimeHorizonSlider.RegisterValueChangedCallback(evt =>
             {
                 float newTimeHorizon = Mathf.Clamp(evt.newValue, k_MinTimeHorizon, k_MaxTimeHorizon);
-                asset.TimeHorizon = newTimeHorizon;
+                m_Asset.TimeHorizon = newTimeHorizon;
                 m_TimeHorizonInput.SetValueWithoutNotify(newTimeHorizon);
             });
 
@@ -85,18 +89,18 @@ namespace Unity.Kinematica.Editor
             var avatarSelector = m_Root.Q<ObjectField>("destinationAvatar");
             avatarSelector.objectType = typeof(Avatar);
 
-            avatarSelector.value = asset.DestinationAvatar;
+            avatarSelector.value = m_Asset.DestinationAvatar;
             avatarSelector.RegisterValueChangedCallback(OnAvatarSelectionChanged);
 
             UIElementsUtils.ApplyStyleSheet(k_Stylesheet, m_Root);
 
-            m_MetricsEditor = new MetricsEditor(asset);
+            m_MetricsEditor = new MetricsEditor(m_Asset);
             m_Root.Q<VisualElement>("metrics").Add(m_MetricsEditor);
 
             var buildButton = m_Root.Q<Button>("buildButton");
             buildButton.clickable.clicked += BuildButtonClicked;
 
-            if (EditorApplication.isPlaying)
+            if (EditorApplication.isPlaying || m_Asset.BuildInProgress)
             {
                 SetInputEnabled(false);
             }
@@ -112,11 +116,27 @@ namespace Unity.Kinematica.Editor
             {
                 EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             }
+
+            if (m_Asset != null)
+            {
+                m_Asset.BuildStarted -= BuildStarted;
+                m_Asset.BuildStopped -= BuildStopped;
+            }
         }
 
         void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             SetInputEnabled(state == PlayModeStateChange.ExitingPlayMode || state == PlayModeStateChange.EnteredEditMode);
+        }
+
+        void BuildStarted()
+        {
+            SetInputEnabled(false);
+        }
+
+        void BuildStopped()
+        {
+            SetInputEnabled(!EditorApplication.isPlaying);
         }
 
         void SetInputEnabled(bool enable)

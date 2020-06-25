@@ -14,6 +14,8 @@ namespace Unity.Kinematica.Editor
         List<string> m_JointNames;
         readonly ListView m_ListView = new ListView();
 
+        bool m_ForceDisabled;
+
         public JointField(Asset asset, SerializedProperty property, Asset.Metric metric)
         {
             m_Asset = asset;
@@ -36,6 +38,8 @@ namespace Unity.Kinematica.Editor
             RegisterCallback<DetachFromPanelEvent>(OnDetachFromPanel);
 
             focusable = true;
+
+            m_ForceDisabled = false;
         }
 
         void OnAttachToPanel(AttachToPanelEvent evt)
@@ -111,9 +115,9 @@ namespace Unity.Kinematica.Editor
             Label joint = element.ElementAt(1) as Label;
             joint.text = m_JointNames[index];
 
-            if (EditorApplication.isPlaying)
+            if (EditorApplication.isPlaying || m_ForceDisabled)
             {
-                element.SetEnabled(!EditorApplication.isPlaying);
+                element.SetEnabled(false);
             }
         }
 
@@ -126,6 +130,8 @@ namespace Unity.Kinematica.Editor
             root.Add(t);
 
             var joint = new Label();
+            //TODO - this value change callback can cause toggles to happen during binding (instead of just on the user toggling).
+            //       this does not happen currently as the ListView is forced to be fully displayed (no virtualization)
             t.RegisterValueChangedCallback(evt => ToggleJoint(joint.text));
             root.Add(joint);
 
@@ -149,8 +155,9 @@ namespace Unity.Kinematica.Editor
             m_Asset.MarkDirty();
         }
 
-        public void SetInputEnabled()
+        public void SetInputEnabled(bool enabled)
         {
+            m_ForceDisabled = !enabled;
             EditorApplication.delayCall += m_ListView.Refresh;
         }
     }

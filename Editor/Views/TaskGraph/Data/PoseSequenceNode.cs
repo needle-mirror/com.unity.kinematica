@@ -8,23 +8,9 @@ namespace Unity.Kinematica.Editor
     [GraphNode(typeof(PoseSequence))]
     internal class PoseSequenceNode : GraphNode
     {
-        BuilderWindow FindBuilderWindow()
-        {
-            var windows =
-                UnityEngine.Resources.FindObjectsOfTypeAll(
-                    typeof(BuilderWindow)) as BuilderWindow[];
-
-            if (windows.Length == 0)
-            {
-                return null;
-            }
-
-            return windows[0];
-        }
-
         TimeIndex RetrieveDebugTimeIndex(ref MotionSynthesizer synthesizer)
         {
-            var builderWindow = FindBuilderWindow();
+            var builderWindow = Utility.FindBuilderWindow();
 
             if (builderWindow != null)
             {

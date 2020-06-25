@@ -21,15 +21,26 @@ namespace Unity.Kinematica.Editor
 
             if (Application.isPlaying && m_PreviewTarget != null)
             {
-                var kinematica = m_PreviewTarget.GetComponent<Kinematica>();
+                var synthesizerProvider = m_PreviewTarget.GetComponent<IMotionSynthesizerProvider>();
 
-                if (kinematica != null)
+                //Look below in the hierarchy as well to help ease of use.
+                if (synthesizerProvider != null)
                 {
-                    ref var synthesizer = ref kinematica.Synthesizer.Ref;
+                    synthesizerProvider = m_PreviewTarget.GetComponentInChildren<IMotionSynthesizerProvider>();
+                }
 
-                    var samplingTime = synthesizer.Time;
+                var synthesizer = MemoryRef<MotionSynthesizer>.Null;
+                if (synthesizerProvider != null)
+                {
+                    synthesizer = synthesizerProvider.Synthesizer;
+                }
 
-                    HighlightTimeIndex(ref synthesizer, samplingTime.timeIndex);
+                //The synthesizer may or may not be valid right away and GetSynthesizer can return null
+                if (synthesizer.IsValid)
+                {
+                    var samplingTime = synthesizer.Ref.Time;
+
+                    HighlightTimeIndex(ref synthesizer.Ref, samplingTime.timeIndex);
                 }
                 else
                 {
@@ -47,15 +58,13 @@ namespace Unity.Kinematica.Editor
 
                 if (taggedClip != null)
                 {
-                    AnimationClip animationClip = taggedClip.AnimationClip;
-
                     float sampleTimeInSeconds = m_Timeline.DebugTime;
 
                     if (sampleTimeInSeconds >= 0.0f)
                     {
                         AnimationSampleTime animSampleTime = new AnimationSampleTime()
                         {
-                            clip = animationClip,
+                            clip = taggedClip,
                             sampleTimeInSeconds = sampleTimeInSeconds
                         };
 
@@ -69,10 +78,7 @@ namespace Unity.Kinematica.Editor
 
         public void HighlightTimeIndex(ref MotionSynthesizer synthesizer, TimeIndex timeIndex, bool debug = false)
         {
-            AnimationSampleTime animSampleTime = AnimationSampleTime.CreateFromTimeIndex(
-                ref synthesizer.Binary,
-                timeIndex,
-                m_AnimationLibraryListView.Children().Select(x => (x.userData as TaggedAnimationClip)?.AnimationClip));
+            AnimationSampleTime animSampleTime = AnimationSampleTime.CreateFromTimeIndex(Asset, ref synthesizer.Binary, timeIndex);
 
             if (animSampleTime.IsValid)
             {
@@ -81,11 +87,11 @@ namespace Unity.Kinematica.Editor
             }
         }
 
-        void HighlightCurrentSamplingTime(AnimationClip animationClip, float sampleTimeInSeconds, bool debug = false)
+        void HighlightCurrentSamplingTime(TaggedAnimationClip animationClip, float sampleTimeInSeconds, bool debug = false)
         {
             TaggedAnimationClip taggedClip = m_Timeline.TaggedClip;
 
-            if (animationClip != null && taggedClip != null && taggedClip.AnimationClip == animationClip)
+            if (animationClip != null && taggedClip != null && taggedClip.AnimationClipGuid == animationClip.AnimationClipGuid)
             {
                 if (debug)
                 {
@@ -104,7 +110,7 @@ namespace Unity.Kinematica.Editor
             }
         }
 
-        void HighlightAnimationClip(AnimationClip animationClip)
+        void HighlightAnimationClip(TaggedAnimationClip animationClip)
         {
             foreach (VisualElement clipElement in m_AnimationLibraryListView.Children())
             {
@@ -115,7 +121,7 @@ namespace Unity.Kinematica.Editor
 
                 IStyle clipStyle = clipElement.ElementAt(k_ClipHighlight).style;
 
-                if (taggedClip.AnimationClip == animationClip)
+                if (taggedClip.AnimationClipGuid == animationClip.AnimationClipGuid)
                 {
                     clipStyle.visibility = Visibility.Visible;
                     clipStyle.opacity = new StyleFloat(1f);

@@ -1,11 +1,19 @@
 using UnityEngine;
 using Unity.Mathematics;
 using System.Collections.Generic;
+using UnityEngine.Rendering;
 
 namespace Unity.Kinematica
 {
     public static class DebugDraw
     {
+        internal enum RenderingPipeline
+        {
+            Undefined,
+            Legacy,
+            HDRP,
+        }
+
         internal static Color White = Color.white;
         internal static Color Black = Color.black;
         internal static Color Red = Color.red;
@@ -24,6 +32,30 @@ namespace Unity.Kinematica
         internal static Color Mustard = new Color(1f, 0.75f, 0.25f, 1f);
         internal static Color Teal = new Color(0f, 0.75f, 0.75f, 1f);
         internal static Color Purple = new Color(0.5f, 0f, 0.5f, 1f);
+
+        static RenderingPipeline s_CurrentRenderingPipeline = RenderingPipeline.Undefined;
+
+        internal static RenderingPipeline CurrentRenderingPipeline
+        {
+            get
+            {
+                if (s_CurrentRenderingPipeline == RenderingPipeline.Undefined)
+                {
+                    if (GraphicsSettings.renderPipelineAsset != null && GraphicsSettings.renderPipelineAsset.GetType().Name.Contains("HDRenderPipelineAsset"))
+                    {
+                        s_CurrentRenderingPipeline = RenderingPipeline.HDRP;
+                    }
+                    else
+                    {
+                        s_CurrentRenderingPipeline = RenderingPipeline.Legacy;
+                    }
+                }
+
+                return s_CurrentRenderingPipeline;
+            }
+        }
+
+        internal static bool IsHDRP => CurrentRenderingPipeline == RenderingPipeline.HDRP;
 
         public static void Begin()
         {
@@ -111,10 +143,17 @@ namespace Unity.Kinematica
                 return;
             }
 
-            SetProgram(PROGRAM.LINES);
-            GL.Color(color);
-            GL.Vertex(start);
-            GL.Vertex(end);
+            if (IsHDRP)
+            {
+                Debug.DrawLine(start, end, color);
+            }
+            else
+            {
+                SetProgram(PROGRAM.LINES);
+                GL.Color(color);
+                GL.Vertex(start);
+                GL.Vertex(end);
+            }
         }
 
         internal static void DrawTransform(AffineTransform transform, float scale, float duration = 0.0f)
@@ -154,11 +193,20 @@ namespace Unity.Kinematica
                 return;
             }
 
-            SetProgram(PROGRAM.TRIANGLES);
-            GL.Color(color);
-            GL.Vertex(b);
-            GL.Vertex(a);
-            GL.Vertex(c);
+            if (IsHDRP)
+            {
+                DrawLine(b, a, color);
+                DrawLine(a, c, color);
+                DrawLine(c, b, color);
+            }
+            else
+            {
+                SetProgram(PROGRAM.TRIANGLES);
+                GL.Color(color);
+                GL.Vertex(b);
+                GL.Vertex(a);
+                GL.Vertex(c);
+            }
         }
 
         internal static void DrawArrow(AffineTransform transform, Color arrowColor, Color lineColor, float scale)

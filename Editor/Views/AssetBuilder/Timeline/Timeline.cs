@@ -105,6 +105,7 @@ namespace Unity.Kinematica.Editor
         AnnotationsTrack m_AnnotationsTrack;
         MarkerTrack m_MarkerTrack;
         BoundaryClipTrack m_BoundaryClipTrack;
+        PlayControls m_PlayControls;
 
         Image m_PreviewWarning;
 
@@ -129,6 +130,8 @@ namespace Unity.Kinematica.Editor
             previewTargetSelector.RegisterValueChangedCallback(OnPreviewTargetSelectorChanged);
             PreviewDisposed += () => previewTargetSelector.SetValueWithoutNotify(null);
             PreviewTargetChanged += (newTarget) => previewTargetSelector.SetValueWithoutNotify(newTarget);
+
+            ConnectToPlayControls(parentElement.Q<PlayControls>());
 
             m_TimelineWorkArea = this.Q<VisualElement>(k_TimelineWorkAreaName);
 
@@ -287,13 +290,7 @@ namespace Unity.Kinematica.Editor
 
         void OnAssetDeserialized(Asset asset)
         {
-            EditorApplication.delayCall += () =>
-            {
-                foreach (var track in m_TrackElements)
-                {
-                    track.OnAssetModified();
-                }
-            };
+            EditorApplication.delayCall += OnAssetModified;
         }
 
         void UnsubFromClip()
@@ -352,7 +349,9 @@ namespace Unity.Kinematica.Editor
             float timeChange = WorldPositionToTime(from.x) - WorldPositionToTime(to.x);
             if (m_TimeRange.PanTimeRange(timeChange))
             {
-                OnGeometryChanged();
+                UpdatePlayheadPositions();
+                AdjustTicks();
+                ResetTimeRuler();
             }
         }
 
@@ -367,11 +366,6 @@ namespace Unity.Kinematica.Editor
         }
 
         void OnGeometryChanged(GeometryChangedEvent evt)
-        {
-            OnGeometryChanged();
-        }
-
-        void OnGeometryChanged()
         {
             if (m_TimelineScrollableArea.layout.width < m_TimelineWorkArea.layout.width)
             {
@@ -503,13 +497,18 @@ namespace Unity.Kinematica.Editor
             {
                 if (EditorApplication.isPlaying)
                 {
-                    Kinematica component = null;
+                    IMotionSynthesizerProvider synthesizerProvider = null;
                     if (PreviewTarget != null)
                     {
-                        component = PreviewTarget.GetComponent<Kinematica>();
+                        synthesizerProvider = PreviewTarget.GetComponent<IMotionSynthesizerProvider>();
+
+                        if (synthesizerProvider == null)
+                        {
+                            synthesizerProvider = PreviewTarget.GetComponentInChildren<IMotionSynthesizerProvider>();
+                        }
                     }
 
-                    if (component == null)
+                    if (synthesizerProvider == null)
                     {
                         m_PreviewWarning.style.display = DisplayStyle.Flex;
                     }
@@ -521,12 +520,11 @@ namespace Unity.Kinematica.Editor
         {
             if (TaggedClip != null && TaggedClip.Valid)
             {
-                var clip = TaggedClip.AnimationClip;
                 if (ActiveTick.style.display == DisplayStyle.Flex)
                 {
                     if (TimelineUnits == TimelineViewMode.frames)
                     {
-                        m_ActiveTimeField.SetValueWithoutNotify(ActiveTime * clip.frameRate);
+                        m_ActiveTimeField.SetValueWithoutNotify(ActiveTime * TaggedClip.SampleRate);
                     }
                     else
                     {
@@ -595,16 +593,6 @@ namespace Unity.Kinematica.Editor
         void ShowDebugPlayhead()
         {
             ActiveDebugTick.style.display = DisplayStyle.Flex;
-        }
-
-        void EnableEdit()
-        {
-            m_TrackElements.ForEach(t => t.EnableEdit());
-        }
-
-        void DisableEdit()
-        {
-            m_TrackElements.ForEach(t => t.DisableEdit());
         }
     }
 }

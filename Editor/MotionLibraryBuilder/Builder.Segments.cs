@@ -48,36 +48,80 @@ namespace Unity.Kinematica.Editor
             }
         }
 
-        public class Segments
+        public class ClipSegments
         {
+            TaggedAnimationClip clip;
+
             List<Segment> segments = new List<Segment>();
 
-            public static Segments Create()
+            public static ClipSegments Create()
             {
-                return new Segments();
-            }
-
-            public int NumFrames
-            {
-                get; private set;
+                return new ClipSegments();
             }
 
             public int NumSegments => segments.Count;
+
+            public TaggedAnimationClip Clip => clip;
 
             public Segment this[int index] => segments[index];
 
             public Segment[] ToArray() => segments.ToArray();
 
-            public void GenerateSegments(Asset asset)
+            public int FindFirstSegmentIndex()
             {
+                int segmentIndex = Binary.SegmentIndex.Invalid;
+
+                int frameIndex = int.MaxValue;
+
+                for (int i = 0; i < NumSegments; ++i)
+                {
+                    if (segments[i].destination.FirstFrame < frameIndex)
+                    {
+                        frameIndex = segments[i].destination.FirstFrame;
+                        segmentIndex = i;
+                    }
+                }
+
+                return segmentIndex;
+            }
+
+            public int FindLastSegmentIndex()
+            {
+                int segmentIndex = Binary.SegmentIndex.Invalid;
+
+                int frameIndex = -1;
+
+                for (int i = 0; i < NumSegments; ++i)
+                {
+                    if (segments[i].destination.FirstFrame > frameIndex)
+                    {
+                        frameIndex = segments[i].destination.FirstFrame;
+                        segmentIndex = i;
+                    }
+                }
+
+                return segmentIndex;
+            }
+
+            public static List<ClipSegments> GenerateSegments(Asset asset, out int numSegments, out int numFrames)
+            {
+                List<ClipSegments> segments = new List<ClipSegments>();
+
                 int destinationIndex = 0;
-                int numFrames = 0;
+                numSegments = 0;
+                numFrames = 0;
 
                 foreach (var animationClip in asset.GetAnimationClips())
                 {
-                    var segments = GenerateSegments(asset, animationClip);
+                    ClipSegments clipSegments = new ClipSegments()
+                    {
+                        clip = animationClip,
+                        segments = GenerateSegments(asset, animationClip)
+                    };
 
-                    foreach (var segment in segments)
+                    numSegments += clipSegments.NumSegments;
+
+                    foreach (var segment in clipSegments.segments)
                     {
                         Assert.IsTrue(segment.source.FirstFrame >= 0);
                         Assert.IsTrue(segment.source.OnePastLastFrame <= animationClip.NumFrames);
@@ -95,10 +139,10 @@ namespace Unity.Kinematica.Editor
                         destinationIndex += numFramesDestination;
                     }
 
-                    this.segments.AddRange(segments);
+                    segments.Add(clipSegments);
                 }
 
-                NumFrames = numFrames;
+                return segments;
             }
 
             static List<Segment> GenerateSegments(Asset asset, TaggedAnimationClip animationClip)
@@ -167,13 +211,31 @@ namespace Unity.Kinematica.Editor
             }
         }
 
+        Segment GetSegment(int segmentIndex)
+        {
+            for (int i = 0; i < clipSegments.Count; ++i)
+            {
+                if (segmentIndex < clipSegments[i].NumSegments)
+                {
+                    return clipSegments[i][segmentIndex];
+                }
+                else
+                {
+                    segmentIndex -= clipSegments[i].NumSegments;
+                }
+            }
+
+            return null;
+        }
+
         bool DoesSegmentCoverMetric(Segment segment)
         {
             foreach (TagAnnotation tag in segment.tags)
             {
+                string tagName = TagAnnotation.GetTagTypeFullName(tag);
+
                 foreach (Asset.Metric metric in asset.Metrics)
                 {
-                    string tagName = TagAnnotation.GetTagTypeFullName(tag);
                     if (metric.TagTypes.Contains(tagName))
                     {
                         return true;
@@ -181,6 +243,19 @@ namespace Unity.Kinematica.Editor
                 }
             }
 
+            return false;
+        }
+
+        bool IsTagAssociatedToMetric(TagAnnotation tag)
+        {
+            string tagName = TagAnnotation.GetTagTypeFullName(tag);
+            foreach (Asset.Metric metric in asset.Metrics)
+            {
+                if (metric.TagTypes.Contains(tagName))
+                {
+                    return true;
+                }
+            }
             return false;
         }
 
@@ -192,61 +267,69 @@ namespace Unity.Kinematica.Editor
 
             bool hasShortTag = false;
 
-            for (int i = 0; i < binary.numSegments; ++i)
+            foreach (ClipSegments segments in clipSegments)
             {
-                Segment segment = segments[i];
-
-                if (!DoesSegmentCoverMetric(segment))
+                for (int i = 0; i < segments.NumSegments; ++i)
                 {
-                    continue;
-                }
+                    Segment segment = segments[i];
 
-                int segmentFirstFrame = segment.clip.ClipFramesToAssetFrames(asset, segment.source.FirstFrame);
-                int segmentOnePastLastFrame = segment.clip.ClipFramesToAssetFrames(asset, segment.source.OnePastLastFrame);
-
-                int prevSegmentFrames = 0;
-                Binary.SegmentIndex prevSegmentIndex = binary.segments[i].previousSegment;
-                if (prevSegmentIndex.IsValid)
-                {
-                    Segment prevSegment = segments[prevSegmentIndex];
-                    if (DoesSegmentCoverMetric(prevSegment))
+                    if (!DoesSegmentCoverMetric(segment))
                     {
-                        prevSegmentFrames = segment.clip.ClipFramesToAssetFrames(asset, prevSegment.source.NumFrames);
+                        continue;
                     }
-                }
 
-                int nextSegmentFrames = 0;
-                Binary.SegmentIndex nextSegmentIndex = binary.segments[i].nextSegment;
-                if (nextSegmentIndex.IsValid)
-                {
-                    Segment nextSegment = segments[nextSegmentIndex];
-                    if (DoesSegmentCoverMetric(nextSegment))
+                    int segmentFirstFrame = segment.clip.ClipFramesToAssetFrames(asset, segment.source.FirstFrame);
+                    int segmentOnePastLastFrame = segment.clip.ClipFramesToAssetFrames(asset, segment.source.OnePastLastFrame);
+
+                    int prevSegmentFrames = 0;
+                    Binary.SegmentIndex prevSegmentIndex = binary.segments[i].previousSegment;
+                    if (prevSegmentIndex.IsValid)
                     {
-                        nextSegmentFrames = segment.clip.ClipFramesToAssetFrames(asset, nextSegment.source.NumFrames);
+                        Segment prevSegment = GetSegment(prevSegmentIndex);
+                        if (DoesSegmentCoverMetric(prevSegment))
+                        {
+                            prevSegmentFrames = segment.clip.ClipFramesToAssetFrames(asset, prevSegment.source.NumFrames);
+                        }
                     }
-                }
 
-                segmentFirstFrame += math.max(numBoundaryFrames - prevSegmentFrames, 0);
-                segmentOnePastLastFrame -= math.max(numBoundaryFrames - nextSegmentFrames, 0);
-
-                for (int j = 0; j < segment.tags.Count; ++j)
-                {
-                    TagAnnotation tag = segment.tags[j];
-
-                    int firstFrame = segment.clip.ClipFramesToAssetFrames(asset, segment.clip.ClampedTimeInSecondsToIndex(tag.startTime));
-                    int onePastLastFrame = firstFrame + segment.clip.ClipFramesToAssetFrames(asset, segment.clip.ClampedDurationInSecondsToFrames(tag.duration));
-
-                    int firstValidFrame = math.max(firstFrame, segmentFirstFrame);
-                    int onePastLastValidFrame = math.min(onePastLastFrame, segmentOnePastLastFrame);
-
-                    if (firstValidFrame >= onePastLastValidFrame)
+                    int nextSegmentFrames = 0;
+                    Binary.SegmentIndex nextSegmentIndex = binary.segments[i].nextSegment;
+                    if (nextSegmentIndex.IsValid)
                     {
-                        int tagNumFrames = onePastLastFrame - firstFrame;
-                        int missingFrames = firstValidFrame + 1 - onePastLastValidFrame;
+                        Segment nextSegment = GetSegment(nextSegmentIndex);
+                        if (DoesSegmentCoverMetric(nextSegment))
+                        {
+                            nextSegmentFrames = segment.clip.ClipFramesToAssetFrames(asset, nextSegment.source.NumFrames);
+                        }
+                    }
 
-                        Debug.LogError($"Tag [{firstFrame},{onePastLastFrame - 1}] from clip {segment.clip.ClipName} is too short. It should be at least {tagNumFrames + missingFrames} frames but is only {tagNumFrames}");
+                    segmentFirstFrame += math.max(numBoundaryFrames - prevSegmentFrames, 0);
+                    segmentOnePastLastFrame -= math.max(numBoundaryFrames - nextSegmentFrames, 0);
 
-                        hasShortTag = true;
+                    for (int j = 0; j < segment.tags.Count; ++j)
+                    {
+                        TagAnnotation tag = segment.tags[j];
+
+                        if (!IsTagAssociatedToMetric(tag))
+                        {
+                            continue;
+                        }
+
+                        int firstFrame = segment.clip.ClipFramesToAssetFrames(asset, segment.clip.ClampedTimeInSecondsToIndex(tag.startTime));
+                        int onePastLastFrame = firstFrame + segment.clip.ClipFramesToAssetFrames(asset, segment.clip.ClampedDurationInSecondsToFrames(tag.duration));
+
+                        int firstValidFrame = math.max(firstFrame, segmentFirstFrame);
+                        int onePastLastValidFrame = math.min(onePastLastFrame, segmentOnePastLastFrame);
+
+                        if (firstValidFrame >= onePastLastValidFrame)
+                        {
+                            int tagNumFrames = onePastLastFrame - firstFrame;
+                            int missingFrames = firstValidFrame + 1 - onePastLastValidFrame;
+
+                            Debug.LogError($"Tag [{firstFrame},{onePastLastFrame - 1}] from clip {segment.clip.ClipName} is too short. It should be at least {tagNumFrames + missingFrames} frames but is only {tagNumFrames}");
+
+                            hasShortTag = true;
+                        }
                     }
                 }
             }
@@ -257,99 +340,105 @@ namespace Unity.Kinematica.Editor
             }
         }
 
-        int FindFirstSegment(TaggedAnimationClip taggedAnimationClip)
+        public int FindFirstSegmentIndex(TaggedAnimationClip clip)
         {
-            int segmentIndex = Binary.SegmentIndex.Invalid;
-
-            int frameIndex = int.MaxValue;
-
-            int numSegments = segments.NumSegments;
-
-            for (int i = 0; i < numSegments; ++i)
+            int segmentIndex = 0;
+            for (int i = 0; i < clipSegments.Count; ++i)
             {
-                if (segments[i].clip == taggedAnimationClip)
+                if (clipSegments[i].Clip == clip)
                 {
-                    if (segments[i].destination.FirstFrame < frameIndex)
-                    {
-                        frameIndex = segments[i].destination.FirstFrame;
-                        segmentIndex = i;
-                    }
+                    return segmentIndex + clipSegments[i].FindFirstSegmentIndex();
+                }
+                else
+                {
+                    segmentIndex += clipSegments[i].NumSegments;
                 }
             }
 
-            return segmentIndex;
+            return -1;
         }
 
-        int FindLastSegment(TaggedAnimationClip taggedAnimationClip)
+        public int FindLastSegmentIndex(TaggedAnimationClip clip)
         {
-            int segmentIndex = Binary.SegmentIndex.Invalid;
-
-            int frameIndex = -1;
-
-            int numSegments = segments.NumSegments;
-
-            for (int i = 0; i < numSegments; ++i)
+            int segmentIndex = 0;
+            for (int i = 0; i < clipSegments.Count; ++i)
             {
-                if (segments[i].clip == taggedAnimationClip)
+                if (clipSegments[i].Clip == clip)
                 {
-                    if (segments[i].destination.FirstFrame > frameIndex)
-                    {
-                        frameIndex = segments[i].destination.FirstFrame;
-                        segmentIndex = i;
-                    }
+                    return segmentIndex + clipSegments[i].FindLastSegmentIndex();
+                }
+                else
+                {
+                    segmentIndex += clipSegments[i].NumSegments;
                 }
             }
 
-            return segmentIndex;
+            return -1;
+        }
+
+        ClipSegments FindClipSegments(TaggedAnimationClip clip)
+        {
+            for (int i = 0; i < clipSegments.Count; ++i)
+            {
+                if (clipSegments[i].Clip == clip)
+                {
+                    return clipSegments[i];
+                }
+            }
+
+            return null;
         }
 
         public void BuildSegments()
         {
-            segments.GenerateSegments(asset);
-
-            int numSegments = segments.NumSegments;
+            clipSegments = ClipSegments.GenerateSegments(asset, out numSegments, out numFrames);
 
             ref Binary binary = ref Binary;
 
             allocator.Allocate(numSegments, ref binary.segments);
 
-            for (int i = 0; i < numSegments; ++i)
+            int segmentIndex = 0;
+            for (int i = 0; i < clipSegments.Count; ++i)
             {
-                var animationClip = segments[i].clip.AnimationClip;
+                ClipSegments segments = clipSegments[i];
 
-                var nameIndex = stringTable.RegisterString(animationClip.name);
+                var clip = segments.Clip;
 
-                var guid =
-                    SerializableGuidUtility.GetSerializableGuidFromAsset(
-                        animationClip);
+                var nameIndex = stringTable.RegisterString(clip.ClipName);
 
-                binary.segments[i].nameIndex = nameIndex;
-                binary.segments[i].guid = guid;
-                binary.segments[i].source.firstFrame = segments[i].source.FirstFrame;
-                binary.segments[i].source.numFrames = segments[i].source.NumFrames;
-                binary.segments[i].destination.firstFrame = segments[i].destination.FirstFrame;
-                binary.segments[i].destination.numFrames = segments[i].destination.NumFrames;
+                var guid = clip.AnimationClipGuid;
 
-                binary.segments[i].previousSegment = Binary.SegmentIndex.Invalid;
-                binary.segments[i].nextSegment = Binary.SegmentIndex.Invalid;
+                for (int j = 0; j < segments.NumSegments; ++j)
+                {
+                    binary.segments[segmentIndex].nameIndex = nameIndex;
+                    binary.segments[segmentIndex].guid = guid;
+                    binary.segments[segmentIndex].source.firstFrame = segments[j].source.FirstFrame;
+                    binary.segments[segmentIndex].source.numFrames = segments[j].source.NumFrames;
+                    binary.segments[segmentIndex].destination.firstFrame = segments[j].destination.FirstFrame;
+                    binary.segments[segmentIndex].destination.numFrames = segments[j].destination.NumFrames;
 
-                segments[i].segmentIndex = i;
-            }
+                    if (clip.TaggedPreBoundaryClip != null)
+                    {
+                        binary.segments[segmentIndex].previousSegment = FindLastSegmentIndex(clip.TaggedPreBoundaryClip);
+                    }
+                    else
+                    {
+                        binary.segments[segmentIndex].previousSegment = Binary.SegmentIndex.Invalid;
+                    }
 
-            //
-            // The builder UI only supports connections
-            // based on animation clips, so unfortunately this is the best I can do.
-            //
+                    if (clip.TaggedPostBoundaryClip != null)
+                    {
+                        binary.segments[segmentIndex].nextSegment = FindFirstSegmentIndex(clip.TaggedPreBoundaryClip);
+                    }
+                    else
+                    {
+                        binary.segments[segmentIndex].nextSegment = Binary.SegmentIndex.Invalid;
+                    }
 
-            for (int i = 0; i < numSegments; ++i)
-            {
-                var taggedAnimationClip = segments[i].clip;
+                    segments[j].segmentIndex = segmentIndex;
 
-                var preBoundaryClip = taggedAnimationClip.TaggedPreBoundaryClip;
-                var postBoundaryClip = taggedAnimationClip.TaggedPostBoundaryClip;
-
-                binary.segments[i].previousSegment = FindLastSegment(preBoundaryClip);
-                binary.segments[i].nextSegment = FindFirstSegment(postBoundaryClip);
+                    ++segmentIndex;
+                }
             }
 
             CheckTagsAreLongEnough();

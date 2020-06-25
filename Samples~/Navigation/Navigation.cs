@@ -19,16 +19,16 @@ namespace Navigation
 
             ref var synthesizer = ref kinematica.Synthesizer.Ref;
 
-            synthesizer.Push(
+            synthesizer.PlayFirstSequence(
                 synthesizer.Query.Where(
                     Locomotion.Default).And(Idle.Default));
 
-            var selector = synthesizer.Selector();
+            var selector = synthesizer.Root.Selector();
 
             {
                 var sequence = selector.Condition().Sequence();
 
-                sequence.Action().PushConstrained(
+                sequence.Action().MatchPose(
                     synthesizer.Query.Where(
                         Locomotion.Default).And(Idle.Default), 0.01f);
 
@@ -38,13 +38,13 @@ namespace Navigation
             {
                 var action = selector.Action();
 
-                action.PushConstrained(
+                action.MatchPoseAndTrajectory(
                     synthesizer.Query.Where(
                         Locomotion.Default).Except(Idle.Default),
-                            action.Navigation().trajectory);
+                            action.Navigation().GetAs<NavigationTask>().trajectory);
             }
 
-            locomotion = selector;
+            locomotion = selector.GetAs<SelectorTask>();
         }
 
         void Update()
@@ -55,8 +55,8 @@ namespace Navigation
 
             synthesizer.Tick(locomotion);
 
-            ref var navigation = ref synthesizer.GetByType<NavigationTask>(locomotion).Ref;
-            ref var idle = ref synthesizer.GetByType<ConditionTask>(locomotion).Ref;
+            ref var navigation = ref synthesizer.GetChildByType<NavigationTask>(locomotion).Ref;
+            ref var idle = ref synthesizer.GetChildByType<ConditionTask>(locomotion).Ref;
 
             if (Input.GetMouseButtonDown(0))
             {
@@ -99,7 +99,7 @@ namespace Navigation
 
         void OnGUI()
         {
-            GUI.Label(new Rect(10, 10, 900, 20), "Click in blue area to move character.");
+            GUI.Label(new Rect(10, 10, 900, 20), "Click somewhere on the ground to move character toward that location.");
         }
     }
 }

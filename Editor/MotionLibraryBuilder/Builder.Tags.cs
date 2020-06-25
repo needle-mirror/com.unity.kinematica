@@ -2,12 +2,12 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
-
 using UnityEngine.Assertions;
 
 using Unity.Mathematics;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Burst;
+using UnityEngine;
 
 namespace Unity.Kinematica.Editor
 {
@@ -46,8 +46,31 @@ namespace Unity.Kinematica.Editor
             }
         }
 
+        public void GenerateProceduralAnnotations()
+        {
+            Experimental.IProceduralAnnotationsGenerator[] generators = Experimental.ProceduralAnnotations.CreateGenerators(true);
+
+            foreach (TaggedAnimationClip taggedClip in asset.AnimationLibrary)
+            {
+                AnimationClip clip = taggedClip.GetOrLoadClipSync();
+                Experimental.ProceduralAnnotations annotations = new Experimental.ProceduralAnnotations();
+
+                foreach (var generator in generators)
+                {
+                    generator.GenerateAnnotations(clip, annotations);
+                }
+
+                if (annotations.NumAnnotations > 0)
+                {
+                    clipProceduralAnnotations.Add(taggedClip.AnimationClipGuid, annotations);
+                }
+            }
+        }
+
         public void BuildTags()
         {
+            GenerateProceduralAnnotations();
+
             GenerateMarkers();
 
             GenerateTags();
@@ -77,6 +100,7 @@ namespace Unity.Kinematica.Editor
             allocator.Allocate(tagLists.Count, ref binary.tagLists);
             allocator.Allocate(memoryRequirements, ref binary.payloads);
 
+            int segmentIndex = 0;
             int tagIndex = 0;
             int traitIndex = 0;
             int intervalIndex = 0;
@@ -118,7 +142,7 @@ namespace Unity.Kinematica.Editor
 
             foreach (var tag in tags)
             {
-                var segmentIndex = tag.segment.segmentIndex;
+                segmentIndex = tag.segment.segmentIndex;
 
                 Assert.IsTrue(tag.interval.FirstFrame >= tag.segment.destination.FirstFrame);
                 Assert.IsTrue(tag.interval.OnePastLastFrame <= tag.segment.destination.OnePastLastFrame);
@@ -137,7 +161,7 @@ namespace Unity.Kinematica.Editor
             {
                 VerifyInterval(interval);
 
-                var segmentIndex = interval.segment.segmentIndex;
+                segmentIndex = interval.segment.segmentIndex;
 
                 Assert.IsTrue(interval.firstFrame >= interval.segment.destination.FirstFrame);
                 Assert.IsTrue(interval.onePastLastFrame <= interval.segment.destination.OnePastLastFrame);
@@ -177,28 +201,30 @@ namespace Unity.Kinematica.Editor
                 markerIndex++;
             }
 
-            int numSegments = segments.NumSegments;
-
-            for (int i = 0; i < numSegments; ++i)
+            segmentIndex = 0;
+            foreach (ClipSegments segments in clipSegments)
             {
-                Assert.IsTrue(binary.segments[i].tagIndex == 0);
-                Assert.IsTrue(binary.segments[i].numTags == 0);
-
-                binary.segments[i].tagIndex = segments[i].tagIndex;
-                binary.segments[i].numTags = segments[i].numTags;
-
-                Assert.IsTrue(binary.segments[i].intervalIndex == 0);
-                Assert.IsTrue(binary.segments[i].numIntervals == 0);
-
-                binary.segments[i].intervalIndex = segments[i].intervalIndex;
-                binary.segments[i].numIntervals = segments[i].numIntervals;
-
-                binary.segments[i].markerIndex = segments[i].markerIndex;
-                binary.segments[i].numMarkers = segments[i].numMarkers;
-
-                if (binary.segments[i].numMarkers <= 0)
+                for (int i = 0; i < segments.NumSegments; ++i, ++segmentIndex)
                 {
-                    binary.segments[i].markerIndex = Binary.MarkerIndex.Invalid;
+                    Assert.IsTrue(binary.segments[segmentIndex].tagIndex == 0);
+                    Assert.IsTrue(binary.segments[segmentIndex].numTags == 0);
+
+                    binary.segments[segmentIndex].tagIndex = segments[i].tagIndex;
+                    binary.segments[segmentIndex].numTags = segments[i].numTags;
+
+                    Assert.IsTrue(binary.segments[segmentIndex].intervalIndex == 0);
+                    Assert.IsTrue(binary.segments[segmentIndex].numIntervals == 0);
+
+                    binary.segments[segmentIndex].intervalIndex = segments[i].intervalIndex;
+                    binary.segments[segmentIndex].numIntervals = segments[i].numIntervals;
+
+                    binary.segments[segmentIndex].markerIndex = segments[i].markerIndex;
+                    binary.segments[segmentIndex].numMarkers = segments[i].numMarkers;
+
+                    if (binary.segments[segmentIndex].numMarkers <= 0)
+                    {
+                        binary.segments[segmentIndex].markerIndex = Binary.MarkerIndex.Invalid;
+                    }
                 }
             }
 
@@ -211,73 +237,77 @@ namespace Unity.Kinematica.Editor
 
         void GenerateMarkers()
         {
-            AnimationSampler sampler = null;
-
-            foreach (var segment in segments.ToArray())
+            foreach (ClipSegments segments in clipSegments)
             {
-                sampler = GetAnimationSampler(segment, sampler);
+                TaggedAnimationClip taggedClip = segments.Clip;
 
-                var payloadBuilder = new PayloadBuilder(this, sampler);
+                List<Marker> markers = new List<Marker>();
 
-                payloadBuilder.interval = segment.destination;
+                List<MarkerAnnotation> clipMarkers = new List<MarkerAnnotation>();
 
-                var taggedClip = segment.clip;
+                // Add the editor created Markers to the list
+                clipMarkers.AddRange(taggedClip.Markers);
 
-                var animationClip = taggedClip.Clip;
-
-                Assert.IsTrue(segment.markerIndex == 0);
-                Assert.IsTrue(segment.numMarkers == 0);
-
-                var markers = new List<Marker>();
-
-                foreach (var marker in segment.clip.Markers)
+                // Add procedural markers
+                Experimental.ProceduralAnnotations annotations;
+                if (clipProceduralAnnotations.TryGetValue(taggedClip.AnimationClipGuid, out annotations))
                 {
-                    int frameIndex =
-                        animationClip.ClampedTimeInSecondsToIndex(
-                            marker.timeInSeconds);
-
-                    if (segment.source.Contains(frameIndex))
-                    {
-                        int adjustedFrameIndex =
-                            segment.Remap(frameIndex) -
-                            segment.destination.FirstFrame;
-
-                        sampler.SamplePose(marker.timeInSeconds);
-
-                        payloadBuilder.sampleTimeInSeconds = marker.timeInSeconds;
-
-                        var markerTrait = BuildTrait(marker.payload, payloadBuilder);
-
-                        markers.Add(new Marker
-                        {
-                            segmentIndex = segment.segmentIndex,
-                            frameIndex = adjustedFrameIndex,
-                            traitIndex = RegisterTrait(markerTrait)
-                        });
-                    }
+                    clipMarkers.AddRange(annotations.Markers);
                 }
 
-                segment.markerIndex = this.markers.Count;
-                segment.numMarkers = markers.Count;
+                for (int i = 0; i < segments.NumSegments; ++i)
+                {
+                    Segment segment = segments[i];
 
-                this.markers.AddRange(markers);
-            }
+                    Assert.IsTrue(segment.markerIndex == 0);
+                    Assert.IsTrue(segment.numMarkers == 0);
 
-            if (sampler != null)
-            {
-                sampler.Dispose();
+                    foreach (var marker in clipMarkers)
+                    {
+                        int frameIndex = taggedClip.ClampedTimeInSecondsToIndex(marker.timeInSeconds);
+
+                        if (segment.source.Contains(frameIndex))
+                        {
+                            int adjustedFrameIndex =
+                                segment.Remap(frameIndex) -
+                                segment.destination.FirstFrame;
+
+                            PayloadBuilder payloadBuilder = new PayloadBuilder(this, Interval.Create(adjustedFrameIndex, adjustedFrameIndex + 1), 1.0f);
+
+                            Trait markerTrait = BuildTrait(marker.payload, payloadBuilder);
+
+                            markers.Add(new Marker
+                            {
+                                segmentIndex = segment.segmentIndex,
+                                frameIndex = adjustedFrameIndex,
+                                traitIndex = RegisterTrait(markerTrait)
+                            });
+                        }
+                    }
+
+                    segment.markerIndex = this.markers.Count;
+                    segment.numMarkers = markers.Count;
+
+                    this.markers.AddRange(markers);
+                }
             }
         }
 
         void GenerateTags()
         {
-            AnimationSampler sampler = null;
-
-            foreach (var segment in segments.ToArray())
+            foreach (ClipSegments segments in clipSegments)
             {
-                sampler = GetAnimationSampler(segment, sampler);
+                TaggedAnimationClip taggedClip = segments.Clip;
 
-                GenerateTags(segment, sampler);
+                Experimental.ProceduralAnnotations annotations = null;
+                clipProceduralAnnotations.TryGetValue(taggedClip.AnimationClipGuid, out annotations);
+
+                for (int i = 0; i < segments.NumSegments; ++i)
+                {
+                    Segment segment = segments[i];
+
+                    GenerateTags(segment, annotations);
+                }
             }
 
             for (int i = 0; i < intervals.Count; ++i)
@@ -291,38 +321,52 @@ namespace Unity.Kinematica.Editor
                 Assert.IsTrue(tags[i].tagIndex == 0);
                 tags[i].tagIndex = i;
             }
-
-            sampler.Dispose();
         }
 
-        void GenerateTags(Segment segment, AnimationSampler sampler)
+        void GenerateTags(Segment segment, Experimental.ProceduralAnnotations annotations)
         {
-            var tags = new List<Tag>();
+            List<Tag> tags = new List<Tag>();
 
-            var payloadBuilder = new PayloadBuilder(this, sampler);
+            TaggedAnimationClip taggedClip = segment.clip;
 
-            foreach (var tag in segment.tags)
+            List<TagAnnotation> allTags = new List<TagAnnotation>();
+
+            // Add the editor created Tags to the list
+            allTags.AddRange(segment.tags);
+
+            // Add procedural tags
+            if (annotations != null)
             {
-                var animationClip = segment.clip;
+                allTags.AddRange(annotations.Tags);
+            }
 
-                float startTime = math.max(0.0f, tag.startTime);
-                float endTime = math.min(animationClip.DurationInSeconds, tag.EndTime);
+            foreach (TagAnnotation tagAnnotation in segment.tags)
+            {
+                float startTime = math.max(0.0f, tagAnnotation.startTime);
+                float endTime = math.min(taggedClip.DurationInSeconds, tagAnnotation.EndTime);
                 float duration = endTime - startTime;
 
                 if (duration <= 0.0f)
                 {
-                    UnityEngine.Debug.LogWarning($"One '{tag.Name}' tag is laying entirely outside of '{animationClip.ClipName}' clip range, it will therefore be ignored. (Tag starting at {tag.startTime:0.00} seconds, whose duration is {tag.duration:0.00} seconds).");
+                    UnityEngine.Debug.LogWarning($"One '{tagAnnotation.Name}' tag is laying entirely outside of '{taggedClip.ClipName}' clip range, it will therefore be ignored. (Tag starting at {tagAnnotation.startTime:0.00} seconds, whose duration is {tagAnnotation.duration:0.00} seconds).");
                     continue;
                 }
 
-                int firstFrame = animationClip.ClampedTimeInSecondsToIndex(startTime);
-                int numFrames = animationClip.ClampedDurationInSecondsToFrames(duration);
+                int firstFrame = taggedClip.ClampedTimeInSecondsToIndex(startTime);
+                int numFrames = taggedClip.ClampedDurationInSecondsToFrames(duration);
 
                 int onePastLastFrame =
                     math.min(firstFrame + numFrames,
-                        animationClip.NumFrames);
+                        taggedClip.NumFrames);
 
-                var interval = new Interval(firstFrame, onePastLastFrame);
+                Interval interval = new Interval(firstFrame, onePastLastFrame);
+
+                if (!interval.Overlaps(segment.source))
+                {
+                    // procedural tag that doesn't cover that segment
+                    Assert.IsTrue(annotations != null && annotations.Tags.Contains(tagAnnotation));
+                    continue;
+                }
 
                 Interval intersection = interval.Intersection(segment.source);
 
@@ -330,16 +374,17 @@ namespace Unity.Kinematica.Editor
                 int adjustedOnePastLastFrame = segment.Remap(intersection.OnePastLastFrame);
                 int adjustedNumFrames = adjustedOnePastLastFrame - adjustedFirstFrame;
 
-                payloadBuilder.interval = new Interval(
-                    adjustedFirstFrame, adjustedOnePastLastFrame);
+                PayloadBuilder payloadBuilder = new PayloadBuilder(this,
+                    Interval.Create(adjustedFirstFrame, adjustedOnePastLastFrame),
+                    1.0f);
 
-                var tagTrait = BuildTrait(tag.payload, payloadBuilder);
+                Trait tagTrait = BuildTrait(tagAnnotation.payload, payloadBuilder);
 
                 tags.Add(new Tag
                 {
                     segment = segment,
-                    interval = payloadBuilder.interval,
-                    traitIndex = RegisterTrait(tagTrait)
+                    interval = payloadBuilder.DestinationInterval,
+                    traitIndex = RegisterTrait(tagTrait),
                 });
             }
 
@@ -350,8 +395,7 @@ namespace Unity.Kinematica.Editor
 
             segment.intervalIndex = intervals.Count;
 
-            var numIntervals =
-                GenerateIntervals(tags, segment);
+            var numIntervals = GenerateIntervals(tags, segment);
 
             segment.numIntervals = numIntervals;
 
@@ -407,11 +451,10 @@ namespace Unity.Kinematica.Editor
         {
             Tag[] tags = tagLists[taggedInterval.tagListIndex];
 
-            foreach (var tag in tags)
+            foreach (Tag tag in tags)
             {
-                var traitType = traits[tag.traitIndex].type;
-
-                var metric = FindMetricForTraitType(traitType);
+                Type traitType = traits[tag.traitIndex].type;
+                Metric metric = FindMetricForTraitType(traitType);
 
                 if (metric != null)
                 {
@@ -430,7 +473,7 @@ namespace Unity.Kinematica.Editor
 
             var boundaries = new List<Boundary>();
 
-            foreach (var tag in tags)
+            foreach (Tag tag in tags)
             {
                 boundaries.Add(
                     Boundary.Create(
@@ -439,6 +482,11 @@ namespace Unity.Kinematica.Editor
                 boundaries.Add(
                     Boundary.Create(
                         tag, tag.interval.OnePastLastFrame));
+            }
+
+            if (boundaries.Count == 0)
+            {
+                return 0;
             }
 
             boundaries = boundaries.OrderBy(x => x.frameIndex).ToList();
@@ -541,5 +589,7 @@ namespace Unity.Kinematica.Editor
         List<Marker> markers = new List<Marker>();
         List<TaggedInterval> intervals = new List<TaggedInterval>();
         List<Tag[]> tagLists = new List<Tag[]>();
+
+        Dictionary<SerializableGuid, Experimental.ProceduralAnnotations>  clipProceduralAnnotations = new Dictionary<SerializableGuid, Experimental.ProceduralAnnotations>();
     }
 }

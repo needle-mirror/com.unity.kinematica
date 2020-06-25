@@ -25,7 +25,6 @@ namespace Unity.Kinematica.Editor
         TaggedAnimationClip clip;
         AssetPostprocessCallbacks clipAssetCallbacks;
         Avatar sourceAvatar;
-        AnimationSamplerFactory samplerFactory;
         AnimationSampler sampler;
 
         // Preview cache data
@@ -97,7 +96,10 @@ namespace Unity.Kinematica.Editor
             float currentTime = previousTime;
 
             ResetAnimationSampler();
-            InitAnimationSampler(importedClip);
+            if (!InitAnimationSampler(importedClip))
+            {
+                return;
+            }
 
             if (currentTime >= 0.0f)
             {
@@ -155,6 +157,11 @@ namespace Unity.Kinematica.Editor
 
         void SamplePose(float time)
         {
+            if (sampler == null)
+            {
+                return;
+            }
+
             if (!AnimationMode.InAnimationMode())
             {
                 AnimationMode.StartAnimationMode();
@@ -165,48 +172,48 @@ namespace Unity.Kinematica.Editor
             try
             {
                 // 1. Sample pose
-                sampler.SamplePose(time);
-
-                // 2. Save bindings so that we can restore the joints to their initial transform once preview is finished
-                foreach (EditorCurveBinding binding in bindings)
+                using (MemoryHeader<TransformBuffer> pose = sampler.SamplePose(time))
                 {
-                    AnimationMode.AddEditorCurveBinding(targetObject, binding);
-                }
-
-                // 3. Sample trajectory
-                AffineTransform rootTransform = sampler.GetRootTransform();
-                if (previousTime >= 0.0f && targetJoints[0] != null)
-                {
-                    // If the character was previously animated, we apply delta trajectory to current transform.
-                    // Otherwise, we don't move the character (this allows user to move manually previewed character between frames)
-                    var currentRootTransform =
-                        Missing.Convert(targetObject.transform) *
-                        previousRootTransform.inverseTimes(rootTransform);
-
-                    targetJoints[0].position = currentRootTransform.t;
-                    targetJoints[0].rotation = currentRootTransform.q;
-                }
-
-                previousTime = time;
-                previousRootTransform = rootTransform;
-
-                // 4. Sample all joints
-                for (int i = 1; i < targetJoints.Length; ++i)
-                {
-                    if (targetJoints[i] == null)
+                    // 2. Save bindings so that we can restore the joints to their initial transform once preview is finished
+                    foreach (EditorCurveBinding binding in bindings)
                     {
-                        continue;
+                        AnimationMode.AddEditorCurveBinding(targetObject, binding);
                     }
 
-                    var localJointTransform =
-                        sampler.TransformBuffer.transforms[i];
+                    // 3. Sample trajectory
+                    AffineTransform rootTransform = sampler.SampleTrajectory(time);
+                    if (previousTime >= 0.0f && targetJoints[0] != null)
+                    {
+                        // If the character was previously animated, we apply delta trajectory to current transform.
+                        // Otherwise, we don't move the character (this allows user to move manually previewed character between frames)
+                        var currentRootTransform =
+                            Missing.Convert(targetObject.transform) *
+                            previousRootTransform.inverseTimes(rootTransform);
 
-                    targetJoints[i].localPosition = localJointTransform.t;
-                    targetJoints[i].localRotation = localJointTransform.q;
+                        targetJoints[0].position = currentRootTransform.t;
+                        targetJoints[0].rotation = currentRootTransform.q;
+                    }
+
+                    previousTime = time;
+                    previousRootTransform = rootTransform;
+
+                    // 4. Sample all joints
+                    for (int i = 1; i < targetJoints.Length; ++i)
+                    {
+                        if (targetJoints[i] == null)
+                        {
+                            continue;
+                        }
+
+                        var localJointTransform = pose.Ref.transforms[i];
+
+                        targetJoints[i].localPosition = localJointTransform.t;
+                        targetJoints[i].localRotation = localJointTransform.q;
+                    }
+
+                    // 5. sample past & future trajectory
+                    SampleTrajectory(time);
                 }
-
-                // 5. sample past & future trajectory
-                SampleTrajectory(time);
             }
             finally
             {
@@ -265,7 +272,10 @@ namespace Unity.Kinematica.Editor
             if (this.clip != clip)
             {
                 //TODO - do we need to call this when hte clip doesn't change but the target avatar does?
-                InitAnimationSampler(clip);
+                if (!InitAnimationSampler(clip))
+                {
+                    return;
+                }
             }
 
             SamplePose(time);
@@ -296,12 +306,6 @@ namespace Unity.Kinematica.Editor
                 clipAssetCallbacks = null;
             }
 
-            if (samplerFactory != null)
-            {
-                samplerFactory.Dispose();
-                samplerFactory = null;
-            }
-
             if (sampler != null)
             {
                 sampler.Dispose();
@@ -311,7 +315,7 @@ namespace Unity.Kinematica.Editor
             previousTime = -1.0f;
         }
 
-        void InitAnimationSampler(TaggedAnimationClip clip)
+        bool InitAnimationSampler(TaggedAnimationClip clip)
         {
             this.clip = clip;
 
@@ -320,30 +324,33 @@ namespace Unity.Kinematica.Editor
                 clipAssetCallbacks.Dispose();
             }
 
-            clipAssetCallbacks = new AssetPostprocessCallbacks(clip.AnimationClip);
+            AnimationClip animationClip = clip.GetOrLoadClipSync();
+
+            clipAssetCallbacks = new AssetPostprocessCallbacks(animationClip);
             clipAssetCallbacks.importDelegate = OnClipReimport;
             clipAssetCallbacks.deleteDelegate = OnClipDelete;
-
-            if (samplerFactory == null || clip.RetargetSourceAvatar != sourceAvatar)
-            {
-                if (samplerFactory != null)
-                {
-                    samplerFactory.Dispose();
-                }
-
-                samplerFactory = AnimationSamplerFactory.Create(clip.RetargetSourceAvatar, targetRig);
-            }
 
             sourceAvatar = clip.RetargetSourceAvatar;
 
             if (sampler != null)
             {
                 sampler.Dispose();
+                sampler = null;
             }
 
-            sampler = samplerFactory.Create(clip.AnimationClip);
+            try
+            {
+                sampler = new AnimationSampler(targetRig, animationClip);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e.Message);
+                return false;
+            }
 
             previousTime = -1.0f;
+
+            return true;
         }
     }
 }

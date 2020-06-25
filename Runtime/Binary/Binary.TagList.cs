@@ -94,6 +94,17 @@ namespace Unity.Kinematica
         }
 
         /// <summary>
+        /// Returns the tag index from the tag list at given index
+        /// </summary>
+        /// <param name="tagList">List of tag indices</param>
+        /// <param name="index">Index of tag index in the list</param>
+        /// <returns></returns>
+        public TagIndex GetTagIndex(ref TagList tagList, int index)
+        {
+            return tagIndices[tagList.tagIndicesIndex + index];
+        }
+
+        /// <summary>
         /// Checks if a given trait belongs to a given trait list.
         /// </summary>
         /// <param name="tagList">The tag list to check against.</param>

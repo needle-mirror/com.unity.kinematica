@@ -17,6 +17,11 @@ namespace Unity.Kinematica.Editor
         public static SerializableGuid GetSerializableGuidFromAsset(Object asset)
         {
             string assetPath = AssetDatabase.GetAssetPath(asset);
+            if (string.IsNullOrEmpty(assetPath))
+            {
+                return SerializableGuid.CreateInvalid();
+            }
+
             return GetSerializableGuidFromAssetPath(assetPath);
         }
     }

@@ -526,5 +526,30 @@ namespace Unity.Kinematica
             Assert.IsTrue(index < numCodeBooks);
             return ref codeBooks[index];
         }
+
+        /// <summary>
+        /// Retrieve fragment index inside codebook that is associated to a time index
+        /// </summary>
+        /// <returns>Returns -1 if the time index isn't covered by the codebook</returns>
+        public int GetCodeBookFragmentIndex(ref CodeBook codeBook, TimeIndex timeIndex)
+        {
+            int numIntervals = codeBook.intervals.Length;
+
+            int fragmentIndex = 0;
+
+            for (int i = 0; i < numIntervals; ++i)
+            {
+                ref Interval interval = ref GetInterval(codeBook.intervals[i]);
+                if (interval.Contains(timeIndex))
+                {
+                    fragmentIndex += timeIndex.frameIndex - interval.firstFrame;
+                    return fragmentIndex;
+                }
+
+                fragmentIndex += interval.numFrames;
+            }
+
+            return -1;
+        }
     }
 }

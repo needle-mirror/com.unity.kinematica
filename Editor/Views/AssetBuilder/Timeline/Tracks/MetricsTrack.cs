@@ -165,9 +165,9 @@ namespace Unity.Kinematica.Editor
             float boundaryDuration = numBoundaryFrames / TargetAsset.SampleRate;
 
             float prevSegmentDuration = 0.0f;
-            if (m_TaggedClip.PreBoundaryClip != null)
+            if (m_TaggedClip.TaggedPreBoundaryClip != null)
             {
-                List<Segment> prevSegments = ComputeSegments(m_TaggedClip.PreBoundaryClip, m_TargetAsset);
+                List<Segment> prevSegments = ComputeSegments(m_TaggedClip.TaggedPreBoundaryClip, m_TargetAsset);
                 if (prevSegments.Count > 0)
                 {
                     prevSegmentDuration = prevSegments[prevSegments.Count - 1].Duration;
@@ -175,9 +175,9 @@ namespace Unity.Kinematica.Editor
             }
 
             float nextSegmentDuration = 0.0f;
-            if (m_TaggedClip.PostBoundaryClip != null)
+            if (m_TaggedClip.TaggedPostBoundaryClip != null)
             {
-                List<Segment> nextSegments = ComputeSegments(m_TaggedClip.PostBoundaryClip, m_TargetAsset);
+                List<Segment> nextSegments = ComputeSegments(m_TaggedClip.TaggedPostBoundaryClip, m_TargetAsset);
                 if (nextSegments.Count > 0)
                 {
                     nextSegmentDuration = nextSegments[0].Duration;
@@ -387,17 +387,6 @@ namespace Unity.Kinematica.Editor
             {
                 me.Resize();
             }
-        }
-
-        List<Segment>   ComputeSegments(AnimationClip clip, Asset asset)
-        {
-            TaggedAnimationClip taggedClip = asset.FindTaggedAnimationClip(clip);
-            if (taggedClip == null)
-            {
-                return null;
-            }
-
-            return ComputeSegments(taggedClip, asset);
         }
 
         List<Segment>   ComputeSegments(TaggedAnimationClip clip, Asset asset)

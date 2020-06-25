@@ -52,30 +52,8 @@
     background-color: #a03406;
 }
 
-.marker-selected {
-    border-color: #0AFF00;
-}
-
 #timeSliderArea {
     border-color: : #8A8A8A;
-}
-
-/* Marker Editor */
-
-.menuContainer {
-    border-color: #5E5E5E;
-}
-
-.structInfoContainer {
-    border-color: #5E5E5E;
-}
-
-.structInfoLabel {
-    border-color: #5E5E5E;
-}
-
-.markerField {
-    border-color: #5E5E5E;
 }
 
 /* Inspector */
@@ -89,11 +67,6 @@
 }
 
 .drawerElement {
-    border-color: #8A8A8A;
-    background-color: #C2C2C2;
-}
-
-.editor {
     border-color: #8A8A8A;
     background-color: #C2C2C2;
 }

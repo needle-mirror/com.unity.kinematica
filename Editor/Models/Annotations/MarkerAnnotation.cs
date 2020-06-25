@@ -26,6 +26,13 @@ namespace Unity.Kinematica.Editor
             return new MarkerAnnotation(type, timeInSeconds);
         }
 
+        public static MarkerAnnotation Create<T>(T payload, float timeInSeconds) where T : struct
+        {
+            MarkerAnnotation marker = Create(typeof(T), timeInSeconds);
+            marker.payload.SetValue(payload);
+            return marker;
+        }
+
         MarkerAnnotation(Type type, float timeInSeconds)
         {
             this.timeInSeconds = timeInSeconds;

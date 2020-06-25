@@ -15,6 +15,10 @@ namespace Unity.Kinematica.Editor
         {
             m_TracksContextManipulator = new ContextualMenuManipulator(evt =>
             {
+                string timeStr = TimelineUtility.GetTimeString(m_Owner.ViewMode, m_Owner.ActiveTime, (int)Clip.SampleRate);
+                evt.menu.AppendAction($"Add Annotation at {timeStr}", null, DropdownMenuAction.Status.Disabled);
+                evt.menu.AppendSeparator();
+
                 AddTagMenu(evt, action => OnAddAnnotationSelection(action.userData as Type), EditorApplication.isPlaying ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
                 evt.menu.AppendSeparator();
                 AddMarkerMenu(evt, action => OnAddAnnotationSelection(action.userData as Type), EditorApplication.isPlaying ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);

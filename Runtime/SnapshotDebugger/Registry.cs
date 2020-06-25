@@ -219,8 +219,9 @@ namespace Unity.SnapshotDebugger
                     {
                         provider.customPayload.PrepareForRead();
 
-                        targetProvider.OnPostProcess(
-                            provider.customPayload);
+                        Assert.IsTrue(targetProvider.RequirePostProcess);
+
+                        targetProvider.OnReadPostProcess(provider.customPayload);
                     }
                 }
             }

@@ -16,7 +16,7 @@ namespace Unity.Kinematica.Editor
         internal static readonly string k_UnknownAnnotationType = "unknownAnnotationTypeLabel";
 
         VisualElement m_Root;
-        ObjectField   m_RetargetSourceAvatarField;
+        ObjectField m_RetargetSourceAvatarField;
         TextField m_ClipField;
 
         public override VisualElement CreateInspectorGUI()
@@ -26,7 +26,7 @@ namespace Unity.Kinematica.Editor
             UIElementsUtils.ApplyStyleSheet(k_AnnotationsEditorStyle, m_Root);
             UIElementsUtils.ApplyStyleSheet(BuilderWindow.k_Stylesheet, m_Root);
 
-#if !USE_HUMAN_POSE_HANDLER_RETARGETING
+#if !UNITY_2020_1_OR_NEWER
             var retargetingInput = m_Root.Q<VisualElement>("retargeting");
             retargetingInput.style.display = DisplayStyle.None;
 #endif
@@ -43,7 +43,19 @@ namespace Unity.Kinematica.Editor
             var annotationsList = target as TimelineSelectionContainer;
             annotationsList.AnnotationsChanged += Refresh;
 
-            if (EditorApplication.isPlaying)
+            TaggedAnimationClip clip = annotationsList.Clip;
+            Asset asset = null;
+            if (clip != null)
+            {
+                asset = clip.Asset;
+                if (asset != null)
+                {
+                    asset.BuildStarted += BuildStarted;
+                    asset.BuildStopped += BuildStopped;
+                }
+            }
+
+            if (EditorApplication.isPlaying || asset != null && asset.BuildInProgress)
             {
                 SetInputEnabled(false);
             }
@@ -61,6 +73,7 @@ namespace Unity.Kinematica.Editor
         void SetInputEnabled(bool enable)
         {
             m_Root.SetEnabled(enable);
+            Refresh();
         }
 
         void Refresh()
@@ -118,15 +131,38 @@ namespace Unity.Kinematica.Editor
         {
             Clear();
 
-            if (target is TimelineSelectionContainer selection)
+            if (target is TimelineSelectionContainer selectionContainer)
             {
-                selection.AnnotationsChanged -= Refresh;
+                selectionContainer.AnnotationsChanged -= Refresh;
+                if (selectionContainer != null)
+                {
+                    TaggedAnimationClip clip = selectionContainer.Clip;
+                    if (clip != null)
+                    {
+                        Asset asset = clip.Asset;
+                        if (asset != null)
+                        {
+                            asset.BuildStarted -= BuildStarted;
+                            asset.BuildStopped -= BuildStopped;
+                        }
+                    }
+                }
             }
 
             if (m_Root != null)
             {
                 EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             }
+        }
+
+        void BuildStarted()
+        {
+            SetInputEnabled(false);
+        }
+
+        void BuildStopped()
+        {
+            SetInputEnabled(!EditorApplication.isPlaying);
         }
 
         void Clear()

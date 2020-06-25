@@ -25,14 +25,14 @@ namespace Unity.Kinematica.Editor
             payload.Dispose();
         }
 
-        public static TagAnnotation Create(Type t, float startTime, float duration, TaggedAnimationClip clip)
+        public static TagAnnotation Create(Type t, float startTime, float duration)
         {
             return new TagAnnotation(t, startTime, duration);
         }
 
-        public static TagAnnotation Create<T>(T payload, float startTime, float duration, TaggedAnimationClip clip) where T : struct
+        public static TagAnnotation Create<T>(T payload, float startTime, float duration) where T : struct
         {
-            TagAnnotation tag = Create(typeof(T), startTime, duration, clip);
+            TagAnnotation tag = Create(typeof(T), startTime, duration);
             tag.payload.SetValue(payload);
             return tag;
         }

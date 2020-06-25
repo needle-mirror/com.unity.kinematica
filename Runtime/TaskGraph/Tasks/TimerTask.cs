@@ -7,8 +7,10 @@ namespace Unity.Kinematica
     /// amount of time in seconds and a success status afterwards.
     /// </summary>
     [Data("Timer", "#2A3756"), BurstCompile]
-    public struct TimerTask : Task
+    public struct TimerTask : Task, GenericTask<TimerTask>
     {
+        public Identifier<TimerTask> self { get; set; }
+
         internal MemoryRef<MotionSynthesizer> synthesizer;
 
         [Property]
@@ -47,7 +49,7 @@ namespace Unity.Kinematica
         /// <param name="self">Task reference that is supposed to be executed.</param>
         /// <returns>Result of the task execution.</returns>
         [BurstCompile]
-        public static Result ExecuteSelf(ref TaskRef self)
+        public static Result ExecuteSelf(ref TaskPointer self)
         {
             return self.Cast<TimerTask>().Execute();
         }

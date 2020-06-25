@@ -31,7 +31,20 @@
     margin-right: 4px;
 }
 
+#progressBar {
+    width: 256px;
+    height: 24px;
+}
+
 #buildButton {
+    align-self: flex-end;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+#cancelBuildButton {
     align-self: flex-end;
     padding-left: 16px;
     padding-right: 16px;
@@ -188,7 +201,7 @@ Slider {
 
 .marker {
     position: absolute;
-    width: 5px;
+    width: 7px;
     height: 21px;
     left: -2px;
 }
@@ -206,24 +219,18 @@ Slider {
     right: 0;
 }
 
-.multi-marker {
-        /* GUIStyle.alignment */
+.markerOverlap {
     -unity-text-align: middle-center;
-
-    /* GUIStyle.fixedHeight */
-    height: 16px;
-
-    /* GUIStyle.fixedWidth */
-    width: 9px;
-
-    /* GUIState.background */
-    background-image: resource("Packages/com.unity.kinematica/Editor/Images/Timeline-Marker-Multi-Overlay.png");
+    top: -2px;
 }
 
-.marker-selected {
-    border-top-width: 1px;
-    border-left-width: 1px;
-    border-right-width: 1px;
+.markerOverlapImage {
+    left: -3px;
+    top: 3px;
+    width: 9px;
+    height: 9px;
+    --unity-image: resource("Packages/com.unity.kinematica/Editor/Images/markerOverlap.png");
+  --unity-image-size: scale-to-fit;
 }
 
 #deleteButton {
@@ -265,46 +272,6 @@ Slider {
     width: 64px;
 }
 
-/* Marker Editor */
-
-.menuContainer {
-    border-bottom-width: 1px;
-}
-
-#addMarkerMenu {
-    padding-left: 16px;
-    padding-right: 16px;
-    padding-top: 4px;
-    padding-bottom: 4px;
-    align-self: flex-end;
-}
-
-.markerScrollView {
-    flex-grow: 1;
-}
-
-.structInfoContainer {
-    border-width: 1px;
-}
-
-.structInfoLabel {
-    padding-top: 2px;
-    border-bottom-width: 1px;
-    margin-bottom: 4px;
-    margin-left: 4px;
-    -unity-font-style: bold;
-    font-size: 12px;
-}
-
-.markerField {
-    border-bottom-width: 1px;
-}
-
-.markerTypeLabel {
-    padding-left: 4px;
-    font-size: 12px;
-}
-
 /* Inspector */
 .inspectorSection {
     border-width: 1px;
@@ -317,17 +284,16 @@ Slider {
 }
 
 .drawerElement {
-    margin-top: 2px;
+    border-bottom-width: 1px;
 }
 
 .editor {
     padding-top: 4px;
     padding-bottom: 4px;
     padding-right: 2px;
-    padding-left: 2px;
+    padding-left: 0px;
     margin-left: 0px;
     margin-right: 0px;
-    border-bottom-width: 1px;
 }
 
 .drawerRoot {

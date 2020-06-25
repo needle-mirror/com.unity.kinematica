@@ -1,18 +1,14 @@
 using System;
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Assertions;
 
 namespace Unity.Kinematica.Editor
 {
-    internal struct ProgressFeedback
-    {
-        public float percentage;
-        public string info;
-    }
-
     internal class ProductQuantizer : IDisposable
     {
         public struct Settings
@@ -152,7 +148,64 @@ namespace Unity.Kinematica.Editor
         // Train the product quantizer on a set of points.
         //
 
-        public void Train(NativeSlice<float3>[] samples, Action<ProgressFeedback> callback)
+
+        public struct TrainingData : IDisposable
+        {
+            public NativeArray<int> permutation;
+            public NativeArray<float> slice;
+
+            public JobQueue[] jobQueues;
+            public KMeans[] featureKmeans;
+
+            public float FrameUpdate()
+            {
+                int numFinishedQueues = 0;
+
+                float progression = 0.0f;
+
+                for (int i = 0; i < jobQueues.Length; ++i)
+                {
+                    float featureProgression = jobQueues[i].FrameUpdate();
+                    if (featureProgression >= 1.0f)
+                    {
+                        ++numFinishedQueues;
+                    }
+
+                    progression += featureProgression;
+                }
+
+                if (numFinishedQueues == jobQueues.Length)
+                {
+                    return 1.0f;
+                }
+                else
+                {
+                    // average progression
+                    return progression / jobQueues.Length;
+                }
+            }
+
+            public void ForceCompleteCurrentBatch()
+            {
+                for (int i = 0; i < jobQueues.Length; ++i)
+                {
+                    jobQueues[i].ForceCompleteBatch();
+                }
+            }
+
+            public void Dispose()
+            {
+                permutation.Dispose();
+                slice.Dispose();
+
+                foreach (KMeans kmeans in featureKmeans)
+                {
+                    kmeans.Dispose();
+                }
+            }
+        }
+
+        public TrainingData ScheduleTraining(ref Builder.FragmentArray fragmentArray)
         {
             //
             // TODO: Variable bitrate encoding.
@@ -160,15 +213,17 @@ namespace Unity.Kinematica.Editor
             //       requires alternative random generator.
             //
 
-            var numInputSamples = samples.Length;
+            var numInputSamples = fragmentArray.numFragments;
 
             var numTrainingSamples = math.clamp(
                 numInputSamples, settings.minimumNumberSamples * ksub,
                 settings.maximumNumberSamples * ksub);
 
-            var permutation = new NativeArray<int>(numTrainingSamples, Allocator.Temp);
-
-            Assert.IsTrue(permutation.Length == numTrainingSamples);
+            TrainingData trainingData = new TrainingData()
+            {
+                permutation = new NativeArray<int>(numTrainingSamples, Allocator.Persistent),
+                slice = new NativeArray<float>(numTrainingSamples * dsub, Allocator.Persistent),
+            };
 
             var random = new RandomGenerator(settings.seed);
 
@@ -176,27 +231,25 @@ namespace Unity.Kinematica.Editor
             {
                 for (int i = 0; i < numTrainingSamples; i++)
                 {
-                    permutation[i] = random.Integer(numInputSamples);
+                    trainingData.permutation[i] = random.Integer(numInputSamples);
                 }
             }
             else
             {
                 for (int i = 0; i < numTrainingSamples; i++)
                 {
-                    permutation[i] = i;
+                    trainingData.permutation[i] = i;
                 }
             }
 
             for (int i = 0; i + 1 < numTrainingSamples; i++)
             {
                 int i2 = i + random.Integer(numTrainingSamples - i);
-                int t = permutation[i];
+                int t = trainingData.permutation[i];
 
-                permutation[i] = permutation[i2];
-                permutation[i2] = t;
+                trainingData.permutation[i] = trainingData.permutation[i2];
+                trainingData.permutation[i2] = t;
             }
-
-            var slice = new NativeArray<float>(numTrainingSamples * dsub, Allocator.Temp);
 
             //
             // Loop over features (M)
@@ -214,67 +267,57 @@ namespace Unity.Kinematica.Editor
                 {
                     for (int i = 0; i < numTrainingSamples; i++)
                     {
-                        int sampleIndex = permutation[i];
+                        int sampleIndex = trainingData.permutation[i];
 
-                        Assert.IsTrue(samples[sampleIndex].Length == M);
+                        Assert.IsTrue(fragmentArray.FragmentFeatures(sampleIndex).Length == M);
 
-                        float* x = (float*)NativeSliceUnsafeUtility.GetUnsafePtr(samples[sampleIndex]);
+                        float* x = (float*)fragmentArray.FragmentFeatures(sampleIndex).ptr;
 
                         int readOffset = m * dsub;
 
                         for (int j = 0; j < dsub; ++j)
                         {
-                            slice[writeOffset++] = x[readOffset++];
+                            trainingData.slice[writeOffset++] = x[readOffset++];
                         }
                     }
                 }
 
-                Assert.IsTrue(writeOffset == slice.Length);
+                Assert.IsTrue(writeOffset == trainingData.slice.Length);
+            }
 
+            trainingData.jobQueues = new JobQueue[M];
+            trainingData.featureKmeans = new KMeans[M];
+
+            for (int m = 0; m < M; m++)
+            {
                 var kms = KMeans.Settings.Default;
 
                 kms.numIterations = settings.numIterations;
                 kms.numAttempts = settings.numAttempts;
                 kms.seed = settings.seed;
 
-                var kmeans = new KMeans(dsub, ksub, kms);
+                KMeans kmeans = new KMeans(dsub, ksub, numTrainingSamples, kms);
 
                 Assert.IsTrue(numTrainingSamples >= settings.minimumNumberSamples * ksub);
                 Assert.IsTrue(numTrainingSamples <= settings.maximumNumberSamples * ksub);
 
-                kmeans.Train(slice, numTrainingSamples, 3, feedback =>
+                trainingData.jobQueues[m] = kmeans.PrepareTrainingJobQueue(new MemoryArray<float>(trainingData.slice), numTrainingSamples, 5);
+                trainingData.jobQueues[m].AddJob(new CopyKMeansCentroidsJob()
                 {
-                    float slicePercentage = 1.0f / M;
-                    float currentPercentage = feedback.percentage * slicePercentage;
-                    float completedPercentage = m * slicePercentage;
-
-                    callback(new ProgressFeedback
-                    {
-                        percentage = currentPercentage + completedPercentage,
-                        info = $"Training {m}/{M} " + feedback.info
-                    });
+                    index = m * ksub * dsub,
+                    numFloats = ksub * dsub,
+                    kmeans = kmeans,
+                    centroids = new MemoryArray<float>(centroids)
                 });
 
-                int numFloats = ksub * dsub;
-                int index = m * numFloats;
-
-                Assert.IsTrue(kmeans.centroids.Length == numFloats);
-
-                for (int i = 0; i < numFloats; ++i)
-                {
-                    centroids[index + i] = kmeans.centroids[i];
-                }
-
-                kmeans.Dispose();
+                trainingData.featureKmeans[m] = kmeans;
             }
 
-            permutation.Dispose();
-            slice.Dispose();
+            return trainingData;
         }
 
-        //
         // Quantize single or multiple vectors with the product quantizer
-        //
+
 
         unsafe void ComputeCode(float* x_ptr, byte* code_ptr)
         {
@@ -322,24 +365,23 @@ namespace Unity.Kinematica.Editor
             }
         }
 
-        public unsafe void ComputeCodes(NativeSlice<float3>[] samples, NativeSlice<byte> codes, Action<ProgressFeedback> callback)
+        public unsafe void ComputeCodes(ref Builder.FragmentArray fragmentArray, NativeSlice<byte> codes)
         {
-            byte* code_ptr = (byte*)NativeSliceUnsafeUtility.GetUnsafePtr(codes);
-
-            int numSamples = samples.Length;
-
-            for (int i = 0; i < numSamples; i++)
+            ComputeCodesJob job = new ComputeCodesJob()
             {
-                float* ptr = (float*)NativeSliceUnsafeUtility.GetUnsafePtr(samples[i]);
+                ksub = ksub,
+                dsub = dsub,
+                M = M,
+                centroids = centroids,
+                features = fragmentArray.Features.Reinterpret<float>(),
+                strideFeatures = fragmentArray.numFeatures * 3,
+                codes = new MemoryArray<byte>(codes),
+                strideCodes = codeSize,
+                startIndex = 0
+            };
 
-                ComputeCode(ptr, code_ptr + i * codeSize);
-
-                callback(new ProgressFeedback
-                {
-                    percentage = (float)i / (float)numSamples,
-                    info = "Encoding fragments"
-                });
-            }
+            JobHandle handle = job.Schedule(fragmentArray.numFragments, 1);
+            handle.Complete();
         }
     }
 }

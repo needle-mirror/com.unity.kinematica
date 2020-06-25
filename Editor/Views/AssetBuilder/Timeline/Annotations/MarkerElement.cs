@@ -11,7 +11,6 @@ namespace Unity.Kinematica.Editor
     class MarkerElement : VisualElement, ITimelineElement, INotifyValueChanged<float>
     {
         const string k_MarkerStyleClass = "marker";
-        const string k_MultiMarkerStyleClass = "multi-marker";
 
         public readonly MarkerAnnotation marker;
 
@@ -20,7 +19,6 @@ namespace Unity.Kinematica.Editor
         VisualElement m_TimelineGuideline;
         Label m_ManipulateLabel;
 
-        VisualElement m_MultipleMarkerIcon;
         VisualElement m_Content;
         readonly Color m_BackgroundColor;
         const float k_BackgroundAlpha = .7f;
@@ -40,12 +38,7 @@ namespace Unity.Kinematica.Editor
             m_Content.style.backgroundColor = background;
             Add(m_Content);
 
-            SetupManipulators(this);
-
-            m_MultipleMarkerIcon = new VisualElement();
-            m_MultipleMarkerIcon.AddToClassList(k_MultiMarkerStyleClass);
-            m_MultipleMarkerIcon.style.visibility = Visibility.Hidden;
-            Add(m_MultipleMarkerIcon);
+            SetupManipulators(m_Content);
 
             m_ManipulateLabel = new Label();
             m_ManipulateLabel.AddToClassList("markerManipulateLabel");
@@ -54,6 +47,9 @@ namespace Unity.Kinematica.Editor
 
             style.position = Position.Absolute;
             style.minHeight = 22;
+            style.maxWidth = 1;
+
+            marker.Changed += Reposition;
 
             if (panel != null)
             {
@@ -65,8 +61,20 @@ namespace Unity.Kinematica.Editor
             }
 
             RegisterCallback<DetachFromPanelEvent>(OnDetachFromPanel);
+        }
 
-            marker.Changed += Reposition;
+        public float XPos
+        {
+            get
+            {
+                float l = style.left.value.value;
+                if (float.IsNaN(l))
+                {
+                    return 0f;
+                }
+
+                return l;
+            }
         }
 
         void SetupManipulators(VisualElement element)
@@ -83,9 +91,18 @@ namespace Unity.Kinematica.Editor
 
         void OnAttachToPanel(AttachToPanelEvent evt)
         {
-            UnregisterCallback<AttachToPanelEvent>(OnAttachToPanel);
-            SetupTimelineGuideline(evt.destinationPanel.visualTree);
-            Reposition();
+            if (m_TimelineGuideline == null)
+            {
+                SetupTimelineGuideline(evt.destinationPanel.visualTree);
+            }
+        }
+
+        void SetupTimelineGuideline()
+        {
+            if (panel != null)
+            {
+                SetupTimelineGuideline(panel.visualTree);
+            }
         }
 
         void SetupTimelineGuideline(VisualElement rootElement)
@@ -115,23 +132,12 @@ namespace Unity.Kinematica.Editor
         void HideManipulationLabel()
         {
             m_TimelineGuideline.style.visibility = Visibility.Hidden;
-
             m_ManipulateLabel.style.visibility = Visibility.Hidden;
-        }
-
-        public void ShowMultiple()
-        {
-            m_MultipleMarkerIcon.style.visibility = Visibility.Visible;
-        }
-
-        public void HideMultiple()
-        {
-            m_MultipleMarkerIcon.style.visibility = Visibility.Hidden;
         }
 
         void SelectMarkerMenu(ContextualMenuPopulateEvent evt)
         {
-            var markersAtTime = m_Track.GetMarkersAtTime(marker.timeInSeconds).ToList();
+            List<MarkerElement> markersAtTime = m_Track.GetMarkersNearX(XPos).ToList();
             foreach (var m in markersAtTime)
             {
                 string text = markersAtTime.Count > 1 ? $"Select/{MarkerAttribute.GetDescription(m.marker.payload.Type)}" : $"Select {MarkerAttribute.GetDescription(m.marker.payload.Type)}";
@@ -155,15 +161,23 @@ namespace Unity.Kinematica.Editor
         void OnDetachFromPanel(DetachFromPanelEvent evt)
         {
             marker.Changed -= Reposition;
-            m_TimelineGuideline.RemoveFromHierarchy();
-            UnregisterCallback<DetachFromPanelEvent>(OnDetachFromPanel);
+            if (m_TimelineGuideline != null)
+            {
+                m_TimelineGuideline.RemoveFromHierarchy();
+                m_TimelineGuideline = null;
+            }
         }
 
-        internal event Action<float, float> MarkerTimelineElementMoved;
+        internal event Action<MarkerElement, float, float, float, float> MarkerElementDragged;
 
         float m_PreviousTime;
 
         public void Reposition()
+        {
+            Reposition(true);
+        }
+
+        public void Reposition(bool notify)
         {
             var clip = m_Track.Clip;
             if (clip == null)
@@ -171,15 +185,19 @@ namespace Unity.Kinematica.Editor
                 return;
             }
 
-
             float leftBefore = style.left.value.value;
             float timeLeftValue = Timeline.TimeToLocalPos(value, m_Track);
             style.left = timeLeftValue;
+            if (m_TimelineGuideline == null)
+            {
+                SetupTimelineGuideline();
+            }
+
             m_TimelineGuideline.style.left = timeLeftValue;
 
-            if (!FloatComparer.s_ComparerWithDefaultTolerance.Equals(leftBefore, timeLeftValue))
+            if (notify && !FloatComparer.s_ComparerWithDefaultTolerance.Equals(leftBefore, timeLeftValue))
             {
-                MarkerTimelineElementMoved?.Invoke(m_PreviousTime, value);
+                MarkerElementDragged?.Invoke(this, m_PreviousTime, value, leftBefore, timeLeftValue);
                 m_PreviousTime = value;
             }
         }
@@ -200,8 +218,7 @@ namespace Unity.Kinematica.Editor
                 {
                     if (panel != null)
                     {
-                        using (ChangeEvent<float> evt =
-                                   ChangeEvent<float>.GetPooled(marker.timeInSeconds, value))
+                        using (ChangeEvent<float> evt = ChangeEvent<float>.GetPooled(marker.timeInSeconds, value))
                         {
                             evt.target = this;
                             SetValueWithoutNotify(value);
@@ -224,7 +241,10 @@ namespace Unity.Kinematica.Editor
             Color backgroundColor = m_BackgroundColor;
             backgroundColor.a = k_BackgroundAlpha;
             m_Content.style.backgroundColor = backgroundColor;
-            m_TimelineGuideline.style.backgroundColor = backgroundColor;
+            if (m_TimelineGuideline != null)
+            {
+                m_TimelineGuideline.style.backgroundColor = backgroundColor;
+            }
 
             m_Selected = false;
             m_Content.MarkDirtyRepaint();
@@ -239,13 +259,16 @@ namespace Unity.Kinematica.Editor
 
         bool m_Selected = false;
 
+        public event Action Selected;
+
         internal static void SelectMarkerElement(MarkerElement markerElement, bool multi)
         {
             // cycle selection
             // if already selected and no ctrl key then we should find other marker elements underneath, bring them to the top..
             if (markerElement.m_Selected && !multi)
             {
-                foreach (var marker in markerElement.m_Track.GetMarkersAtTime(markerElement.marker.timeInSeconds))
+                List<MarkerElement> markers = markerElement.m_Track.GetMarkersNearX(markerElement.XPos).ToList();
+                foreach (MarkerElement marker in markers)
                 {
                     if (marker != markerElement)
                     {
@@ -259,8 +282,11 @@ namespace Unity.Kinematica.Editor
             markerElement.m_Track.m_Owner.Select(markerElement, multi);
             markerElement.m_Content.style.backgroundColor = markerElement.m_BackgroundColor;
             markerElement.m_TimelineGuideline.style.backgroundColor = markerElement.m_BackgroundColor;
+            markerElement.style.display = DisplayStyle.Flex;
+
             markerElement.m_Selected = true;
             markerElement.m_Content.MarkDirtyRepaint();
+            markerElement.Selected?.Invoke();
         }
 
         protected override void ExecuteDefaultActionAtTarget(EventBase evt)

@@ -10,6 +10,17 @@ namespace Unity.Kinematica
         public int val2;
         public int val3;
 
+        public static SerializableGuid CreateInvalid()
+        {
+            return new SerializableGuid()
+            {
+                val0 = 0,
+                val1 = 0,
+                val2 = 0,
+                val3 = 0
+            };
+        }
+
         public void SetGuid(Guid guid)
         {
             byte[] guidBytes = guid.ToByteArray();

@@ -35,16 +35,16 @@ public class BipedShort : MonoBehaviour
 
         ref var synthesizer = ref kinematica.Synthesizer.Ref;
 
-        synthesizer.Push(
+        synthesizer.PlayFirstSequence(
             synthesizer.Query.Where(
                 ShortAnimationClips.Locomotion.Default).And(ShortAnimationClips.Idle.Default));
 
-        var selector = synthesizer.Selector();
+        var selector = synthesizer.Root.Selector();
 
         {
             var sequence = selector.Condition().Sequence();
 
-            sequence.Action().PushConstrained(
+            sequence.Action().MatchPose(
                 synthesizer.Query.Where(
                     ShortAnimationClips.Locomotion.Default).And(ShortAnimationClips.Idle.Default), 0.01f);
 
@@ -55,15 +55,15 @@ public class BipedShort : MonoBehaviour
         {
             var action = selector.Action();
 
-            action.PushConstrained(
+            action.MatchPoseAndTrajectory(
                 synthesizer.Query.Where(
                     ShortAnimationClips.Locomotion.Default).Except(ShortAnimationClips.Idle.Default),
-                        action.TrajectoryPrediction().trajectory);
+                        action.TrajectoryPrediction().GetAs<TrajectoryPredictionTask>().trajectory);
 
-            synthesizer.GetByType<TrajectoryHeuristicTask>(action.self).Ref.threshold = 0.01f;
+            synthesizer.GetChildByType<TrajectoryHeuristicTask>(action).Ref.threshold = 0.01f;
         }
 
-        locomotion = selector;
+        locomotion = selector.GetAs<SelectorTask>();
     }
 
     void Update()
@@ -74,8 +74,8 @@ public class BipedShort : MonoBehaviour
 
         synthesizer.Tick(locomotion);
 
-        ref var prediction = ref synthesizer.GetByType<TrajectoryPredictionTask>(locomotion).Ref;
-        ref var idle = ref synthesizer.GetByType<ConditionTask>(locomotion).Ref;
+        ref var prediction = ref synthesizer.GetChildByType<TrajectoryPredictionTask>(locomotion).Ref;
+        ref var idle = ref synthesizer.GetChildByType<ConditionTask>(locomotion).Ref;
 
         var horizontal = InputUtility.GetMoveHorizontalInput();
         var vertical = InputUtility.GetMoveVerticalInput();

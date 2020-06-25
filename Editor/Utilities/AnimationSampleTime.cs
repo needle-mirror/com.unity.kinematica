@@ -15,27 +15,22 @@ namespace Unity.Kinematica.Editor
             };
         }
 
-        public static AnimationSampleTime CreateFromTimeIndex(ref Binary binary, TimeIndex timeIndex, IEnumerable<AnimationClip> clips)
+        public static AnimationSampleTime CreateFromTimeIndex(Asset asset, ref Binary binary, TimeIndex timeIndex)
         {
             AnimationSampleTimeIndex animSampleTime = binary.GetAnimationSampleTimeIndex(timeIndex);
             if (animSampleTime.IsValid)
             {
-                foreach (AnimationClip clip in clips)
+                foreach (TaggedAnimationClip clip in asset.AnimationLibrary)
                 {
-                    if (clip == null)
+                    if (!clip.Valid)
                     {
                         continue;
                     }
 
-                    SerializableGuid clipGuid = SerializableGuidUtility.GetSerializableGuidFromAsset(clip);
-
-                    if (clipGuid == animSampleTime.clipGuid)
+                    if (clip.AnimationClipGuid == animSampleTime.clipGuid)
                     {
-                        var inverseSampleRate =
-                            math.rcp(clip.frameRate);
-
-                        var sampleTimeInSeconds =
-                            animSampleTime.animFrameIndex * inverseSampleRate;
+                        var inverseSampleRate = math.rcp(clip.SampleRate);
+                        var sampleTimeInSeconds = animSampleTime.animFrameIndex * inverseSampleRate;
 
                         return new AnimationSampleTime
                         {
@@ -51,20 +46,19 @@ namespace Unity.Kinematica.Editor
 
         public TimeIndex GetTimeIndex(ref Binary binary)
         {
-            int animFrameIndex = Missing.truncToInt(sampleTimeInSeconds * clip.frameRate);
-            var clipGuid = SerializableGuidUtility.GetSerializableGuidFromAsset(clip);
+            int animFrameIndex = Missing.truncToInt(sampleTimeInSeconds * clip.SampleRate);
 
             return binary.GetTimeIndexFromAnimSampleTime(new AnimationSampleTimeIndex()
             {
-                clipGuid = clipGuid,
-                clipName = clip.name,
+                clipGuid = clip.AnimationClipGuid,
+                clipName = clip.ClipName,
                 animFrameIndex = animFrameIndex
             });
         }
 
-        public bool IsValid => clip != null;
+        public bool IsValid => clip != null && clip.Valid;
 
-        public AnimationClip    clip;
+        public TaggedAnimationClip clip;
         public float            sampleTimeInSeconds;
     }
 }

@@ -7,9 +7,9 @@ namespace Unity.Kinematica
     /// an internal condition that can be controlled externally.
     /// </summary>
     [Data("Condition", "#2A3756"), BurstCompile]
-    public struct ConditionTask : Task
+    public struct ConditionTask : Task, GenericTask<ConditionTask>
     {
-        internal Identifier<ConditionTask> self;
+        public Identifier<ConditionTask> self { get; set; }
 
         internal MemoryRef<MotionSynthesizer> synthesizer;
 
@@ -55,7 +55,7 @@ namespace Unity.Kinematica
         /// <param name="self">Task reference that is supposed to be executed.</param>
         /// <returns>Result of the task execution.</returns>
         [BurstCompile]
-        public static Result ExecuteSelf(ref TaskRef self)
+        public static Result ExecuteSelf(ref TaskPointer self)
         {
             return self.Cast<ConditionTask>().Execute();
         }
@@ -69,39 +69,25 @@ namespace Unity.Kinematica
             value = false;
         }
 
-        /// <summary>
-        /// Creates a new action task as a child of the condition task.
-        /// </summary>
-        /// <returns>Reference to the newly created action task.</returns>
+        [System.Obsolete("Please use similar function from TaskReference.")]
         public ref ActionTask Action()
         {
             return ref synthesizer.Ref.Action(self);
         }
 
-        /// <summary>
-        /// Creates a new selector task as a child of the condition task.
-        /// </summary>
-        /// <returns>Reference to the newly created selector task.</returns>
+        [System.Obsolete("Please use similar function from TaskReference.")]
         public ref SelectorTask Selector()
         {
             return ref synthesizer.Ref.Selector(self);
         }
 
-        /// <summary>
-        /// Creates a new sequence task as a child of the condition task.
-        /// </summary>
-        /// <param name="loop">If false, once the sequence has finished executing all its children, it will do nothing and just return success. If true, sequence will reexecute all its children tasks indefinitely.</param>
-        /// <param name="resetWhenNotExecuted">If true, and if the sequence isn't executed during one task graph pass, next time the sequence will be executed again, it will restart execution from its first child.</param>
-        /// <returns>Reference to the newly created sequence task.</returns>
+        [System.Obsolete("Please use similar function from TaskReference.")]
         public ref SequenceTask Sequence(bool loop = false, bool resetWhenNotExecuted = true)
         {
             return ref synthesizer.Ref.Sequence(self, loop, resetWhenNotExecuted);
         }
 
-        /// <summary>
-        /// Creates a new parallel task as a child of the condition task.
-        /// </summary>
-        /// <returns>Reference to the newly created parallel task.</returns>
+        [System.Obsolete("Please use similar function from TaskReference.")]
         public ref ParallelTask Parallel()
         {
             return ref synthesizer.Ref.Parallel(self);

@@ -6,7 +6,8 @@
         "Unity.Mathematics",
         "Unity.Burst",
         "Unity.SnapshotDebugger",
-        "Unity.SnapshotDebugger.Editor"
+        "Unity.SnapshotDebugger.Editor",
+	"AnimationEditorTools.Editor"
     ],
     "includePlatforms": [
         "Editor"

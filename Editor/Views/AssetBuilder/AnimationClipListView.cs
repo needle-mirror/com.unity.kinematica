@@ -5,52 +5,25 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-using Object = System.Object;
-
 namespace Unity.Kinematica.Editor
 {
     class AnimationClipListView : ListView
     {
-        class AnimationClipListAssetModificationProcessor : UnityEditor.AssetModificationProcessor
-        {
-            static readonly List<AnimationClipListView> k_ClipLists = new List<AnimationClipListView>();
-
-            public static void AddListView(AnimationClipListView lv)
-            {
-                k_ClipLists.Add(lv);
-            }
-
-            public static void RemoveListView(AnimationClipListView lv)
-            {
-                k_ClipLists.Remove(lv);
-            }
-
-            static void OnWillCreateAsset(string assetName)
-            {
-                MarkClipListsForUpdate(k_ClipLists);
-            }
-
-            static AssetDeleteResult OnWillDeleteAsset(string s, RemoveAssetOptions options)
-            {
-                MarkClipListsForUpdate(k_ClipLists);
-                return AssetDeleteResult.DidNotDelete;
-            }
-        }
-
-        internal static void MarkClipListsForUpdate(IEnumerable<AnimationClipListView> listViews)
+        internal void MarkClipListsForUpdate()
         {
             EditorApplication.delayCall += () =>
             {
-                foreach (var list in listViews)
-                {
-                    list.Refresh();
-                }
+                Refresh();
             };
         }
 
-        public new class UxmlFactory : UxmlFactory<AnimationClipListView, UxmlTraits> {}
+        public new class UxmlFactory : UxmlFactory<AnimationClipListView, UxmlTraits>
+        {
+        }
 
-        public new class UxmlTraits : BindableElement.UxmlTraits {}
+        public new class UxmlTraits : BindableElement.UxmlTraits
+        {
+        }
 
         public AnimationClipListView()
         {
@@ -64,7 +37,8 @@ namespace Unity.Kinematica.Editor
             RegisterCallback<DragPerformEvent>(OnDragPerform);
             RegisterCallback<DetachFromPanelEvent>(OnDetachFromPanel);
 
-            AnimationClipListAssetModificationProcessor.AddListView(this);
+            AnimationClipPostprocessor.AddOnImport(MarkClipListsForUpdate);
+            AnimationClipPostprocessor.AddOnDelete(MarkClipListsForUpdate);
         }
 
         void OnDetachFromPanel(DetachFromPanelEvent evt)
@@ -73,17 +47,34 @@ namespace Unity.Kinematica.Editor
             UnregisterCallback<DragUpdatedEvent>(OnDragUpdate);
             UnregisterCallback<DragPerformEvent>(OnDragPerform);
 
-            AnimationClipListAssetModificationProcessor.RemoveListView(this);
+            AnimationClipPostprocessor.RemoveOnImport(MarkClipListsForUpdate);
+            AnimationClipPostprocessor.RemoveOnDelete(MarkClipListsForUpdate);
         }
 
-        public void SelectItem(Object obj)
+        public void SelectItems(List<int> items)
         {
             if (itemsSource == null)
             {
                 return;
             }
 
-            var index = itemsSource.IndexOf(obj);
+            foreach (int index in items)
+            {
+                if (index >= 0 && index < itemsSource.Count)
+                {
+                    AddToSelection(index);
+                }
+            }
+        }
+
+        public void SelectItem(TaggedAnimationClip obj)
+        {
+            if (itemsSource == null)
+            {
+                return;
+            }
+
+            int index = itemsSource.IndexOf(obj);
             if (index >= 0)
             {
                 SetSelection(index);
@@ -158,9 +149,69 @@ namespace Unity.Kinematica.Editor
             selectedIndex = currentSelection;
         }
 
+        internal void GenerateProceduralAnnotations()
+        {
+            bool bNotationsAdded = false;
+
+            Experimental.IProceduralAnnotationsGenerator[] generators = Experimental.ProceduralAnnotations.CreateGenerators(false);
+
+            for (int i = 0; i < m_ClipSelection.Count; ++i)
+            {
+                var taggedClip = m_ClipSelection[i];
+
+                AnimationClip clip = taggedClip.GetOrLoadClipSync();
+                Experimental.ProceduralAnnotations annotations = new Experimental.ProceduralAnnotations();
+
+                foreach (var generator in generators)
+                {
+                    generator.GenerateAnnotations(clip, annotations);
+                }
+
+                if (annotations.NumAnnotations > 0)
+                {
+                    bNotationsAdded = true;
+
+                    foreach (TagAnnotation tag in annotations.Tags)
+                    {
+                        taggedClip.AddTag(tag);
+                    }
+
+                    foreach (MarkerAnnotation marker in annotations.Markers)
+                    {
+                        taggedClip.AddMarker(marker);
+                    }
+                }
+            }
+
+            if (bNotationsAdded)
+            {
+                //Refresh() alone doesn't seems to work for showing new tags and markers.
+                if (m_ClipSelection.Count == 1)
+                {
+                    SelectItem(m_ClipSelection[0]);
+                }
+
+                Refresh();
+            }
+        }
+
+        internal DropdownMenuAction.Status CanGenerateProceduralAnnotations()
+        {
+            //The generators will be empty if none are implemented or none are implemented in for tools
+
+            Experimental.IProceduralAnnotationsGenerator[] generators = Experimental.ProceduralAnnotations.CreateGenerators(false);
+            if (generators.Length > 0)
+            {
+                return DropdownMenuAction.Status.Normal;
+            }
+
+            return DropdownMenuAction.Status.Hidden;
+        }
+
         internal void UpdateSource(IList source)
         {
-            itemsSource = source;
+            itemsSource = source ?? new List<TaggedAnimationClip>();
+
             int itemCount = 0;
             if (itemsSource != null)
             {

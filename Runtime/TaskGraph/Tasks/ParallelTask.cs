@@ -7,9 +7,9 @@ namespace Unity.Kinematica
     /// until it encounters a non-success status.
     /// </summary>
     [Data("Parallel", "#2A5637"), BurstCompile]
-    public struct ParallelTask : Task
+    public struct ParallelTask : Task, GenericTask<ParallelTask>
     {
-        internal Identifier<ParallelTask> self;
+        public Identifier<ParallelTask> self { get; set; }
 
         internal MemoryRef<MotionSynthesizer> synthesizer;
 
@@ -50,7 +50,7 @@ namespace Unity.Kinematica
         /// <param name="self">Task reference that is supposed to be executed.</param>
         /// <returns>Result of the task execution.</returns>
         [BurstCompile]
-        public static Result ExecuteSelf(ref TaskRef self)
+        public static Result ExecuteSelf(ref TaskPointer self)
         {
             return self.Cast<ParallelTask>().Execute();
         }

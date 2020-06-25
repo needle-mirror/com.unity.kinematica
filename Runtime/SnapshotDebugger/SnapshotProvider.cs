@@ -62,12 +62,22 @@ namespace Unity.SnapshotDebugger
         {
         }
 
-        public virtual Buffer OnPostProcess()
+        /// <summary>
+        /// Returns true if the provider need post process callbacks called after serialization and deserialization
+        /// </summary>
+        public virtual bool RequirePostProcess => false;
+
+        /// <summary>
+        /// Post process callback called after all snapshot objects have been serialized, can be use to serialize additional data
+        /// </summary>
+        public virtual void OnWritePostProcess(Buffer buffer)
         {
-            return null;
         }
 
-        public virtual void OnPostProcess(Buffer buffer)
+        /// <summary>
+        /// Post process callback called after all snapshot objects have been deserialized, can be use to deserialize additional data
+        /// </summary>
+        public virtual void OnReadPostProcess(Buffer buffer)
         {
         }
 

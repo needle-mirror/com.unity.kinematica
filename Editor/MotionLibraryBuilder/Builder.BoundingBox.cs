@@ -1,3 +1,4 @@
+using Unity.Collections;
 using Unity.Mathematics;
 
 namespace Unity.Kinematica.Editor
@@ -30,7 +31,7 @@ namespace Unity.Kinematica.Editor
                 return transformPoint(position * extent);
             }
 
-            public static BoundingBox Create(float3[] pointCloud)
+            public static BoundingBox Create(NativeArray<float3> pointCloud)
             {
                 //
                 // Loop over points to find mean point location.

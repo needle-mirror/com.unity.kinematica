@@ -26,5 +26,10 @@ namespace Unity.Kinematica
         /// Weight of the animation in the final pose
         /// </summary>
         public float   weight;
+
+        /// <summary>
+        /// How long (in seconds) the frame will be blended out after the sequence isn't updated anymore
+        /// </summary>
+        public float   blendOutDuration;
     }
 }

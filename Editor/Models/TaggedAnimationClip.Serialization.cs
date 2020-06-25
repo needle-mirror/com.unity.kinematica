@@ -1,3 +1,6 @@
+using UnityEditor;
+using UnityEngine;
+
 namespace Unity.Kinematica.Editor
 {
     partial class TaggedAnimationClip
@@ -18,6 +21,34 @@ namespace Unity.Kinematica.Editor
             {
                 SerializeGuidStr(m_PostBoundaryClip, ref m_PostBoundaryClipGuid);
             }
+        }
+
+        internal void ConvertToV3()
+        {
+            AnimationClip clip = LoadAnimationClipFromGuid(m_AnimationClipGuid);
+            if (clip != null)
+            {
+                SetClip(clip);
+            }
+        }
+
+        internal void OnDeserialize()
+        {
+            AnimationClipPostprocessor.AddOnImport(m_AnimationClipGuid, ReloadClipAndMarkDirty);
+            AnimationClipPostprocessor.AddOnDelete(m_AnimationClipGuid, OnDeleteClip);
+        }
+
+        internal void ReloadClipAndMarkDirty()
+        {
+            AnimationClip clip = LoadClipSync();
+            SetClip(clip); // update cache info
+            NotifyChanged();
+        }
+
+        internal void OnDeleteClip()
+        {
+            SetClip(null);
+            NotifyChanged();
         }
     }
 }

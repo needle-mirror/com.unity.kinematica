@@ -1,13 +1,10 @@
 using System;
-
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
-
 using UnityEngine;
 
 namespace Unity.Kinematica.Editor
 {
-    internal struct KMeans : IDisposable
+    internal partial struct KMeans : IDisposable
     {
         public struct Settings
         {
@@ -65,8 +62,13 @@ namespace Unity.Kinematica.Editor
         //
 
         public NativeArray<float> centroids;
+        NativeArray<distance> distances;
 
-        public KMeans(int d, int k, Settings settings)
+        NativeArray<float> bestCentroids;
+
+        NativeArray<float> errors;
+
+        public KMeans(int d, int k, int nx, Settings settings)
         {
             this.d = d;
             this.k = k;
@@ -74,90 +76,87 @@ namespace Unity.Kinematica.Editor
             this.settings = settings;
 
             centroids = new NativeArray<float>(d * k, Allocator.Persistent);
+
+            distances = new NativeArray<distance>(nx, Allocator.Persistent);
+
+            bestCentroids = new NativeArray<float>(d * k, Allocator.Persistent);
+
+            errors = new NativeArray<float>(2, Allocator.Persistent);
         }
 
         public void Dispose()
         {
             centroids.Dispose();
+            distances.Dispose();
+            bestCentroids.Dispose();
+            errors.Dispose();
         }
 
-        public void Train(NativeSlice<float> x, int nx, int dsub, Action<ProgressFeedback> callback)
+        public JobQueue PrepareTrainingJobQueue(MemoryArray<float> features, int numSamples, int batchCount)
         {
-            var distances = new NativeArray<distance>(nx, Allocator.Temp);
-
-            var bestCentroids = new NativeArray<float>(d * k, Allocator.Temp);
-
-            float minimumError = float.MaxValue;
-
             Debug.Assert(centroids.Length == d * k);
 
-            for (int attempt = 0; attempt < numAttempts; attempt++)
+            JobQueue jobQueue = JobQueue.Create(batchCount);
+
+            errors[1] = float.MaxValue;
+
+            for (int attempt = 0; attempt < numAttempts; ++attempt)
             {
-                //
-                // initialize centroids with random points from the dataset
-                //
-
-                Debug.Assert(centroids.Length == d * k);
-
-                using (var perm = new NativeArray<int>(nx, Allocator.Persistent))
+                PreAttemptJob preAttemptJob = new PreAttemptJob()
                 {
-                    RandomPermutation(perm, randomSeed + 1 + attempt * 15486557);
+                    d = d,
+                    k = k,
+                    numSamples = numSamples,
+                    randomSeed = randomSeed,
+                    attempt = attempt,
+                    features = features,
+                    centroids = new MemoryArray<float>(centroids),
+                };
 
-                    for (int i = 0; i < k; ++i)
-                    {
-                        int index = perm[i % perm.Length];
+                jobQueue.AddJob(preAttemptJob);
 
-                        for (int j = 0; j < d; ++j)
-                        {
-                            centroids[i * d + j] = x[index * d + j];
-                        }
-                    }
-                }
-
-                float error = 0.0f;
-
-                for (int i = 0; i < numIterations; ++i)
+                for (int iteration = 0; iteration < numIterations; ++iteration)
                 {
-                    MeasureCentroids(distances, x, centroids);
-
-                    error = 0.0f;
-                    for (int j = 0; j < nx; j++)
+                    TrainIterationJob trainIterationJob = new TrainIterationJob()
                     {
-                        error += distances[j].l2;
-                    }
+                        d = d,
+                        k = k,
+                        numSamples = numSamples,
+                        features = features,
+                        centroids = new MemoryArray<float>(centroids),
+                        distances = new MemoryArray<distance>(distances),
+                        errors = new MemoryArray<float>(errors),
+                        error = 0.0f
+                    };
 
-                    int nsplit =
-                        UpdateCentroids(
-                            x, centroids, distances, d, k, nx);
-
-                    float basePercentage = (float)(i + 1) / (float)numIterations;
-                    float factor = ImbalanceFactor(nx, k, distances);
-
-                    callback(new ProgressFeedback
-                    {
-                        percentage = basePercentage / numAttempts,
-                        info = $"Iteration {i} Objective={error:0.00} Imbalance={factor:0.00} NumSplits={nsplit}"
-                    });
+                    jobQueue.AddJob(trainIterationJob);
                 }
 
                 if (numAttempts > 1)
                 {
-                    if (error < minimumError)
+                    PostAttemptJob postAttemptJob = new PostAttemptJob()
                     {
-                        minimumError = error;
+                        bestCentroids = new MemoryArray<float>(bestCentroids),
+                        centroids = new MemoryArray<float>(centroids),
+                        errors = new MemoryArray<float>(errors)
+                    };
 
-                        centroids.CopyTo(bestCentroids);
-                    }
+                    jobQueue.AddJob(postAttemptJob);
                 }
             }
 
             if (numAttempts > 1)
             {
-                bestCentroids.CopyTo(centroids);
+                PostTrainingJob postTrainingJob = new PostTrainingJob()
+                {
+                    bestCentroids = new MemoryArray<float>(bestCentroids),
+                    centroids = new MemoryArray<float>(centroids)
+                };
+
+                jobQueue.AddJob(postTrainingJob);
             }
 
-            bestCentroids.Dispose();
-            distances.Dispose();
+            return jobQueue;
         }
 
         int numIterations => settings.numIterations;
@@ -166,172 +165,12 @@ namespace Unity.Kinematica.Editor
 
         int randomSeed => settings.seed;
 
-        struct distance
+        public struct distance
         {
             public int index;
             public float l2;
         }
 
-        unsafe void MeasureCentroids(NativeArray<distance> result, NativeSlice<float> x, NativeArray<float> centroids)
-        {
-            int nx = result.Length;
-
-            distance* result_ptr = (distance*)NativeArrayUnsafeUtility.GetUnsafePtr(result);
-
-            float* x_ptr = (float*)NativeSliceUnsafeUtility.GetUnsafePtr(x);
-            float* y_ptr = (float*)NativeArrayUnsafeUtility.GetUnsafePtr(centroids);
-
-            for (int i = 0; i < nx; i++)
-            {
-                result_ptr[i].index = -1;
-                result_ptr[i].l2 = float.MaxValue;
-
-                int id = i * d;
-
-                for (int j = 0; j < k; j++)
-                {
-                    var jd = j * d;
-
-                    float disij = 0.0f;
-                    for (int k = 0; k < d; ++k)
-                    {
-                        float d = x_ptr[id + k] - y_ptr[jd + k];
-                        disij += d * d;
-                    }
-
-                    if (disij < result_ptr[i].l2)
-                    {
-                        result_ptr[i].index = j;
-                        result_ptr[i].l2 = disij;
-                    }
-                }
-            }
-        }
-
-        //
-        // Update stage for k-means.
-        //
-        // Compute centroids given assignment of vectors to centroids
-        //
-        // x         - training vectors, size n * d
-        // centroids - centroid vectors, size k * d
-        // assign    - nearest centroid for each training vector, size n
-        //
-        // returns number of split operations to fight empty clusters
-        //
-
-        unsafe int UpdateCentroids(NativeSlice<float> x, NativeArray<float> centroids, NativeArray<distance> assign, int d, int k, int n)
-        {
-            int* hassign = stackalloc int[k];
-            for (int i = 0; i < k; ++i)
-            {
-                hassign[i] = 0;
-            }
-
-            Debug.Assert(centroids.Length == d * k);
-
-            for (int i = 0; i < centroids.Length; ++i)
-            {
-                centroids[i] = 0.0f;
-            }
-
-            for (int i = 0; i < n; ++i)
-            {
-                int ci = assign[i].index;
-                Debug.Assert(ci >= 0 && ci < k);
-                hassign[ci]++;
-                for (int j = 0; j < d; ++j)
-                {
-                    centroids[ci * d + j] += x[i * d + j];
-                }
-            }
-
-            for (int ci = 0; ci < k; ci++)
-            {
-                var ni = hassign[ci];
-                if (ni != 0)
-                {
-                    for (int j = 0; j < d; ++j)
-                    {
-                        centroids[ci * d + j] /= (float)ni;
-                    }
-                }
-            }
-
-            //
-            // Take care of void clusters
-            //
-
-            int nsplit = 0;
-
-            var random = new RandomGenerator(1234);
-
-            for (int ci = 0; ci < k; ++ci)
-            {
-                //
-                // need to redefine a centroid
-                //
-
-                if (hassign[ci] == 0)
-                {
-                    int cj = 0;
-                    while (true)
-                    {
-                        //
-                        // probability to pick this cluster for split
-                        //
-
-                        float p = (hassign[cj] - 1.0f) / (float)(n - k);
-                        float r = random.Float();
-
-                        if (r < p)
-                        {
-                            //
-                            // found our cluster to be split
-                            //
-                            break;
-                        }
-
-                        cj = (cj + 1) % k;
-                    }
-
-                    for (int j = 0; j < d; ++j)
-                    {
-                        centroids[ci * d + j] = centroids[cj * d + j];
-                    }
-
-                    //
-                    // small symmetric perturbation
-                    //
-
-                    float eps = 1.0f / 1024.0f;
-                    for (int j = 0; j < d; ++j)
-                    {
-                        if (j % 2 == 0)
-                        {
-                            centroids[ci * d + j] *= 1 + eps;
-                            centroids[cj * d + j] *= 1 - eps;
-                        }
-                        else
-                        {
-                            centroids[ci * d + j] *= 1 - eps;
-                            centroids[cj * d + j] *= 1 + eps;
-                        }
-                    }
-
-                    //
-                    // assume even split of the cluster
-                    //
-
-                    hassign[ci] = hassign[cj] / 2;
-                    hassign[cj] -= hassign[ci];
-
-                    nsplit++;
-                }
-            }
-
-            return nsplit;
-        }
 
         unsafe float ImbalanceFactor(int n, int k, NativeArray<distance> assign)
         {
@@ -357,26 +196,6 @@ namespace Unity.Kinematica.Editor
             result = result * k / (total * total);
 
             return result;
-        }
-
-        void RandomPermutation(NativeArray<int> perm, int seed)
-        {
-            int n = perm.Length;
-
-            for (int i = 0; i < n; i++)
-            {
-                perm[i] = i;
-            }
-
-            var random = new RandomGenerator(seed);
-
-            for (int i = 0; i + 1 < n; i++)
-            {
-                int i2 = i + random.Integer(n - i);
-                int t = perm[i];
-                perm[i] = perm[i2];
-                perm[i2] = t;
-            }
         }
     }
 }

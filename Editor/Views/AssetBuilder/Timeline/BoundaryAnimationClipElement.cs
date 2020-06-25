@@ -38,7 +38,7 @@ namespace Timeline
 
             var selectClipContextManipulator = new ContextualMenuManipulator(evt =>
             {
-                evt.menu.AppendAction("None", dropDownMenuAction => { Select(null as TaggedAnimationClip); });
+                evt.menu.AppendAction("None", dropDownMenuAction => { Select(null); });
                 evt.menu.AppendSeparator();
                 foreach (var clip in m_Clips)
                 {

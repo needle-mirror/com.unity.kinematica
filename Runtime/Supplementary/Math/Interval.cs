@@ -3,7 +3,10 @@ using Unity.Mathematics;
 
 namespace Unity.Kinematica
 {
-    internal struct Interval
+    /// <summary>
+    /// Structure representing a contiguous interval of frames.
+    /// </summary>
+    public struct Interval
     {
         int firstFrame;
         int onePastLastFrame;

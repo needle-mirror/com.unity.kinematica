@@ -34,7 +34,7 @@ namespace Unity.Kinematica.Editor
             {
                 if (input is JointField jf)
                 {
-                    jf.SetInputEnabled();
+                    jf.SetInputEnabled(enable);
                 }
                 else
                 {

@@ -1,8 +1,6 @@
 <UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements"
       xmlns:kinematica="Unity.Kinematica.Editor"
       xmlns:kinematicaTemp="Unity.Kinematica.Temporary">
-    <ui:Template path="packages/com.unity.kinematica/Editor/Templates/MarkerWindow.uxml" name="Markers"/>
-    <!-- TODO - this is simple enough to go directly into Builder-->
     <ui:VisualElement class="timeline">
         <ui:VisualElement name="timelineWorkArea">
             <kinematica:TimeRuler class="timeRuler"/>

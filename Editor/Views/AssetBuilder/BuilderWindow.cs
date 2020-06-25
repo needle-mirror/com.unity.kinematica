@@ -8,8 +8,8 @@ using UnityEngine.UIElements;
 
 using UnityEditor;
 using UnityEditor.UIElements;
-
 using Object = UnityEngine.Object;
+using System.Collections;
 
 namespace Unity.Kinematica.Editor
 {
@@ -51,7 +51,9 @@ namespace Unity.Kinematica.Editor
         Button m_EditAssetButton;
 
         VisualElement m_AssetDirtyWarning;
+        ProgressBar m_ProgressBar;
         Button m_BuildButton;
+        Button m_CancelBuildButton;
 
         AnimationClipListView m_AnimationLibraryListView;
 
@@ -61,13 +63,15 @@ namespace Unity.Kinematica.Editor
         GameObject m_PreviewTarget;
 
         [SerializeField]
-        int m_PreviousSelection;
+        List<int> m_PreviousSelection;
 
         Timeline m_Timeline;
         VisualElement m_AssetCreateLayout;
         VisualElement m_MainInputLayout;
 
         bool m_UpdateTitle = false;
+
+        BuildProcess m_BuildProcess = null;
 
         [UnityEditor.Callbacks.OnOpenAsset(1)]
         static bool OnOpenAsset(int instanceID, int line)
@@ -150,7 +154,17 @@ namespace Unity.Kinematica.Editor
             AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
 
             m_PreviousAsset = Asset;
-            m_PreviousSelection = m_AnimationLibraryListView.selectedIndex;
+            m_PreviousSelection = new List<int>();
+
+            foreach (var selected in m_AnimationLibraryListView.m_ClipSelection)
+            {
+                int index = Asset.AnimationLibrary.IndexOf(selected);
+                if (index >= 0)
+                {
+                    m_PreviousSelection.Add(index);
+                }
+            }
+
             Asset = null;
         }
 
@@ -163,7 +177,7 @@ namespace Unity.Kinematica.Editor
                 Asset = m_PreviousAsset;
                 ChangeLayoutMode(LayoutMode.ConfigureAndBuildAsset);
 
-                if (m_PreviousSelection >= 0 && m_PreviousSelection < Asset.AnimationLibrary.Count)
+                if (m_PreviousSelection != null && m_PreviousSelection.Any())
                 {
                     rootVisualElement.RegisterCallback<GeometryChangedEvent>(OnGeometryChangedAfterAssemblyReload);
                 }
@@ -172,15 +186,21 @@ namespace Unity.Kinematica.Editor
             }
             else
             {
-                m_PreviousSelection = -1;
+                m_PreviousSelection = null;
             }
         }
 
         void OnGeometryChangedAfterAssemblyReload(GeometryChangedEvent evt)
         {
+            // we need to cache the reselect flag here as it will change when we re-select items in the list view
+            bool reselect = m_ReselectAsset;
             rootVisualElement.UnregisterCallback<GeometryChangedEvent>(OnGeometryChangedAfterAssemblyReload);
-            m_AnimationLibraryListView.selectedIndex = m_PreviousSelection;
-            m_PreviousSelection = -1;
+            m_AnimationLibraryListView.SelectItems(m_PreviousSelection);
+            m_PreviousSelection = null;
+            if (reselect)
+            {
+                Selection.activeObject = Asset;
+            }
         }
 
         void OnDisable()
@@ -195,6 +215,7 @@ namespace Unity.Kinematica.Editor
 
             m_EditAssetButton.clickable.clicked -= EditAsset;
             m_BuildButton.clickable.clicked -= BuildAsset;
+            m_CancelBuildButton.clickable.clicked -= CancelBuildAsset;
 
             var createButton = m_MainLayout.Q<Button>("createButton");
             createButton.clickable.clicked -= CreateButtonClicked;
@@ -229,18 +250,22 @@ namespace Unity.Kinematica.Editor
                 clip.ElementAt(k_ClipHighlight).style.visibility = Visibility.Hidden;
             }
 
-            m_Timeline.OnPlayModeStateChanged(state, m_PreviewTarget);
+            m_Timeline.PreviewTarget = m_PreviewTarget;
+            bool enabled = state == PlayModeStateChange.ExitingPlayMode || state == PlayModeStateChange.EnteredEditMode;
+            if (!enabled)
+            {
+                CancelBuildAsset();
+            }
 
-            if (state == PlayModeStateChange.ExitingEditMode || state == PlayModeStateChange.EnteredPlayMode)
-            {
-                m_BuildButton.SetEnabled(false);
-                ShowOrHideAssetDirtyWarning(true);
-            }
-            else
-            {
-                m_BuildButton.SetEnabled(true);
-                ShowOrHideAssetDirtyWarning(false);
-            }
+            rootVisualElement.Q<PlayControls>().SetEnabled(enabled);
+            SetAssetEditingEnabled(enabled);
+        }
+
+        void SetAssetEditingEnabled(bool enabled, bool showDirtyWarning = true)
+        {
+            m_Timeline.SetTimelineEditingEnabled(enabled);
+            m_BuildButton.SetEnabled(enabled);
+            ShowOrHideAssetDirtyWarning(!enabled && showDirtyWarning);
         }
 
         void Update()
@@ -318,8 +343,15 @@ namespace Unity.Kinematica.Editor
 
                 m_AssetDirtyWarning = rootVisualElement.Q<VisualElement>("assetDirtyWarning");
 
+                m_ProgressBar = rootVisualElement.Q<ProgressBar>("progressBar");
+                HideProgressBar();
+
                 m_BuildButton = rootVisualElement.Q<Button>("buildButton");
                 m_BuildButton.clickable.clicked += BuildAsset;
+
+                m_CancelBuildButton = rootVisualElement.Q<Button>("cancelBuildButton");
+                m_CancelBuildButton.clickable.clicked += CancelBuildAsset;
+                DisplayCancelBuildButton(false);
 
                 var assetSelector = m_Toolbar.Q<ObjectField>("asset");
                 assetSelector.objectType = typeof(Asset);
@@ -407,14 +439,39 @@ namespace Unity.Kinematica.Editor
 
         void OnLibrarySelectionChanged(List<TaggedAnimationClip> selection)
         {
-            if (selection.Count != 1)
+            if (!selection.Any())
             {
                 m_Timeline.SetClip(null);
                 Selection.activeObject = Asset;
             }
             else
             {
-                m_Timeline.SetClip(selection.First());
+                if (selection.Count == 1)
+                {
+                    AnimationClipSelectionContainer.Clear();
+                    m_Timeline.SetClip(selection.First());
+                }
+                else
+                {
+                    m_Timeline.SetClip(null);
+                    AnimationClipSelectionContainer.SetSelection(selection);
+                    Selection.activeObject = AnimationClipSelectionContainer;
+                }
+            }
+        }
+
+        TaggedAnimationClipSelectionContainer m_AnimationClipSelectionContainer;
+
+        TaggedAnimationClipSelectionContainer AnimationClipSelectionContainer
+        {
+            get
+            {
+                if (m_AnimationClipSelectionContainer == null)
+                {
+                    m_AnimationClipSelectionContainer = CreateInstance<TaggedAnimationClipSelectionContainer>();
+                }
+
+                return m_AnimationClipSelectionContainer;
             }
         }
 
@@ -465,9 +522,11 @@ namespace Unity.Kinematica.Editor
             if (asset != null)
             {
                 Asset = asset;
+                m_ReselectAsset = true;
             }
             else if (Selection.activeObject is TimelineSelectionContainer)
             {
+                m_ReselectAsset = false;
                 return;
             }
 
@@ -527,14 +586,14 @@ namespace Unity.Kinematica.Editor
 
         [SerializeField]
         Asset m_PreviousAsset;
+        [SerializeField]
+        bool m_ReselectAsset;
 
         Asset m_Asset;
 
         public Asset Asset
         {
             get { return m_Asset; }
-
-
             set
             {
                 if (m_Asset != value)
@@ -543,6 +602,7 @@ namespace Unity.Kinematica.Editor
                     {
                         m_Asset.MarkedDirty -= UpdateTitle;
                         m_Asset.AssetWasDeserialized -= OnAssetDeserialized;
+                        CancelBuildAsset();
                     }
 
                     m_Asset = value;
@@ -596,14 +656,13 @@ namespace Unity.Kinematica.Editor
             var taggedClip = taggedClips[i];
 
             //TODO - remove tooltip and reference to AnimationClip?
-            AnimationClip clip = taggedClip.AnimationClip;
             var clipValid = taggedClip.Valid;
 
             (e.ElementAt(k_ClipFieldIndex) as Label).text = taggedClip.ClipName;
             e.ElementAt(k_ClipWarningIndex).style.display = clipValid ? DisplayStyle.None : DisplayStyle.Flex;
             if (clipValid)
             {
-                e.tooltip = $"Duration {taggedClip.DurationInSeconds:F2}s/{Mathf.RoundToInt(taggedClip.DurationInSeconds * clip.frameRate)} frames";
+                e.tooltip = $"Duration {taggedClip.DurationInSeconds:F2}s/{Mathf.RoundToInt(taggedClip.DurationInSeconds * taggedClip.SampleRate )} frames";
             }
             else
             {
@@ -638,7 +697,21 @@ namespace Unity.Kinematica.Editor
 
             ContextualMenuManipulator itemContext = new ContextualMenuManipulator(evt => BuildAnimationClipItemMenu(evt, ve));
             ve.AddManipulator(itemContext);
+
+            Clickable doubleClick = new Clickable(() => OnAnimationLibraryItemDoubleClick(ve));
+            doubleClick.activators.Clear();
+            doubleClick.activators.Add(new ManipulatorActivationFilter { button = MouseButton.LeftMouse, clickCount = 2});
+            ve.AddManipulator(doubleClick);
+
             return ve;
+        }
+
+        void OnAnimationLibraryItemDoubleClick(VisualElement ve)
+        {
+            if (ve.userData is TaggedAnimationClip clip)
+            {
+                EditorGUIUtility.PingObject(clip.GetOrLoadClipSync());
+            }
         }
 
         void BuildAnimationClipItemMenu(ContextualMenuPopulateEvent evt, VisualElement ve)
@@ -664,6 +737,10 @@ namespace Unity.Kinematica.Editor
                 {
                     evt.menu.AppendAction($"Tag Selected Clip(s)/{TagAttribute.GetDescription(tagType)}", OnTagSelectionClicked, DropdownMenuAction.AlwaysEnabled, tagType);
                 }
+
+                evt.menu.AppendAction("Set Boundary Clips", action => BoundaryClipWindow.ShowWindow(m_Asset, m_AnimationLibraryListView.m_ClipSelection));
+
+                evt.menu.AppendAction("Experimental - Generate Procedural Annotations", action => m_AnimationLibraryListView.GenerateProceduralAnnotations(), m_AnimationLibraryListView.CanGenerateProceduralAnnotations());
             }
             else
             {
@@ -724,10 +801,19 @@ namespace Unity.Kinematica.Editor
             bool playing = EditorApplication.isPlaying;
             m_EditAssetButton.SetEnabled(enable);
             m_BuildButton.SetEnabled(enable && !playing);
+            m_CancelBuildButton.SetEnabled(enable && !playing);
             m_PreviewToggle.SetEnabled(enable);
             rootVisualElement.Q<PreviewSelector>().SetEnabled(enable);
+            rootVisualElement.Q<PlayControls>().SetEnabled(enable);
             rootVisualElement.Q<Button>(classes: "viewMode").SetEnabled(enable);
+
             ShowOrHideAssetDirtyWarning(playing);
+        }
+
+        void DisplayCancelBuildButton(bool display)
+        {
+            m_BuildButton.style.display = display ? DisplayStyle.None : DisplayStyle.Flex;
+            m_CancelBuildButton.style.display = display ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         void ShowOrHideAssetDirtyWarning(bool isOrEnteringPlayMode)
@@ -751,7 +837,35 @@ namespace Unity.Kinematica.Editor
         void BuildAsset()
         {
             Debug.Assert(Asset != null);
-            Asset.Build();
+
+            if (!Unity.Burst.BurstCompiler.Options.EnableBurstCompilation)
+            {
+                if (!EditorUtility.DisplayDialog("Kinematica Asset Build Warning", "Burst compilation is currently disabled, it is advised to enable it from menu " +
+                    "(Burst -> Enable Compilation) otherwise building Kinematica asset can be extremely slow.", "Build anyway", "Cancel build"))
+                {
+                    return;
+                }
+            }
+
+            CancelBuildAsset();
+
+            m_BuildProcess = Asset.BuildAsync();
+            if (m_BuildProcess != null)
+            {
+                DisplayCancelBuildButton(true);
+
+                m_BuildProcess.Builder.progressFeedback += DisplayProgressBar;
+                EditorApplication.update += UpdateBuildProcess;
+                SetAssetEditingEnabled(false, showDirtyWarning: false);
+            }
+        }
+
+        void CancelBuildAsset()
+        {
+            m_BuildProcess?.Cancel();
+            HideProgressBar();
+            DisplayCancelBuildButton(false);
+            SetAssetEditingEnabled(true);
         }
 
         /*
@@ -776,10 +890,41 @@ namespace Unity.Kinematica.Editor
 
         void OnAssetDeserialized(Asset asset)
         {
-            AnimationClipListView.MarkClipListsForUpdate(new[] { m_AnimationLibraryListView });
+            m_AnimationLibraryListView.MarkClipListsForUpdate();
+
             if (asset != null)
             {
                 EditorApplication.delayCall += () => { m_Timeline?.OnAssetModified(); };
+            }
+        }
+
+        void HideProgressBar()
+        {
+            m_ProgressBar.style.display = DisplayStyle.None;
+        }
+
+        void DisplayProgressBar(ProgressInfo progressInfo)
+        {
+            m_ProgressBar.title = progressInfo.title;
+            m_ProgressBar.value = progressInfo.progress * 100.0f;
+            m_ProgressBar.style.display = DisplayStyle.Flex;
+        }
+
+        void UpdateBuildProcess()
+        {
+            m_BuildProcess.FrameUpdate();
+
+            if (m_BuildProcess.IsFinished)
+            {
+                m_BuildProcess.Builder.progressFeedback -= DisplayProgressBar;
+                EditorApplication.update -= UpdateBuildProcess;
+
+                m_BuildProcess.Dispose();
+                m_BuildProcess = null;
+
+                HideProgressBar();
+                DisplayCancelBuildButton(false);
+                SetAssetEditingEnabled(true);
             }
         }
 

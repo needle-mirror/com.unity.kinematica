@@ -36,7 +36,8 @@ namespace Unity.Kinematica.Editor
 
         const uint kAssetRewriteVersion = 1;
         const uint kAnimationClipGuidVersion = 2;
-        const uint kCurrentSerializeVersion = 2;
+        const uint kCachedClipVersion = 3;
+        const uint kCurrentSerializeVersion = 3;
         internal const string k_DefaultMetricName = "Default";
         internal const string k_MetricsPropertyPath = "m_Data.metrics";
         internal const string k_SampleRatePropertyPath = "m_Data.sampleRate";
@@ -72,7 +73,7 @@ namespace Unity.Kinematica.Editor
 
             EnsureUniqueMetricNames();
 
-            if (m_SerializeVersion == kAssetRewriteVersion)
+            if (m_SerializeVersion < kCurrentSerializeVersion)
             {
                 m_DelayUpdateVersion = true;
                 //Notify Listeners that the asset was deserialized
@@ -84,12 +85,21 @@ namespace Unity.Kinematica.Editor
                         ConvertToV2();
                     }
 
+                    if (m_SerializeVersion < kCachedClipVersion)
+                    {
+                        ConvertToV3();
+                    }
+
+                    NotifyTaggedClipDeserialization();
                     AssetWasDeserialized?.Invoke(this);
                     m_DelayUpdateVersion = false;
+
+                    EditorUtility.SetDirty(this);
                 };
             }
             else
             {
+                NotifyTaggedClipDeserialization();
                 AssetWasDeserialized?.Invoke(this);
             }
         }
@@ -150,6 +160,29 @@ namespace Unity.Kinematica.Editor
             }
 
             EditorUtility.ClearProgressBar();
+        }
+
+        void ConvertToV3()
+        {
+            int clipCount = AnimationLibrary.Count;
+            EditorUtility.DisplayProgressBar($"Converting Kinematica Asset {name}.asset to V3", string.Empty, 0f);
+
+            for (var index = 0; index < clipCount; index++)
+            {
+                var tac = AnimationLibrary[index];
+                EditorUtility.DisplayProgressBar($"Converting Kinematica Asset {name}.asset to V3", $"Converting {tac.ClipName} references", (float)index / clipCount);
+                tac.ConvertToV3();
+            }
+
+            EditorUtility.ClearProgressBar();
+        }
+
+        void NotifyTaggedClipDeserialization()
+        {
+            foreach (TaggedAnimationClip taggedClip in AnimationLibrary)
+            {
+                taggedClip.OnDeserialize();
+            }
         }
     }
 }

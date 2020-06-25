@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Unity.Mathematics;
 using Unity.SnapshotDebugger;
 using UnityEngine;
 
@@ -26,9 +28,38 @@ namespace Unity.Kinematica
 
         public override void UpdateRecordEntries(float frameStartTime, float frameEndTime, FrameDebugProvider provider)
         {
-            var frameSnapshots = ((FrameDebugProvider<AnimationFrameDebugInfo>)provider).GetFrameDebugInfo();
+            List<AnimationFrameDebugInfo> frameSnapshots  = ((FrameDebugProvider<AnimationFrameDebugInfo>)provider).GetFrameDebugInfo();
 
-            List<int> newSnapshots = new List<int>(); // snaphots from sequence that weren't already present in the records
+            List<int> newSnapshots = new List<int>(); // snaphots from sequences that weren't already present in the records
+
+            // Update blending-out sequences
+            float deltaTime = frameEndTime - frameStartTime;
+            for (int i = m_AnimationRecords.Count - m_NumActiveAnims; i < m_AnimationRecords.Count; ++i)
+            {
+                AnimationRecord animRecord = m_AnimationRecords[i];
+                if (frameSnapshots.Any(s => s.sequenceIdentifier == animRecord.sequenceIdentifier))
+                {
+                    continue; // sequence will updated anyway with a new frame
+                }
+
+                if (animRecord.blendOutTime > 0.0f)
+                {
+                    // sequence is obsolete (no update this frame) but still require blending out
+                    animRecord.blendOutTime -= deltaTime;
+
+                    AnimationFrameInfo lastFrame = animRecord.animFrames[animRecord.animFrames.Count - 1];
+                    float deltaWeight = deltaTime / animRecord.blendOutDuration;
+
+                    frameSnapshots.Add(new AnimationFrameDebugInfo()
+                    {
+                        sequenceIdentifier = animRecord.sequenceIdentifier,
+                        animName = animRecord.animName,
+                        animFrame = lastFrame.animFrame,
+                        weight = math.max(lastFrame.weight - deltaWeight, 0.0f),
+                        blendOutDuration = 0.0f
+                    });
+                }
+            }
 
             int updatedSnapshots = 0;
 
@@ -45,7 +76,7 @@ namespace Unity.Kinematica
                     {
                         // snapshot from already existing sequence, just add a new animation frame
                         animRecord.endTime = frameEndTime;
-                        animRecord.AddAnimationFrame(frameEndTime, frameDebugInfo.weight, frameDebugInfo.animFrame);
+                        animRecord.AddAnimationFrame(frameEndTime, frameDebugInfo.weight, frameDebugInfo.animFrame, frameDebugInfo.blendOutDuration);
 
                         m_LinesEndTimes[animRecord.rank] = frameEndTime;
                         m_AnimationRecords.SwapElements(i, m_AnimationRecords.Count - updatedSnapshots - 1);
@@ -76,6 +107,8 @@ namespace Unity.Kinematica
                     animName = frameDebugInfo.animName,
                     startTime = frameStartTime,
                     endTime = frameEndTime,
+                    blendOutDuration = frameDebugInfo.blendOutDuration,
+                    blendOutTime = frameDebugInfo.blendOutDuration,
                     rank = GetNewAnimRank(frameStartTime, frameEndTime),
                     animFrames = animFrames
                 });
