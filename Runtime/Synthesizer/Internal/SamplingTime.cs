@@ -1,3 +1,6 @@
+using Unity.SnapshotDebugger;
+using UnityEngine;
+
 namespace Unity.Kinematica
 {
     /// <summary>
@@ -9,8 +12,8 @@ namespace Unity.Kinematica
     /// enables sub-sampling.
     /// </remarks>
     /// <seealso cref="TimeIndex"/>
-    [Data("Sampling Time")]
-    public struct SamplingTime
+    [Data("Sampling Time", DataFlags.SelfInputOutput)]
+    public struct SamplingTime : IDebugObject, IDebugDrawable
     {
         /// <summary>
         /// Denotes a blend weight between 0 and 1 that control sub-frame sampling.
@@ -26,6 +29,9 @@ namespace Unity.Kinematica
         /// Denotes the time index this sampling time refers to.
         /// </summary>
         public TimeIndex timeIndex;
+
+
+        public DebugIdentifier debugIdentifier { get; set; }
 
         /// <summary>
         /// Determines if the given sampling time is valid or not.
@@ -64,7 +70,8 @@ namespace Unity.Kinematica
             return new SamplingTime
             {
                 timeIndex = timeIndex,
-                theta = theta
+                theta = theta,
+                debugIdentifier = DebugIdentifier.Invalid
             };
         }
 
@@ -74,6 +81,21 @@ namespace Unity.Kinematica
         public static SamplingTime Invalid
         {
             get => new SamplingTime { timeIndex = TimeIndex.Invalid };
+        }
+
+        public void Draw(Camera camera, ref MotionSynthesizer synthesizer, DebugMemory debugMemory, SamplingTime debugSamplingTime, ref DebugDrawOptions options)
+        {
+            if (!timeIndex.IsValid)
+            {
+                return;
+            }
+
+            string text = synthesizer.Binary.GetFragmentDebugText(SamplingTime.Create(timeIndex), "Sampling Clip", options.timeOffset);
+
+            DebugDraw.SetMovableTextTitle(options.textWindowIdentifier, "Sampling Time");
+            DebugDraw.AddMovableTextLine(options.textWindowIdentifier, text, options.inputOutputFragTextColor);
+
+            DebugDraw.DrawFragment(ref synthesizer, this, options.inputOutputFragmentColor, options.timeOffset, synthesizer.WorldRootTransform);
         }
     }
 }

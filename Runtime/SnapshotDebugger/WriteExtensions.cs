@@ -104,12 +104,8 @@ namespace Unity.SnapshotDebugger
             extensionMethods = methods.ToArray();
         }
 
-        static byte[] sharedBuffer = new byte[4];
-
-        internal static void TryWriteObject(this Buffer buffer, object value)
+        internal static void WriteType(this Buffer buffer, Type type)
         {
-            Type type = value.GetType();
-
             if (type.Assembly == typeof(Type).Assembly || type.Assembly == typeof(Buffer).Assembly)
             {
                 buffer.Write(type.FullName);
@@ -118,6 +114,13 @@ namespace Unity.SnapshotDebugger
             {
                 buffer.Write(type.AssemblyQualifiedName);
             }
+        }
+
+        internal static void TryWriteObject(this Buffer buffer, object value)
+        {
+            Type type = value.GetType();
+
+            buffer.WriteType(type);
 
             if (typeof(Serializable).IsAssignableFrom(type) == true)
             {
@@ -181,9 +184,7 @@ namespace Unity.SnapshotDebugger
         /// <param name="value">The short that should be written to the buffer.</param>
         public static void Write(this Buffer buffer, short value)
         {
-            BitConverter.GetBytes(sharedBuffer, value);
-
-            buffer.Write(sharedBuffer, 0, sizeof(short));
+            buffer.WriteBlittable(value);
         }
 
         /// <summary>
@@ -192,9 +193,7 @@ namespace Unity.SnapshotDebugger
         /// <param name="value">The integer that should be written to the buffer.</param>
         public static void Write(this Buffer buffer, int value)
         {
-            BitConverter.GetBytes(sharedBuffer, value);
-
-            buffer.Write(sharedBuffer, 0, sizeof(int));
+            buffer.WriteBlittable(value);
         }
 
         /// <summary>
@@ -203,9 +202,7 @@ namespace Unity.SnapshotDebugger
         /// <param name="value">The floating point value that should be written to the buffer.</param>
         public static void Write(this Buffer buffer, float value)
         {
-            BitConverter.GetBytes(sharedBuffer, value);
-
-            buffer.Write(sharedBuffer, 0, sizeof(float));
+            buffer.WriteBlittable(value);
         }
 
         /// <summary>
@@ -214,9 +211,7 @@ namespace Unity.SnapshotDebugger
         /// <param name="value">The boolean that should be written to the buffer.</param>
         public static void Write(this Buffer buffer, bool value)
         {
-            BitConverter.GetBytes(sharedBuffer, value);
-
-            buffer.Write(sharedBuffer, 0, sizeof(bool));
+            buffer.WriteBlittable(value);
         }
 
         /// <summary>
@@ -311,6 +306,12 @@ namespace Unity.SnapshotDebugger
             buffer.Write(value.g);
             buffer.Write(value.b);
             buffer.Write(value.a);
+        }
+
+        public static void Write(this Buffer buffer, NativeString64 value)
+        {
+            buffer.WriteBlittable(value.LengthInBytes);
+            buffer.WriteBlittable(value.buffer);
         }
 
         /// <summary>
@@ -419,6 +420,48 @@ namespace Unity.SnapshotDebugger
             }
         }
 
+        public static void WriteNativeArray<T>(this Buffer buffer, NativeArray<T> array, Allocator allocator) where T : struct
+        {
+            buffer.Write((int)allocator);
+
+            if (allocator == Allocator.Invalid)
+            {
+                return;
+            }
+
+            buffer.Write(array.Length);
+
+            int elemSize;
+            unsafe
+            {
+                elemSize = UnsafeUtility.SizeOf<T>();
+            }
+
+            NativeArray<byte> bytes = array.Reinterpret<byte>(elemSize);
+            buffer.Append(bytes);
+        }
+
+        public static void WriteNativeList<T>(this Buffer buffer, NativeList<T> list, Allocator allocator) where T : struct
+        {
+            buffer.Write((int)allocator);
+
+            if (allocator == Allocator.Invalid)
+            {
+                return;
+            }
+
+            buffer.Write(list.Length);
+
+            int elemSize;
+            unsafe
+            {
+                elemSize = UnsafeUtility.SizeOf<T>();
+            }
+
+            NativeArray<byte> bytes = list.AsArray().Reinterpret<byte>(elemSize);
+            buffer.Append(bytes);
+        }
+
         /// <summary>
         /// Writes a native list to the buffer.
         /// </summary>
@@ -454,6 +497,14 @@ namespace Unity.SnapshotDebugger
                     byteArray.Length);
             }
             buffer.Write(byteArray);
+        }
+
+        public static unsafe void WriteToStream<T>(this NativeSlice<T> nativeSlice, Buffer buffer) where T : struct
+        {
+            for (int i = 0; i < nativeSlice.Length; ++i)
+            {
+                buffer.WriteBlittable(nativeSlice[i]);
+            }
         }
     }
 }

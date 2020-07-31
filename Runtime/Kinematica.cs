@@ -32,7 +32,7 @@ namespace Unity.Kinematica
     /// </para>
     /// <para>
     /// The Kinematica component is not necessary to run Kinematica and all its
-    /// associated tools (task graph, snapshot debugger...), it is provided as an
+    /// associated tools (execution graph, snapshot debugger...), it is provided as an
     /// example on how to use Kinematica inside a component.
     /// </para>
     /// </remarks>
@@ -40,7 +40,7 @@ namespace Unity.Kinematica
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Animator))]
     [AddComponentMenu("Kinematica/Kinematica")]
-    public partial class Kinematica : SnapshotProvider, FrameDebugProvider<AnimationFrameDebugInfo>, IMotionSynthesizerProvider
+    public partial class Kinematica : SnapshotProvider, IFrameDebugProvider, IMotionSynthesizerProvider
     {
         /// <summary>
         /// Allows access to the underlying Kinematica runtime asset.
@@ -76,16 +76,16 @@ namespace Unity.Kinematica
         [HideInInspector]
         protected float _deltaTime;
 
-        MotionSynthesizerHolder synthesizerHolder = MotionSynthesizerHolder.CreateInvalid();
+        MotionSynthesizer synthesizer;
 
         PlayableGraph playableGraph;
 
-        KinematicaJob job;
+        UpdateAnimationPoseJob job;
 
         /// <summary>
         /// Allows direct access to the underlying Kinematica runtime asset.
         /// </summary>
-        public ref Binary Binary => ref synthesizerHolder.Binary;
+        public ref Binary Binary => ref synthesizer.Binary;
 
         /// <summary>
         /// Allows direct access to the motion synthesizer.
@@ -100,14 +100,16 @@ namespace Unity.Kinematica
         {
             get
             {
-                if (!synthesizerHolder.IsValid)
+                if (!synthesizer.IsValid)
                 {
-                    synthesizerHolder = MotionSynthesizerHolder.Create(transform, resource, blendDuration);
+                    synthesizer = MotionSynthesizer.Create(resource, AffineTransform.Create(transform.position, transform.rotation), blendDuration, Allocator.Persistent);
                 }
 
-                return synthesizerHolder.Synthesizer;
+                return MemoryRef<MotionSynthesizer>.Create(ref synthesizer);
             }
         }
+
+        public bool IsSynthesizerInitialized => synthesizer.IsValid;
 
         /// <summary>
         /// Override for OnEnable().
@@ -124,7 +126,7 @@ namespace Unity.Kinematica
             base.OnEnable();
 
 #if UNITY_EDITOR
-            Debugger.frameDebugger.AddFrameDebugProvider<AnimationDebugRecord>(this);
+            Debugger.frameDebugger.AddFrameDebugProvider(this);
 #endif
             OnEarlyUpdate(false);
 
@@ -163,7 +165,8 @@ namespace Unity.Kinematica
 #if UNITY_EDITOR
             Debugger.frameDebugger.RemoveFrameDebugProvider(this);
 #endif
-            synthesizerHolder.Dispose();
+
+            synthesizer.Dispose();
 
             job.Dispose();
 
@@ -195,8 +198,6 @@ namespace Unity.Kinematica
             {
                 EarlyUpdate();
             }
-
-            synthesizerHolder.OnEarlyUpdate(rewind);
         }
 
         /// <summary>
@@ -204,7 +205,11 @@ namespace Unity.Kinematica
         /// </summary>
         public void Update()
         {
-            synthesizerHolder.Update();
+            if (synthesizer.IsValid)
+            {
+                synthesizer.UpdateFrameCount(Time.frameCount);
+                synthesizer.UpdateDebuggingStatus();
+            }
         }
 
         /// <summary>
@@ -217,10 +222,10 @@ namespace Unity.Kinematica
         /// </remarks>
         public virtual void OnAnimatorMove()
         {
-            if (applyRootMotion && synthesizerHolder.IsValid)
+            if (applyRootMotion && synthesizer.IsValid)
             {
-                transform.position = Synthesizer.Ref.WorldRootTransform.t;
-                transform.rotation = Synthesizer.Ref.WorldRootTransform.q;
+                transform.position = synthesizer.WorldRootTransform.t;
+                transform.rotation = synthesizer.WorldRootTransform.q;
             }
         }
 
@@ -235,7 +240,7 @@ namespace Unity.Kinematica
 
             var deltaTimeProperty = animator.BindSceneProperty(transform, typeof(Kinematica), "_deltaTime");
 
-            job = new KinematicaJob();
+            job = new UpdateAnimationPoseJob();
             if (!job.Setup(animator,
                 GetComponentsInChildren<Transform>(), ref Synthesizer.Ref, deltaTimeProperty))
             {

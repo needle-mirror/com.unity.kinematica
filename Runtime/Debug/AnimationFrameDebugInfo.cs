@@ -5,7 +5,7 @@ namespace Unity.Kinematica
     /// <summary>
     /// Informations about a played animation during one given frame that will feed the animation timeline in the snapshot debugger
     /// </summary>
-    public struct AnimationFrameDebugInfo : IFrameDebugInfo
+    public struct AnimationFrameDebugInfo : IFrameRecord
     {
         /// <summary>
         /// Unique identifier allowing the debugger to group frames sharing the same identifier into blocks onto the timeline

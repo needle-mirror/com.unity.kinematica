@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.Mathematics;
+using Unity.Collections;
 
 namespace Unity.Kinematica
 {
@@ -123,11 +124,11 @@ namespace Unity.Kinematica
             DebugDrawArc(position, rotation, Mathf.PI * 2.0f, color, radius);
         }
 
-        public static void DebugDrawTrajectory(AffineTransform worldRootTransform, MemoryArray<AffineTransform> trajectory, float sampleRate, Color baseColor, Color linesAndContourColor)
+        public static void DebugDrawTrajectory(AffineTransform worldRootTransform, NativeSlice<AffineTransform> trajectory, float sampleRate, Color baseColor, Color linesAndContourColor, bool drawArrows = true)
         {
             linesAndContourColor.a = 0.9f;
 
-            int trajectoryLength = trajectory.length;
+            int trajectoryLength = trajectory.Length;
 
             var previousRootTransform = worldRootTransform * trajectory[0];
 
@@ -145,17 +146,20 @@ namespace Unity.Kinematica
             {
                 Unity.Kinematica.DebugDraw.DrawArrow(
                     worldRootTransform * transform,
-                    baseColor, linesAndContourColor, 0.25f);
+                    baseColor, linesAndContourColor, 0.1f);
             }
 
-            int stepSize = Missing.truncToInt(sampleRate / 3);
-            int numSteps = trajectoryLength / stepSize;
-            for (int i = 0; i < numSteps; ++i)
+            if (drawArrows)
             {
-                DrawArrow(trajectory[i * stepSize]);
-            }
+                int stepSize = Missing.truncToInt(sampleRate / 3);
+                int numSteps = trajectoryLength / stepSize;
+                for (int i = 0; i < numSteps; ++i)
+                {
+                    DrawArrow(trajectory[i * stepSize]);
+                }
 
-            DrawArrow(trajectory[trajectoryLength - 1]);
+                DrawArrow(trajectory[trajectoryLength - 1]);
+            }
         }
     }
 }

@@ -1,117 +1,135 @@
 using UnityEngine;
-
+using Unity.SnapshotDebugger;
 using Unity.Kinematica;
 using Unity.Mathematics;
+using Unity.Jobs;
+using Unity.Burst;
+using Unity.Collections;
 
-[RequireComponent(typeof(Kinematica))]
-public class BipedShort : MonoBehaviour
+namespace ShortAnimationClips
 {
-    [Header("Prediction settings")]
-    [Tooltip("Desired speed in meters per second for slow movement.")]
-    [Range(0.0f, 10.0f)]
-    public float desiredSpeedSlow = 3.9f;
-
-    [Tooltip("Desired speed in meters per second for fast movement.")]
-    [Range(0.0f, 10.0f)]
-    public float desiredSpeedFast = 5.5f;
-
-    [Tooltip("How fast or slow the target velocity is supposed to be reached.")]
-    [Range(0.0f, 1.0f)]
-    public float velocityPercentage = 1.0f;
-
-    [Tooltip("How fast or slow the desired forward direction is supposed to be reached.")]
-    [Range(0.0f, 1.0f)]
-    public float forwardPercentage = 1.0f;
-
-    Identifier<SelectorTask> locomotion;
-
-    float3 movementDirection = Missing.forward;
-
-    float desiredLinearSpeed => InputUtility.IsPressingActionButton() ? desiredSpeedFast : desiredSpeedSlow;
-
-    void OnEnable()
+    [BurstCompile(CompileSynchronously = true)]
+    public struct KinematicaJob : IJob
     {
-        var kinematica = GetComponent<Kinematica>();
+        public MemoryRef<MotionSynthesizer> synthesizer;
 
-        ref var synthesizer = ref kinematica.Synthesizer.Ref;
+        public PoseSet idleCandidates;
 
-        synthesizer.PlayFirstSequence(
-            synthesizer.Query.Where(
-                ShortAnimationClips.Locomotion.Default).And(ShortAnimationClips.Idle.Default));
+        public PoseSet locomotionCandidates;
 
-        var selector = synthesizer.Root.Selector();
+        public Trajectory trajectory;
 
+        public bool idle;
+
+        ref MotionSynthesizer Synthesizer => ref synthesizer.Ref;
+
+        public void Execute()
         {
-            var sequence = selector.Condition().Sequence();
+            if (idle && Synthesizer.MatchPose(idleCandidates, Synthesizer.Time, MatchOptions.DontMatchIfCandidateIsPlaying | MatchOptions.LoopSegment, 0.01f))
+            {
+                return;
+            }
 
-            sequence.Action().MatchPose(
-                synthesizer.Query.Where(
-                    ShortAnimationClips.Locomotion.Default).And(ShortAnimationClips.Idle.Default), 0.01f);
-
-            // TODO: If in idle, otherwise search
-            sequence.Action().Timer();
+            Synthesizer.MatchPoseAndTrajectory(locomotionCandidates, Synthesizer.Time, trajectory, MatchOptions.None, 0.4f, 0.01f);
         }
-
-        {
-            var action = selector.Action();
-
-            action.MatchPoseAndTrajectory(
-                synthesizer.Query.Where(
-                    ShortAnimationClips.Locomotion.Default).Except(ShortAnimationClips.Idle.Default),
-                        action.TrajectoryPrediction().GetAs<TrajectoryPredictionTask>().trajectory);
-
-            synthesizer.GetChildByType<TrajectoryHeuristicTask>(action).Ref.threshold = 0.01f;
-        }
-
-        locomotion = selector.GetAs<SelectorTask>();
     }
 
-    void Update()
+    [RequireComponent(typeof(Kinematica))]
+    public class BipedShort : SnapshotProvider
     {
-        var kinematica = GetComponent<Kinematica>();
+        [Header("Prediction settings")]
+        [Tooltip("Desired speed in meters per second for slow movement.")]
+        [Range(0.0f, 10.0f)]
+        public float desiredSpeedSlow = 3.9f;
 
-        ref var synthesizer = ref kinematica.Synthesizer.Ref;
+        [Tooltip("Desired speed in meters per second for fast movement.")]
+        [Range(0.0f, 10.0f)]
+        public float desiredSpeedFast = 5.5f;
 
-        synthesizer.Tick(locomotion);
+        [Tooltip("How fast or slow the target velocity is supposed to be reached.")]
+        [Range(0.0f, 1.0f)]
+        public float velocityPercentage = 1.0f;
 
-        ref var prediction = ref synthesizer.GetChildByType<TrajectoryPredictionTask>(locomotion).Ref;
-        ref var idle = ref synthesizer.GetChildByType<ConditionTask>(locomotion).Ref;
+        [Tooltip("How fast or slow the desired forward direction is supposed to be reached.")]
+        [Range(0.0f, 1.0f)]
+        public float forwardPercentage = 1.0f;
 
-        var horizontal = InputUtility.GetMoveHorizontalInput();
-        var vertical = InputUtility.GetMoveVerticalInput();
+        Kinematica kinematica;
 
-        float3 analogInput = Utility.GetAnalogInput(horizontal, vertical);
+        PoseSet idleCandidates;
+        PoseSet locomotionCandidates;
+        Trajectory trajectory;
 
-        prediction.velocityFactor = velocityPercentage;
-        prediction.rotationFactor = forwardPercentage;
+        [Snapshot]
+        float moveIntensity = 0.0f;
 
-        idle.value = math.length(analogInput) <= 0.1f;
+        [Snapshot]
+        float3 movementDirection = Missing.forward;
 
-        if (idle)
+        float desiredLinearSpeed => InputUtility.IsPressingActionButton() ? desiredSpeedFast : desiredSpeedSlow;
+
+        public override void OnEnable()
         {
-            prediction.linearSpeed = 0.0f;
+            base.OnEnable();
+
+            kinematica = GetComponent<Kinematica>();
+            ref var synthesizer = ref kinematica.Synthesizer.Ref;
+
+            idleCandidates = synthesizer.Query.Where("Idle", Locomotion.Default).And(Idle.Default);
+            locomotionCandidates = synthesizer.Query.Where("Locomotion", Locomotion.Default).Except(Idle.Default);
+            trajectory = synthesizer.CreateTrajectory(Allocator.Persistent);
+
+            synthesizer.PlayFirstSequence(idleCandidates);
         }
-        else
-        {
-            movementDirection =
-                Utility.GetDesiredForwardDirection(
-                    analogInput, movementDirection);
 
-            var factor = 0.5f + math.abs(math.dot(
+        public override void OnDisable()
+        {
+            base.OnDisable();
+
+            idleCandidates.Dispose();
+            locomotionCandidates.Dispose();
+            trajectory.Dispose();
+        }
+
+        public override void OnEarlyUpdate(bool rewind)
+        {
+            base.OnEarlyUpdate(rewind);
+
+            Utility.GetInputMove(ref movementDirection, ref moveIntensity);
+        }
+
+        void Update()
+        {
+            ref var synthesizer = ref kinematica.Synthesizer.Ref;
+            
+            float factor = 0.5f + math.abs(math.dot(
                 Missing.zaxis(synthesizer.WorldRootTransform.q),
                     movementDirection)) * 0.5f;
 
-            prediction.linearSpeed =
-                math.length(analogInput) *
-                    desiredLinearSpeed * factor;
+            float desiredSpeed = moveIntensity * desiredLinearSpeed * factor;
 
-            prediction.movementDirection = movementDirection;
-            prediction.forwardDirection = movementDirection;
+            TrajectoryPrediction.CreateFromDirection(ref kinematica.Synthesizer.Ref,
+                movementDirection,
+                desiredSpeed,
+                trajectory,
+                velocityPercentage,
+                forwardPercentage).Generate();
+
+            KinematicaJob job = new KinematicaJob()
+            {
+                synthesizer = kinematica.Synthesizer,
+                idleCandidates = idleCandidates,
+                locomotionCandidates = locomotionCandidates,
+                trajectory = trajectory,
+                idle = moveIntensity == 0.0f
+            };
+
+            kinematica.AddJobDependency(job.Schedule());
         }
-    }
 
-    void OnGUI()
-    {
-        InputUtility.DisplayMissingInputs(InputUtility.ActionButtonInput | InputUtility.MoveInput | InputUtility.CameraInput);
+        void OnGUI()
+        {
+            InputUtility.DisplayMissingInputs(InputUtility.ActionButtonInput | InputUtility.MoveInput | InputUtility.CameraInput);
+        }
     }
 }

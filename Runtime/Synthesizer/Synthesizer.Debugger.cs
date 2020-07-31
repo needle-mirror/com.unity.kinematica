@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Unity.SnapshotDebugger;
 
 using Buffer = Unity.SnapshotDebugger.Buffer;
@@ -11,9 +12,9 @@ namespace Unity.Kinematica
         /// return the currently active animation frames
         /// </summary>
         /// <returns></returns>
-        public List<AnimationFrameDebugInfo> GetFrameDebugInfo()
+        public List<IFrameRecord> GetFrameDebugInfo()
         {
-            List<AnimationFrameDebugInfo> snapshots = new List<AnimationFrameDebugInfo>();
+            List<IFrameRecord> snapshots = new List<IFrameRecord>();
 
 #if UNITY_EDITOR
             if (poseGenerator.CurrentPushIndex >= 0)
@@ -48,8 +49,6 @@ namespace Unity.Kinematica
 
             poseGenerator.WriteToStream(buffer);
             trajectory.WriteToStream(buffer);
-
-            memoryChunk.Ref.WriteToStream(buffer);
         }
 
         internal void ReadFromStream(Buffer buffer)
@@ -62,28 +61,52 @@ namespace Unity.Kinematica
 
             poseGenerator.ReadFromStream(buffer);
             trajectory.ReadFromStream(buffer);
-
-            memoryChunk.Ref.ReadFromStream(buffer);
         }
 
-        /// <summary>
-        /// Post process callback called after all snapshot objects have been serialized, can be use to serialize additional data
-        /// </summary>
-        internal void OnWritePostProcess(Buffer buffer)
+        public bool IsDebugging => isDebugging;
+
+        public void UpdateDebuggingStatus()
         {
-#if UNITY_EDITOR
-            memoryChunkShadow.Ref.WriteToStream(buffer);
-#endif
+            isDebugging = false;
+
+            foreach (SelectedFrameDebugProvider selected in Debugger.frameDebugger.Selection)
+            {
+                if (selected.providerInfo.provider is IMotionSynthesizerProvider provider)
+                {
+                    if (provider.Synthesizer.Equals(ref this))
+                    {
+                        isDebugging = true;
+                        break;
+                    }
+                }
+            }
         }
 
-        /// <summary>
-        /// Post process callback called after all snapshot objects have been deserialized, can be use to deserialize additional data
-        /// </summary>
-        internal void OnReadPostProcess(Buffer buffer)
+        public void DebugPushGroup()
         {
-#if UNITY_EDITOR
-            memoryChunkShadow.Ref.ReadFromStream(buffer);
-#endif
+            writeDebugMemory.PushGroup();
         }
+
+        public DebugIdentifier DebugWriteBlittableObject<T>(ref T obj, bool dataOnly = false) where T : struct, IDebugObject
+        {
+            return writeDebugMemory.WriteBlittableObject(ref obj, dataOnly);
+        }
+
+        public DebugIdentifier DebugWriteUnblittableObject<T>(ref T obj, bool dataOnly = false) where T : struct, IDebugObject, Serializable
+        {
+            return writeDebugMemory.WriteUnblittableObject(ref obj, dataOnly);
+        }
+
+        public T DebugReadObject<T>(DebugReference reference) where T : struct, IDebugObject
+        {
+            return readDebugMemory.ReadObject<T>(reference);
+        }
+
+        public void AddCostRecordsToFrameDebugger(IFrameDebugProvider frameDebugProvider)
+        {
+            Debugger.frameDebugger.AddFrameRecords<DebugCostAggregate>(frameDebugProvider, ReadDebugMemory.CostRecords.ToList());
+        }
+
+        internal DebugMemory ReadDebugMemory => readDebugMemory;
     }
 }

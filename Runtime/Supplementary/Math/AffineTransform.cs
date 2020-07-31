@@ -527,6 +527,11 @@ namespace Unity.Mathematics
             return new AffineTransform(t, q);
         }
 
+        public static AffineTransform CreateGlobal(Transform transform)
+        {
+            return Create(transform.position, transform.rotation);
+        }
+
         public static AffineTransform identity
         {
             get

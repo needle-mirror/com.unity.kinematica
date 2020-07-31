@@ -333,8 +333,9 @@ namespace Unity.Kinematica.Editor
             }
 
             bool invalidFound = false;
-            HashSet<string> missingTagTypes = new HashSet<string>();
-            HashSet<string> missingMarkerTypes = new HashSet<string>();
+
+            MissingAnnotationSet missingTagTypes = MissingAnnotationSet.Create();
+            MissingAnnotationSet missingMarkerTypes = MissingAnnotationSet.Create();
 
             foreach (TaggedAnimationClip tc in AnimationLibrary)
             {
@@ -348,7 +349,7 @@ namespace Unity.Kinematica.Editor
                 {
                     if (tag.payload.Type == null)
                     {
-                        missingTagTypes.Add(tag.payload.SimplifiedTypeName);
+                        missingTagTypes.Add(tag.payload.SimplifiedTypeName, tc.ClipName, tag.startTime, tag.duration);
                     }
                 }
 
@@ -356,21 +357,23 @@ namespace Unity.Kinematica.Editor
                 {
                     if (marker.payload.Type == null)
                     {
-                        missingMarkerTypes.Add(marker.payload.SimplifiedTypeName);
+                        missingMarkerTypes.Add(marker.payload.SimplifiedTypeName, tc.ClipName, marker.timeInSeconds, 0.0f);
                     }
                 }
             }
 
-            if (missingTagTypes.Any())
+            foreach ((string tagTypeName, List<MissingAnnotationSet.Occurence> occurences) in missingTagTypes.Annotations)
             {
-                string tagTypeNames = string.Join(",", missingTagTypes.ToList());
-                errors.Add($"{tagTypeNames} tag definition(s) missing and referenced in asset. Please restore Tag type definition(s) or remove references");
+                string[] occurenceStrings = occurences.Select(o => $"{o.clipName} on interval [{o.startTime},{o.startTime + o.duration}]").ToArray();
+                string occurencesMsg = string.Join(", ", occurenceStrings);
+                errors.Add($"{tagTypeName} tag definition missing but still used in clip(s) {occurencesMsg}. Please restore Tag type definition or remove references");
             }
 
-            if (missingMarkerTypes.Any())
+            foreach ((string markerTypeName, List<MissingAnnotationSet.Occurence> occurences) in missingMarkerTypes.Annotations)
             {
-                string markerTypeNames = string.Join(",", missingMarkerTypes.ToList());
-                errors.Add($"{markerTypeNames} marker definition(s) missing and referenced in asset. Please restore Marker type definition(s) or remove references");
+                string[] occurenceStrings = occurences.Select(o => $"{o.clipName} at time {o.startTime}").ToArray();
+                string occurencesMsg = string.Join(", ", occurenceStrings);
+                errors.Add($"{markerTypeName} marker definition missing but still used in clip(s) {occurencesMsg}. Please restore Marker type definition or remove references");
             }
 
             string binaryPath = BinaryPath;

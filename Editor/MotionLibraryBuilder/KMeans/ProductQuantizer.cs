@@ -121,7 +121,7 @@ namespace Unity.Kinematica.Editor
             this.d = d;
             this.M = M;
 
-            numBits = 8;
+            numBits = Binary.CodeBook.kNumCodeBits;
 
             Debug.Assert(d % M == 0);
 

@@ -36,16 +36,30 @@ namespace Unity.SnapshotDebugger
 
         public void WriteToStream(Buffer buffer)
         {
-            buffer.TryWriteObject(value);
+            buffer.WriteType(value.GetType());
+
+            if (value is Serializable serializable)
+            {
+                serializable.WriteToStream(buffer);
+            }
+            else
+            {
+                buffer.WriteBlittableGeneric(value);
+            }
         }
 
         public void ReadFromStream(Buffer buffer)
         {
-            var type = Type.GetType(buffer.ReadString());
+            Type type = buffer.ReadType();
 
             if (type == null)
             {
                 throw new InvalidOperationException("Failed to read type information");
+            }
+
+            if (value is IDisposable disposable)
+            {
+                disposable.Dispose();
             }
 
             if (typeof(Serializable).IsAssignableFrom(type) == true)
@@ -65,7 +79,7 @@ namespace Unity.SnapshotDebugger
             }
             else
             {
-                value = buffer.TryReadObject(type);
+                value = buffer.ReadBlittableGeneric(type);
             }
         }
 

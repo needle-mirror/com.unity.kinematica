@@ -19,7 +19,6 @@
     background-color: #323232;
 }
 
-
 .clipTag {
     background-color: #C32148;
     border-bottom-color: rgba(255, 255, 255, 0.1);
@@ -120,4 +119,8 @@
 
 .manipulationGuideline {
     background-color: #4F4F4F;
+}
+
+.snapLine {
+    background-color: #FFFFFF;
 }

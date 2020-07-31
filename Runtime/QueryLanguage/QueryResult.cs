@@ -16,8 +16,9 @@ namespace Unity.Kinematica
         /// <summary>
         /// Denotes the pose sequence that matches the query result.
         /// </summary>
-        [DeallocateOnJobCompletion]
         public NativeList<PoseSequence> sequences;
+
+        public NativeString64 debugName;
 
         /// <summary>
         /// Disposes the underlying pose sequence.

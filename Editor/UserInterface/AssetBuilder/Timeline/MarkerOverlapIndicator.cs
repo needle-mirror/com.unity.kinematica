@@ -1,3 +1,4 @@
+using System;
 using UnityEngine.Assertions.Comparers;
 using UnityEngine.UIElements;
 
@@ -49,6 +50,8 @@ namespace Unity.Kinematica.Editor
         }
 
         public object Object => null;
+        public float StartTime { get { throw new NotImplementedException();} }
+
         public Timeline Timeline
         {
             get

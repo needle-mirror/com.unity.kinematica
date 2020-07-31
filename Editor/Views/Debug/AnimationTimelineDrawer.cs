@@ -3,6 +3,7 @@ using Unity.Mathematics;
 using Unity.SnapshotDebugger;
 using Unity.SnapshotDebugger.Editor;
 using UnityEngine;
+using System;
 
 namespace Unity.Kinematica.Editor
 {
@@ -45,27 +46,24 @@ namespace Unity.Kinematica.Editor
             m_SelectedAnimFrame = AnimationFrameIdentifier.CreateInvalid();
         }
 
-        public float GetHeight()
-        {
-            float height = beginOffset;
-            foreach (FrameDebugRecord debugRecord in Debugger.frameDebugger.Records)
-            {
-                if (debugRecord is AnimationDebugRecord record)
-                {
-                    height += GetAnimStateTimelineHeight(record);
-                }
-            }
+        public Type AggregateType => typeof(AnimationDebugRecord);
 
-            return height;
+        public float GetDrawHeight(IFrameAggregate aggregate)
+        {
+            return GetAnimStateTimelineHeight((AnimationDebugRecord)aggregate);
         }
 
-        public void DrawTooltip()
+        public void Draw(FrameDebugProviderInfo providerInfo, IFrameAggregate aggregate, TimelineWidget.DrawInfo drawInfo)
+        {
+            AnimationDebugRecord animDebugRecord = (AnimationDebugRecord)aggregate;
+            DrawAnimationTimeline(providerInfo, animDebugRecord, drawInfo);
+        }
+
+        public void OnPostDraw()
         {
             if (m_SelectedAnimFrame.IsValid)
             {
-                AnimationDebugRecord animStateRecord = (AnimationDebugRecord)Debugger.frameDebugger.GetRecord(m_SelectedAnimFrame.providerIdentifier);
-
-                Assert.IsTrue(animStateRecord != null);
+                AnimationDebugRecord animStateRecord = Debugger.frameDebugger.FindAggregate<AnimationDebugRecord>(m_SelectedAnimFrame.providerIdentifier);
                 if (animStateRecord == null)
                 {
                     m_SelectedAnimFrame = AnimationFrameIdentifier.CreateInvalid();
@@ -95,94 +93,72 @@ namespace Unity.Kinematica.Editor
 
                 Rect toolTipRect = new Rect(Event.current.mousePosition.x + 20, Event.current.mousePosition.y, labelSize.x + 5.0f, labelSize.y + 5.0f);
 
-                TimelineWidget.DrawRectangleWithDetour(toolTipRect, new Color(0.75f, 0.75f, 0.75f, 1.0f), new Color(0.1f, 0.1f, 0.1f, 1.0f));
-                TimelineWidget.DrawLabel(toolTipRect, label, new Color(0.1f, 0.1f, 0.1f, 1.0f));
+                TimelineWidget.DrawRectangleWithDetour(toolTipRect, kTooltipBackgroundColor, kTooltipDetourColor);
+                TimelineWidget.DrawLabel(toolTipRect, label, kTooltipTextColor);
+
+                m_SelectedAnimFrame = AnimationFrameIdentifier.CreateInvalid();
             }
         }
 
-        public void Draw(Rect rect, TimelineWidget.DrawInfo drawInfo)
-        {
-            m_SelectedAnimFrame = AnimationFrameIdentifier.CreateInvalid();
-
-            float yPosition = rect.y + beginOffset;
-
-            AnimationFrameIdentifier selectedAnimFrame = AnimationFrameIdentifier.CreateInvalid();
-            foreach (FrameDebugRecord debugRecord in Debugger.frameDebugger.Records)
-            {
-                if (debugRecord is AnimationDebugRecord record)
-                {
-                    DrawAnimationTimeline(record, rect, drawInfo, ref yPosition);
-                }
-            }
-        }
-
-        private void DrawAnimationTimeline(AnimationDebugRecord animStateRecord, Rect rect, TimelineWidget.DrawInfo drawInfo, ref float yPosition)
+        private void DrawAnimationTimeline(FrameDebugProviderInfo providerInfo, AnimationDebugRecord animStateRecord, TimelineWidget.DrawInfo drawInfo)
         {
             if (animStateRecord.AnimationRecords.Count == 0)
             {
                 return;
             }
 
-            // Display name
-            Vector2 labelSize = TimelineWidget.GetLabelSize(animStateRecord.DisplayName);
-            TimelineWidget.DrawRectangle(new Rect(rect.x, yPosition, rect.width, characterNameRectangleHeight), new Color(0.1f, 0.1f, 0.1f, 1.0f));
-            TimelineWidget.DrawLabel(new Rect(rect.x + 10.0f, yPosition, labelSize.x, characterNameRectangleHeight), animStateRecord.DisplayName, Color.white);
-
-            yPosition += characterNameOffset;
-
             // Animations
             for (int i = 0; i < animStateRecord.AnimationRecords.Count; ++i)
             {
-                DrawAnimationWidget(animStateRecord, i, rect, drawInfo, yPosition);
+                DrawAnimationWidget(providerInfo, animStateRecord, i, drawInfo);
             }
-
-            yPosition += animStateRecord.NumLines * animWidgetOffset + spaceBetweenTimelines;
         }
 
-        private void DrawAnimationWidget(AnimationDebugRecord animStateRecord, int animIndex, Rect rect, TimelineWidget.DrawInfo drawInfo, float yPosition)
+        private void DrawAnimationWidget(FrameDebugProviderInfo providerInfo, AnimationDebugRecord animStateRecord, int animIndex, TimelineWidget.DrawInfo drawInfo)
         {
             AnimationRecord animation = animStateRecord.AnimationRecords[animIndex];
 
-            if (animation.endTime < drawInfo.rangeStart)
+            if (animation.endTime < drawInfo.timeline.startTime)
             {
                 return;
             }
 
-            if (animation.startTime > drawInfo.rangeStart + drawInfo.rangeWidth)
+            if (animation.startTime > drawInfo.timeline.endTime)
             {
                 return;
             }
 
-            float startPosition = drawInfo.GetPixelPosition(animation.startTime, rect.width);
-            float endPosition = drawInfo.GetPixelPosition(animation.endTime, rect.width);
+            float startPosition = drawInfo.GetPixelPosition(animation.startTime);
+            float endPosition = drawInfo.GetPixelPosition(animation.endTime);
 
+            Rect drawRect = drawInfo.timeline.drawRect;
 
-            yPosition = yPosition + animation.rank * animWidgetOffset;
-            Rect animRect = new Rect(startPosition, yPosition, endPosition - startPosition, animWidgetHeight);
+            drawRect.y += animation.rank * kAnimWidgetOffset;
+            Rect animRect = new Rect(startPosition, drawRect.y, endPosition - startPosition, kAnimWidgetHeight);
 
-            TimelineWidget.DrawRectangleWithDetour(animRect, new Color(0.25f, 0.25f, 0.25f, 1.0f), new Color(0.5f, 0.5f, 0.5f, 1.0f));
+            TimelineWidget.DrawRectangleWithDetour(animRect, kAnimWidgetBackgroundColor, kAnimWidgetDetourColor);
 
             int barStartPosition = Missing.truncToInt(startPosition) + 1;
             int maxBarPosition = Missing.truncToInt(endPosition);
             for (int i = 0; i < animation.animFrames.Count; ++i)
             {
-                int barEndPosition = Missing.truncToInt(drawInfo.GetPixelPosition(animation.animFrames[i].endTime, rect.width));
+                int barEndPosition = Missing.truncToInt(drawInfo.GetPixelPosition(animation.animFrames[i].endTime));
                 if (barEndPosition > barStartPosition)
                 {
                     float weight = animation.animFrames[i].weight;
                     if (weight < 1.0f)
                     {
-                        Rect barRect = new Rect(barStartPosition, yPosition, barEndPosition - barStartPosition, (1.0f - weight) * animWidgetHeight);
-                        TimelineWidget.DrawRectangle(barRect, new Color(0.05f, 0.05f, 0.05f, 1.0f));
+                        Rect barRect = new Rect(barStartPosition, drawRect.y, barEndPosition - barStartPosition, (1.0f - weight) * kAnimWidgetHeight);
+                        TimelineWidget.DrawRectangle(barRect, kAnimWidgetWeightColor);
                     }
                 }
                 barStartPosition = barEndPosition;
             }
 
-            TimelineWidget.DrawLabelInsideRectangle(animRect, animation.animName, Color.white);
+            TimelineWidget.DrawLabelInsideRectangle(animRect, animation.animName, kAnimWidgetTextColor);
 
             // check if mouse is hovering the anim widget
-            if (!m_SelectedAnimFrame.IsValid && endPosition > startPosition && animRect.Contains(Event.current.mousePosition))
+            if (endPosition > startPosition && animRect.Contains(Event.current.mousePosition))
             {
                 float mouseNormalizedTime = (Event.current.mousePosition.x - startPosition) / (endPosition - startPosition);
                 float mouseTime = animation.startTime + mouseNormalizedTime * (animation.endTime - animation.startTime);
@@ -193,7 +169,7 @@ namespace Unity.Kinematica.Editor
                     float curEndTime = animation.animFrames[i].endTime;
                     if (curStartTime <= mouseTime && mouseTime <= curEndTime)
                     {
-                        m_SelectedAnimFrame.providerIdentifier = animStateRecord.ProviderIdentifier;
+                        m_SelectedAnimFrame.providerIdentifier = providerInfo.uniqueIdentifier;
                         m_SelectedAnimFrame.animIndex = animIndex;
                         m_SelectedAnimFrame.animFrameIndex = i;
                         m_SelectedAnimFrame.mouseX = Missing.truncToInt(Event.current.mousePosition.x);
@@ -206,16 +182,21 @@ namespace Unity.Kinematica.Editor
 
         private float GetAnimStateTimelineHeight(AnimationDebugRecord animStateRecord)
         {
-            return animStateRecord.AnimationRecords.Count > 0 ? characterNameOffset + animStateRecord.NumLines * animWidgetOffset + spaceBetweenTimelines : 0.0f;
+            return animStateRecord.AnimationRecords.Count > 0 ? animStateRecord.NumLines * kAnimWidgetOffset : 0.0f;
         }
 
         AnimationFrameIdentifier m_SelectedAnimFrame; // anim frame hovered by mouse
 
-        static float beginOffset = 10.0f;
-        static float characterNameRectangleHeight = 25.0f;
-        static float characterNameOffset = 30.0f;
-        static float animWidgetHeight = 25.0f;
-        static float animWidgetOffset = 30.0f;
-        static float spaceBetweenTimelines = 15.0f;
+        static readonly float kAnimWidgetHeight = 25.0f;
+        static readonly float kAnimWidgetOffset = 30.0f;
+
+        static readonly Color kTooltipBackgroundColor = new Color(0.75f, 0.75f, 0.75f, 1.0f);
+        static readonly Color kTooltipDetourColor = new Color(0.1f, 0.1f, 0.1f, 1.0f);
+        static readonly Color kTooltipTextColor = new Color(0.1f, 0.1f, 0.1f, 1.0f);
+
+        static readonly Color kAnimWidgetBackgroundColor = new Color(0.2f, 0.2f, 0.23f, 1.0f);
+        static readonly Color kAnimWidgetDetourColor = new Color(0.4f, 0.4f, 0.4f, 1.0f);
+        static readonly Color kAnimWidgetTextColor = new Color(0.75f, 0.75f, 0.75f, 1.0f);
+        static readonly Color kAnimWidgetWeightColor = new Color(0.1f, 0.1f, 0.1f, 1.0f);
     }
 }

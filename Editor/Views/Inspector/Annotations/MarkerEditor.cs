@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using Unity.Kinematica.Editor.GenericStruct;
 using Unity.Kinematica.UIElements;
 using UnityEditor;
-using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -39,19 +38,18 @@ namespace Unity.Kinematica.Editor
             typeLabel.value = MarkerAttribute.GetDescription(m_Marker.payload.Type);
             typeLabel.SetEnabled(false);
 
-            FloatField timeField = this.Q<FloatField>();
-            timeField.value = marker.timeInSeconds;
-
-            timeField.RegisterCallback<ChangeEvent<float>>(evt =>
+            var timeField = this.Q<TimeField>("timeInSeconds");
+            timeField.Init(m_Clip, marker.timeInSeconds);
+            timeField.TimeChanged += newTime =>
             {
-                if (!EqualityComparer<float>.Default.Equals(m_Marker.timeInSeconds, evt.newValue))
+                if (!EqualityComparer<float>.Default.Equals(m_Marker.timeInSeconds, newTime))
                 {
                     Undo.RecordObject(m_Clip.Asset, "Change marker time");
-                    m_Marker.timeInSeconds = evt.newValue;
+                    m_Marker.timeInSeconds = newTime;
                     m_Marker.NotifyChanged();
                     clip.Asset.MarkDirty();
                 }
-            });
+            };
 
             m_Marker.Changed += UpdateTime;
 
@@ -78,17 +76,13 @@ namespace Unity.Kinematica.Editor
 
         void UpdateTime()
         {
-            FloatField timeField = this.Q<FloatField>();
-
             if (m_Marker == null)
             {
                 return;
             }
 
-            if (!EqualityComparer<float>.Default.Equals(timeField.value, m_Marker.timeInSeconds))
-            {
-                timeField.SetValueWithoutNotify(m_Marker.timeInSeconds);
-            }
+            var timeField = this.Q<TimeField>("timeInSeconds");
+            timeField.SetValueWithoutNotify(m_Marker.timeInSeconds);
         }
 
         void OnDetachFromPanel(DetachFromPanelEvent evt)

@@ -1,3 +1,4 @@
+using Unity.Collections;
 using Unity.Mathematics;
 namespace Unity.Kinematica
 {
@@ -50,23 +51,21 @@ namespace Unity.Kinematica
         /// <summary>
         /// Returns the interpolated transform between the root delta transform from Kinematica binary for the current frame, and the desired delta transform.
         /// </summary>
-        /// <param name="desiredTrajectory">Memory identifier of the desired trajectory that will be sampled from time 0 to <code>_deltaTime</code> in order to compute the desired delta transform</param>
+        /// <param name="desiredTrajectory">Desired trajectory that will be sampled from time 0 to <code>_deltaTime</code> in order to compute the desired delta transform</param>
         /// <param name="translationWeight">Interpolation weight between the root delta position at 0, and the desired delta position at 1</param>
         /// <param name="rotationWeight">Interpolation weight between the root delta rotation at 0, and the desired delta rotation at 1</param>
         /// <param name="startSpeed">Root speed (m/s) at which steering will start to be effective, steering weight will then increase linearly as root speed increases toward <code>endSpeed</code></param>
         /// <param name="endSpeed">Root speed (m/s) at which steering will be fully effective</param>
         /// <returns></returns>
-        public AffineTransform SteerRootMotion(Identifier<Trajectory> desiredTrajectory, float translationWeight, float rotationWeight, float startSpeed = 0.0f, float endSpeed = 0.15f)
+        public AffineTransform SteerRootMotion(Trajectory desiredTrajectory, float translationWeight, float rotationWeight, float startSpeed = 0.0f, float endSpeed = 0.15f)
         {
             if (_deltaTime <= 0.0f)
             {
                 return AffineTransform.identity;
             }
 
-            var trajectory = GetArray<AffineTransform>(desiredTrajectory);
-
             AffineTransform binaryRootDelta = rootDeltaTransform;
-            AffineTransform desiredRootDelta = Utility.SampleTrajectoryAtTime(trajectory, _deltaTime, Binary.TimeHorizon);
+            AffineTransform desiredRootDelta = Utility.SampleTrajectoryAtTime(desiredTrajectory, _deltaTime, Binary.TimeHorizon);
 
             return Utility.SteerRootMotion(binaryRootDelta, desiredRootDelta, _deltaTime, translationWeight, rotationWeight, startSpeed, endSpeed);
         }
@@ -94,7 +93,23 @@ namespace Unity.Kinematica
         /// is maintained in character space.
         /// </para>
         /// </remarks>
-        public MemoryArray<AffineTransform> TrajectoryArray => trajectory.Array;
+        public NativeSlice<AffineTransform> TrajectoryArray => trajectory.Array;
+
+        public Trajectory CreateTrajectory(Allocator allocator)
+        {
+            return Trajectory.Create(TrajectoryArray.Length, allocator);
+        }
+
+        public void ClearTrajectory(NativeSlice<AffineTransform> trajectory)
+        {
+            trajectory.CopyFrom(TrajectoryArray);
+
+            int halfTrajectoryLength = TrajectoryArray.Length / 2;
+            for (int i = halfTrajectoryLength; i < trajectory.Length; ++i)
+            {
+                trajectory[i] = AffineTransform.identity;
+            }
+        }
 
         internal AffineTransform DesiredTargetWorldTransform
         {

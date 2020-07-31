@@ -1,11 +1,16 @@
+using System;
 using UnityEngine;
 
 namespace Unity.SnapshotDebugger.Editor
 {
-    internal interface ITimelineDebugDrawer
+    public interface ITimelineDebugDrawer
     {
-        void Draw(Rect rect, TimelineWidget.DrawInfo drawInfo);
-        void DrawTooltip();
-        float GetHeight();
+        Type AggregateType { get; }
+
+        float GetDrawHeight(IFrameAggregate aggregate);
+
+        void Draw(FrameDebugProviderInfo providerInfo, IFrameAggregate aggregate, TimelineWidget.DrawInfo drawInfo);
+
+        void OnPostDraw();
     }
 }

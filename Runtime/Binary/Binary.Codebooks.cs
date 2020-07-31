@@ -22,6 +22,19 @@ namespace Unity.Kinematica
         public struct CodeBook
         {
             /// <summary>
+            /// Every float from each fragment will be encoded in a code
+            /// of <code>kNumCodeBits</code> bits. This code is interpreted as an index
+            /// pointing to the closest centroid to the encoded float.
+            /// </summary>
+            public static readonly int kNumCodeBits = 8;
+
+            /// <summary>
+            /// Number of values a code (encoding a float from a fragment) can have.
+            /// A code can have any value in <code>[0, kNumCodeValues - 1]</code>
+            /// </summary>
+            public static readonly int kNumCodeValues = 1 << kNumCodeBits;
+
+            /// <summary>
             /// Denotes the metric this codebook has been created for.
             /// </summary>
             public MetricIndex metricIndex;
@@ -182,9 +195,11 @@ namespace Unity.Kinematica
 
                     Assert.IsTrue(codes.Length == numFeaturesFlattened);
 
+                    float codeMaxValue = Binary.CodeBook.kNumCodeValues - 1;
+
                     for (int i = 0; i < numFeaturesQuantized; ++i)
                     {
-                        var normalizedLength = codes[i] / 255.0f;
+                        var normalizedLength = codes[i] / codeMaxValue;
 
                         var code = codes[numFeaturesQuantized + i];
 

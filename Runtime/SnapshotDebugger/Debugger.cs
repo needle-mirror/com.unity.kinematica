@@ -13,12 +13,13 @@ using EarlyUpdate = UnityEngine.PlayerLoop.EarlyUpdate;
 
 namespace Unity.SnapshotDebugger
 {
-    public class Debugger
+    public class Debugger : System.IDisposable
     {
         public enum State
         {
-            Suspended,
+            Inactive,
             Record,
+            Rewind,
         }
 
         public float deltaTime
@@ -36,23 +37,17 @@ namespace Unity.SnapshotDebugger
             get; set;
         }
 
+        public bool isActive => !IsState(State.Inactive);
+
         public bool rewind
         {
-            get
-            {
-                return _rewind;
-            }
-
+            get => IsState(State.Rewind);
             set
             {
-                if (_rewind && !value)
+                if (isActive)
                 {
-                    rewindTime = _storage.endTimeInSeconds;
-
-                    OnPreUpdate();
+                    state = value ? State.Rewind : State.Record;
                 }
-
-                _rewind = value;
             }
         }
 
@@ -108,7 +103,7 @@ namespace Unity.SnapshotDebugger
             get { return instance._registry; }
         }
 
-        internal static FrameDebugger frameDebugger
+        public static FrameDebugger frameDebugger
         {
             get { return instance._frameDebugger; }
         }
@@ -133,11 +128,6 @@ namespace Unity.SnapshotDebugger
             get { return registry[identifier].gameObject; }
         }
 
-        public bool IsRecording
-        {
-            get { return IsState(State.Record); }
-        }
-
         public bool IsState(State state)
         {
             return this.state == state;
@@ -145,23 +135,57 @@ namespace Unity.SnapshotDebugger
 
         public State state
         {
-            get
-            {
-                return _preferences.state;
-            }
+            get => _state;
 
             set
             {
-                _preferences.state = value;
+                if (_state != value)
+                {
+                    State prevState = _state;
+                    _state = value;
 
-                _preferences.Save();
+                    switch (_state)
+                    {
+                        case State.Inactive:
+                        {
+                            _frameDebugger.Clear();
+                            _frameDebugger.DisableRecording();
+
+                            time = 0.0f;
+                            rewindTime = 0.0f;
+                            deltaTime = 0.0f;
+
+                            _storage.Discard();
+                        }
+                        break;
+                        case State.Record:
+                        {
+                            _storage.DiscardAfterTimeStamp(time);
+
+                            _frameDebugger.EnableRecording(time);
+
+                            _wasRewinding = prevState == State.Rewind;
+                        }
+                        break;
+                        case State.Rewind:
+                        {
+                            rewindTime = _storage.endTimeInSeconds;
+
+                            _frameDebugger.DisableRecording();
+
+                            OnPreUpdate();
+                        }
+                        break;
+                    }
+                }
+
+                _state = value;
             }
         }
 
         [Serializable]
         struct Preferences
         {
-            public State state;
             public float capacityInSeconds;
 
 
@@ -178,7 +202,6 @@ namespace Unity.SnapshotDebugger
 
                 return new Preferences
                 {
-                    state = State.Suspended,
                     capacityInSeconds = 10.0f
                 };
             }
@@ -205,10 +228,21 @@ namespace Unity.SnapshotDebugger
 
             _frameDebugger = new FrameDebugger();
 
+            _state = State.Inactive;
+
+            _wasRewinding = false;
+
 #if UNITY_EDITOR
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+#else
+            RegisterUpdateFunctions();
 #endif
+        }
+
+        public void Dispose()
+        {
+            (_storage as IDisposable).Dispose();
         }
 
         public static void Initialize()
@@ -222,68 +256,26 @@ namespace Unity.SnapshotDebugger
         }
 
 #if UNITY_EDITOR
-        void OnPlayModeStateChanged(PlayModeStateChange state)
+        void OnPlayModeStateChanged(PlayModeStateChange playModeState)
         {
-            if (state == PlayModeStateChange.EnteredPlayMode)
+            if (playModeState == PlayModeStateChange.EnteredPlayMode)
             {
-                BeginRecording();
+                RegisterUpdateFunctions();
             }
-            else if (state == PlayModeStateChange.ExitingPlayMode)
+            else if (playModeState == PlayModeStateChange.ExitingPlayMode)
             {
-                StopRecording();
+                state = State.Inactive;
+
+                UnregisterUpdateFunctions();
             }
         }
 
 #endif
 
-        void BeginRecording()
-        {
-            DiscardRecording();
-
-            _storage.PrepareWrite();
-
-            ResetTimer();
-
-            UpdateSystem.Listen<EarlyUpdate>(OnEarlyUpdate);
-            UpdateSystem.Listen<PreUpdate>(OnPreUpdate);
-            UpdateSystem.Listen<PostLateUpdate>(OnPostLateUpdate);
-        }
-
-        void StopRecording()
-        {
-            UpdateSystem.Ignore<PostLateUpdate>(OnPostLateUpdate);
-            UpdateSystem.Ignore<PreUpdate>(OnPreUpdate);
-            UpdateSystem.Ignore<EarlyUpdate>(OnEarlyUpdate);
-
-            _storage.Commit();
-
-            _storage.PrepareRead();
-
-            _frameDebugger.Clear();
-
-            ResetTimer();
-        }
-
-        void ResetTimer()
-        {
-            time = 0.0f;
-            rewindTime = 0.0f;
-            deltaTime = 0.0f;
-
-            _previousDeltaTime = 0.0f;
-        }
-
-        void DiscardRecording()
-        {
-            _storage.Discard();
-        }
-
         void OnEarlyUpdate()
         {
-            if (!rewind)
+            if (!rewind && !_wasRewinding)
             {
-                _previousDeltaTime = deltaTime;
-
                 deltaTime = Time.deltaTime;
             }
 
@@ -294,29 +286,31 @@ namespace Unity.SnapshotDebugger
         {
             if (IsState(State.Record))
             {
-                if (rewind)
+                time = _storage.endTimeInSeconds;
+
+                _storage.Record(
+                    registry.RecordSnapshot(
+                        time, deltaTime));
+
+                rewindTime = time;
+
+                if (!_wasRewinding)
                 {
-                    var snapshot = _storage.Retrieve(rewindTime);
-
-                    if (snapshot != null)
-                    {
-                        time = snapshot.startTimeInSeconds;
-                        deltaTime = snapshot.durationInSeconds;
-
-                        registry.RestoreSnapshot(snapshot);
-                    }
+                    _frameDebugger.Update(time, startTimeInSeconds);
                 }
-                else
+
+                _wasRewinding = false;
+            }
+            else if (IsState(State.Rewind))
+            {
+                var snapshot = _storage.Retrieve(rewindTime);
+
+                if (snapshot != null)
                 {
-                    rewindTime = time;
+                    time = snapshot.startTimeInSeconds;
+                    deltaTime = snapshot.durationInSeconds;
 
-                    time += _previousDeltaTime;
-
-                    _storage.Record(
-                        registry.RecordSnapshot(
-                            time, deltaTime));
-
-                    _frameDebugger.Update(time, deltaTime, startTimeInSeconds);
+                    registry.RestoreSnapshot(snapshot);
                 }
             }
         }
@@ -325,14 +319,11 @@ namespace Unity.SnapshotDebugger
         {
             if (IsState(State.Record))
             {
-                if (!rewind)
-                {
-                    var snapshot = _storage.Retrieve(time);
+                var snapshot = _storage.Retrieve(time);
 
-                    Assert.IsTrue(snapshot != null);
+                Assert.IsTrue(snapshot != null);
 
-                    snapshot.PostProcess();
-                }
+                snapshot.PostProcess();
             }
         }
 
@@ -345,9 +336,21 @@ namespace Unity.SnapshotDebugger
 
 #endif
 
-        Registry _registry = new Registry();
+        void RegisterUpdateFunctions()
+        {
+            UpdateSystem.Listen<EarlyUpdate>(OnEarlyUpdate);
+            UpdateSystem.Listen<PreUpdate>(OnPreUpdate);
+            UpdateSystem.Listen<PostLateUpdate>(OnPostLateUpdate);
+        }
 
-        float _previousDeltaTime;
+        void UnregisterUpdateFunctions()
+        {
+            UpdateSystem.Ignore<PostLateUpdate>(OnPostLateUpdate);
+            UpdateSystem.Ignore<PreUpdate>(OnPreUpdate);
+            UpdateSystem.Ignore<EarlyUpdate>(OnEarlyUpdate);
+        }
+
+        Registry _registry = new Registry();
 
         Preferences _preferences;
 
@@ -355,6 +358,8 @@ namespace Unity.SnapshotDebugger
 
         FrameDebugger _frameDebugger;
 
-        bool _rewind;
+        State _state;
+
+        bool _wasRewinding;
     }
 }

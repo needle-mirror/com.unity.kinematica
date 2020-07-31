@@ -57,7 +57,7 @@ namespace Unity.Kinematica.Editor
         {
             Assert.IsTrue(type != null);
 
-            return type.GetCustomAttributes(typeof(T), true).Length > 0 && PayloadUtilities.ImplementsPayloadInterface(type);
+            return type.GetCustomAttributes(typeof(T), true).Length > 0;
         }
     }
 }

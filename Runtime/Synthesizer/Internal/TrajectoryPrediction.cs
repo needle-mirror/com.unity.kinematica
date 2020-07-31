@@ -1,6 +1,7 @@
 using Unity.Mathematics;
 using Unity.Kinematica.Supplementary;
 using UnityEngine.Assertions;
+using Unity.Collections;
 
 namespace Unity.Kinematica
 {
@@ -23,6 +24,14 @@ namespace Unity.Kinematica
     /// <seealso cref="TrajectoryPredictionTask"/>
     public struct TrajectoryPrediction
     {
+        public static TrajectoryPrediction CreateFromDirection(ref MotionSynthesizer synthesizer, float3 desiredDirection, float desiredSpeed, Trajectory trajectory, float velocityFactor, float rotationFactor)
+        {
+            float3 desiredVelocity = desiredDirection * desiredSpeed;
+            quaternion desiredRotation = Missing.forRotation(Missing.forward, desiredDirection);
+
+            return Create(ref synthesizer, desiredVelocity, desiredRotation, trajectory, velocityFactor, rotationFactor);
+        }
+
         /// <summary>
         /// Creates a trajectory prediction instance.
         /// </summary>
@@ -33,7 +42,7 @@ namespace Unity.Kinematica
         /// <param name="velocityFactor">Factor that determines when the desired velocity w.r.t. the time horizon should be reached.</param>
         /// <param name="rotationFactor">Factor that determines when the desired rotation w.r.t. the time horizon should be reached.</param>
         /// <returns>The newly created trajectory prediction instance.</returns>
-        public static TrajectoryPrediction Create(ref MotionSynthesizer synthesizer, float3 desiredLinearVelocity, quaternion desiredRotation, MemoryArray<AffineTransform> trajectory, float velocityFactor, float rotationFactor)
+        public static TrajectoryPrediction Create(ref MotionSynthesizer synthesizer, float3 desiredLinearVelocity, quaternion desiredRotation, Trajectory trajectory, float velocityFactor, float rotationFactor)
         {
             return TrajectoryPrediction.Create(ref synthesizer, desiredLinearVelocity, desiredRotation, trajectory, velocityFactor, rotationFactor, synthesizer.CurrentVelocity);
         }
@@ -49,9 +58,11 @@ namespace Unity.Kinematica
         /// <param name="rotationFactor">Factor that determines when the desired rotation w.r.t. the time horizon should be reached.</param>
         /// <param name="currentLinearVelocity">Current linear velocity in meters per second in character space</param>
         /// <returns>The newly created trajectory prediction instance.</returns>
-        public static TrajectoryPrediction Create(ref MotionSynthesizer synthesizer, float3 desiredLinearVelocity, quaternion desiredRotation, MemoryArray<AffineTransform> trajectory, float velocityFactor, float rotationFactor, float3 currentLinearVelocity)
+        public static TrajectoryPrediction Create(ref MotionSynthesizer synthesizer, float3 desiredLinearVelocity, quaternion desiredRotation, Trajectory trajectory, float velocityFactor, float rotationFactor, float3 currentLinearVelocity)
         {
             ref var binary = ref synthesizer.Binary;
+
+            synthesizer.ClearTrajectory(trajectory);
 
             float sampleRate = binary.SampleRate;
 
@@ -201,6 +212,6 @@ namespace Unity.Kinematica
 
         int currentIndex;
 
-        MemoryArray<AffineTransform> trajectory;
+        Trajectory trajectory;
     }
 }

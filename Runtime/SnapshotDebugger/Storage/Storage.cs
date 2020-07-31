@@ -20,6 +20,8 @@ namespace Unity.SnapshotDebugger
 
         public abstract void Discard();
 
+        public abstract void DiscardAfterTimeStamp(float timestamp);
+
         public abstract void PrepareWrite();
 
         public abstract void PrepareRead();

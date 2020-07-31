@@ -2,43 +2,59 @@ using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine.Assertions;
 using Unity.SnapshotDebugger;
+using Buffer = Unity.SnapshotDebugger.Buffer;
 using Unity.Collections.LowLevel.Unsafe;
+using System;
 
 namespace Unity.Kinematica
 {
     internal struct TransformBuffer
     {
-        public static MemoryHeader<TransformBuffer> Create(int numTransforms, Allocator allocator)
+        public struct Memory : IDisposable
         {
-            var memoryRequirements = MemoryRequirements.Of<TransformBuffer>();
+            ArrayMemory memory;
+            TransformBuffer buffer;
 
-            memoryRequirements += GetMemoryRequirements(numTransforms);
+            public ref TransformBuffer Ref => ref (new MemoryRef<TransformBuffer>(ref buffer)).Ref;
 
-            MemoryHeader<TransformBuffer> transformBuffer;
+            Memory(int numTransforms, Allocator allocator)
+            {
+                int transformSize = 0;
 
-            var memoryBlock = MemoryBlock.Create(
-                memoryRequirements, allocator, out transformBuffer);
+                unsafe
+                {
+                    transformSize = UnsafeUtility.SizeOf<AffineTransform>();
+                }
 
-            transformBuffer.Ref.Construct(
-                ref memoryBlock, numTransforms);
+                memory = ArrayMemory.Create();
+                memory.Reserve<AffineTransform>(numTransforms);
+                memory.Allocate(allocator);
 
-            Assert.IsTrue(memoryBlock.IsComplete);
+                buffer = Create(ref memory, numTransforms);
+            }
 
-            return transformBuffer;
+            public static Memory Allocate(int numTransforms, Allocator allocator)
+            {
+                return new Memory(numTransforms, allocator);
+            }
+
+            public void Dispose()
+            {
+                memory.Dispose();
+            }
         }
 
-        internal unsafe void CopyFrom(ref TransformBuffer transformBuffer)
+        public static TransformBuffer Create(ref ArrayMemory memory, int numTransforms)
         {
-            Assert.IsTrue(transformBuffer.transforms.Length == transforms.Length);
-
-            var numBytes = Length * UnsafeUtility.SizeOf<AffineTransform>();
-
-            UnsafeUtility.MemCpy(transforms.ptr, transformBuffer.transforms.ptr, numBytes);
+            return new TransformBuffer()
+            {
+                transforms = memory.CreateSlice<AffineTransform>(numTransforms)
+            };
         }
 
-        internal void Construct(ref MemoryBlock memoryBlock, int numTransforms)
+        internal void CopyFrom(ref TransformBuffer transformBuffer)
         {
-            transforms = memoryBlock.CreateArray(numTransforms, AffineTransform.identity);
+            transforms.CopyFrom(transformBuffer.transforms);
         }
 
         public int Length => transforms.Length;
@@ -59,11 +75,6 @@ namespace Unity.Kinematica
             transforms.ReadFromStream(buffer);
         }
 
-        public static MemoryRequirements GetMemoryRequirements(int numTransforms)
-        {
-            return MemoryRequirements.Of<AffineTransform>() * numTransforms;
-        }
-
-        public MemoryArray<AffineTransform> transforms;
+        public NativeSlice<AffineTransform> transforms;
     }
 }

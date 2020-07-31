@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Unity.SnapshotDebugger
 {
     [Serializable]
-    internal sealed class Snapshot
+    internal sealed class Snapshot : IDisposable
     {
         public Identifier<Snapshot> identifier
         {
@@ -14,17 +14,23 @@ namespace Unity.SnapshotDebugger
         internal int aggregateIdentifier;
         internal int providerIdentifier;
 
-        public class AggregateReference
+        public class AggregateReference : IDisposable
         {
             public Identifier<Aggregate> identifier;
 
-            public class ProviderReference
+            public class ProviderReference : IDisposable
             {
                 public Identifier<SnapshotProvider> identifier;
 
                 public Buffer payload;
 
-                public Buffer customPayload;
+                public Nullable<Buffer> customPayload;
+
+                public void Dispose()
+                {
+                    payload.Dispose();
+                    customPayload?.Dispose();
+                }
             }
 
             public static AggregateReference Create(Identifier<Aggregate> identifier)
@@ -34,15 +40,25 @@ namespace Unity.SnapshotDebugger
 
             public void Create(SnapshotProvider provider)
             {
-                var payload = Buffer.Create();
+                var payload = Buffer.Create(Collections.Allocator.Persistent);
 
                 provider.WriteToStream(payload);
 
                 _providers.Add(new ProviderReference
                 {
                     identifier = provider.identifier,
-                    payload = payload
+                    payload = payload,
+                    customPayload = null
                 });
+            }
+
+            public void Dispose()
+            {
+                foreach (ProviderReference provider in _providers)
+                {
+                    provider.Dispose();
+                }
+                _providers.Clear();
             }
 
             public int memorySize
@@ -157,6 +173,14 @@ namespace Unity.SnapshotDebugger
             return new Snapshot(startTime, deltaTime);
         }
 
+        public void Dispose()
+        {
+            foreach (AggregateReference aggregate in _aggregates)
+            {
+                aggregate.Dispose();
+            }
+        }
+
         public void PostProcess()
         {
             var registry = Debugger.registry;
@@ -173,8 +197,10 @@ namespace Unity.SnapshotDebugger
 
                         if (provider.RequirePostProcess)
                         {
-                            reference.customPayload = Buffer.Create();
-                            provider.OnWritePostProcess(reference.customPayload);
+                            reference.customPayload?.Dispose();
+
+                            reference.customPayload = Buffer.Create(Collections.Allocator.Persistent);
+                            provider.OnWritePostProcess(reference.customPayload.Value);
                         }
                     }
                 }

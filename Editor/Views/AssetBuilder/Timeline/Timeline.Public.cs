@@ -180,6 +180,7 @@ namespace Unity.Kinematica.Editor
             return true;
         }
 
+        public static event Action<TimelineViewMode> TimelineViewModeChange;
         public TimelineViewMode TimelineUnits
         {
             get { return m_Mode; }
@@ -193,6 +194,8 @@ namespace Unity.Kinematica.Editor
                     AdjustTicks();
 
                     EditorPrefs.SetString(k_TimelineUnitsPreferenceKey, ((int)TimelineUnits).ToString());
+
+                    TimelineViewModeChange?.Invoke(value);
                 }
             }
         }
@@ -219,6 +222,8 @@ namespace Unity.Kinematica.Editor
             {
                 if (m_Target != value)
                 {
+                    PreviewEnabled = false;
+
                     if (m_Target != null)
                     {
                         m_Target.AssetWasDeserialized -= OnAssetDeserialized;

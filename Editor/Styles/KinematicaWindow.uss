@@ -1,4 +1,4 @@
-.mainContainer {
+#kinematica {
     flex: 1 0 0;
     align-items:stretch;
 }
@@ -8,10 +8,6 @@
     justify-content: space-between;
     flex-direction: row;
     max-height: 22px;
-}
-
-#viewToggles {
-    flex-direction: row;
 }
 
 #toolbarButtons {
@@ -60,11 +56,6 @@
     display: none;
 }
 
-#kinematica {
-    flex: 1 0 0;
-    align-items:stretch;
-}
-
 #windowContent {
     flex: 1 0 0;
     align-items:stretch;
@@ -93,6 +84,12 @@
 #gutterToggleMenu {
     min-width: 20px;
     min-height: 20px;
+}
+
+.viewMode {
+    height: 16px;
+    width: 16px;
+    background-image: resource("d_Settings");
 }
 
 .trackToggle {
@@ -171,10 +168,6 @@ Slider {
     margin: 4px;
 }
 
-.tag {
-    align-self: center;
-}
-
 .preview {
     align-self: center;
 }
@@ -195,43 +188,7 @@ Slider {
     border-width: 2px;
 }
 
-#tagTimeline {
-    min-height: 20px;
-}
 
-.marker {
-    position: absolute;
-    width: 7px;
-    height: 21px;
-    left: -2px;
-}
-
-.markerManipulateLabel {
-    position: absolute;
-    left: 10px;
-}
-
-.markerGuideline {
-    margin-top: -4px;
-    position: absolute;
-    top: 0;
-    bottom:0;
-    right: 0;
-}
-
-.markerOverlap {
-    -unity-text-align: middle-center;
-    top: -2px;
-}
-
-.markerOverlapImage {
-    left: -3px;
-    top: 3px;
-    width: 9px;
-    height: 9px;
-    --unity-image: resource("Packages/com.unity.kinematica/Editor/Images/markerOverlap.png");
-  --unity-image-size: scale-to-fit;
-}
 
 #deleteButton {
     padding-top: 4px;

@@ -31,12 +31,6 @@ Kinematica also maintains a desired trajectory (which represents the intended fu
 
 In the above image, the yellow trajectory indicates the trajectory that is associated with the current animation pose and the green trajectory indicates the desired future movement.
 
-## Task Graph
-
-Kinematica uses a task based system in order to allow the execution of arbitrary logic. Tasks always execute in its own job prior to the frame update of Kinematica itself, regardless of where (main thread or job) and when the task graph has been updated during a frame. The task graph is meant to be changed on a frame-by-frame basis and the controlling logic can build a new task graph on an as-needed basis.
-
-Kinematica comes with a number of frequently used tasks. In addition to that, users can define their own custom tasks in order to control Kinematica's motion synthesizer.
-
 ## Snapshot Debugger
 
 The snapshot debugger is a system that allows to record the internal state of game object components (or entities) and to rewind to a previously recorded snapshot at a later time. Snapshots are recorded each frame and are being restored before the corresponding logic executes. This allows the user to rewind to a particular frame that has been recorded in play mode previously. During rewind mode, users can for example set breakpoints in script code and inspect the internal state of any object as it was at the time the state has been originally recorded and re-execute the logic.

@@ -44,8 +44,6 @@ namespace Unity.Kinematica.Editor
         public void Init(Timeline timeline, PanManipulator panManipulator, ZoomManipulator zoomManipulator)
         {
             m_TimelineWidget = new TimelineWidget();
-            m_DrawInfo.scale = 1f;
-            m_DrawInfo.inverseScale = 1.0f / m_DrawInfo.scale;
 
             m_PanManipulator = panManipulator;
             m_ZoomManipulator = zoomManipulator;
@@ -63,13 +61,11 @@ namespace Unity.Kinematica.Editor
 
                 if (rect.width > 0 && rect.height > 0)
                 {
-                    if (!FloatComparer.s_ComparerWithDefaultTolerance.Equals(m_DrawInfo.rangeStart, m_TimelineWidget.RangeStart) ||
-                        !FloatComparer.s_ComparerWithDefaultTolerance.Equals(m_DrawInfo.rangeWidth, m_TimelineWidget.RangeWidth))
+                    if (!FloatComparer.s_ComparerWithDefaultTolerance.Equals(m_DrawInfo.layout.startTime, m_TimelineWidget.RangeStart) ||
+                        !FloatComparer.s_ComparerWithDefaultTolerance.Equals(m_DrawInfo.layout.Duration, m_TimelineWidget.RangeWidth))
                     {
-                        m_DrawInfo.rangeStart = m_TimelineWidget.RangeStart;
-                        m_DrawInfo.rangeWidth = m_TimelineWidget.RangeWidth;
-                        m_DrawInfo.scale = m_TimelineWidget.RangeWidth;
-                        m_DrawInfo.inverseScale = 1.0f / m_DrawInfo.scale;
+                        m_DrawInfo.layout.startTime = m_TimelineWidget.RangeStart;
+                        m_DrawInfo.layout.endTime = m_TimelineWidget.RangeEnd;
                     }
                     else
                     {

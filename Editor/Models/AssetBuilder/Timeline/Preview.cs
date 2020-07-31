@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEditor;
 
 using Unity.Mathematics;
+using Unity.Collections;
 
 namespace Unity.Kinematica.Editor
 {
@@ -13,7 +14,7 @@ namespace Unity.Kinematica.Editor
         AnimationRig targetRig;
         float timeHorizon;
         float assetSampleRate;
-        AffineTransform[] sampleTrajectory;
+        Trajectory sampleTrajectory;
         Color trajectoryColor;
 
         // Preview game object
@@ -53,7 +54,7 @@ namespace Unity.Kinematica.Editor
             targetRig = AnimationRig.Create(asset.DestinationAvatar);
 
             int trajectoryLength = Missing.truncToInt(2.0f * asset.TimeHorizon * asset.SampleRate) + 1;
-            sampleTrajectory = new AffineTransform[trajectoryLength];
+            sampleTrajectory = Trajectory.Create(trajectoryLength, Allocator.Persistent);
             timeHorizon = asset.TimeHorizon;
             assetSampleRate = asset.SampleRate;
 
@@ -68,6 +69,8 @@ namespace Unity.Kinematica.Editor
             }
 
             ResetAnimationSampler();
+
+            sampleTrajectory.Dispose();
         }
 
         public void EnableDisplayTrajectory()
@@ -172,7 +175,7 @@ namespace Unity.Kinematica.Editor
             try
             {
                 // 1. Sample pose
-                using (MemoryHeader<TransformBuffer> pose = sampler.SamplePose(time))
+                using (TransformBuffer.Memory pose = sampler.SamplePose(time))
                 {
                     // 2. Save bindings so that we can restore the joints to their initial transform once preview is finished
                     foreach (EditorCurveBinding binding in bindings)
@@ -248,8 +251,7 @@ namespace Unity.Kinematica.Editor
             try
             {
                 AffineTransform worldRootTransform = AffineTransform.Create(targetJoints[0].position, targetJoints[0].rotation);
-                MemoryArray<AffineTransform> trajectory = new MemoryArray<AffineTransform>(sampleTrajectory);
-                DebugExtensions.DebugDrawTrajectory(worldRootTransform, trajectory, assetSampleRate, trajectoryColor, trajectoryColor);
+                DebugExtensions.DebugDrawTrajectory(worldRootTransform, sampleTrajectory, assetSampleRate, trajectoryColor, trajectoryColor);
             }
             catch (MissingReferenceException)
             {

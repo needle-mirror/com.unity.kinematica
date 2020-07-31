@@ -128,10 +128,6 @@ namespace Unity.Kinematica.Editor
             for (int i = 1; i < NumJoints; ++i)
             {
                 transforms[i] = FindChildRecursive(root, joints[i].name);
-                if (transforms[i] == null)
-                {
-                    Debug.LogWarning($"Could not map joint {joints[i].name} to any child transform of {root.name}.");
-                }
             }
 
             return transforms;

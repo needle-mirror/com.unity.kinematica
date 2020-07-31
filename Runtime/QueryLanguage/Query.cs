@@ -1,3 +1,5 @@
+using Unity.Collections;
+
 namespace Unity.Kinematica
 {
     // (has_a && has_b && !has_d) or (has_a && has_c)
@@ -79,6 +81,13 @@ namespace Unity.Kinematica
             return
                 QueryTraitExpression.Create(
                 ref binary.Ref).And(value);
+        }
+
+        public QueryTraitExpression Where<T>(NativeString64 debugName, T value) where T : struct
+        {
+            return
+                QueryTraitExpression.Create(
+                ref binary.Ref, debugName).And(value);
         }
 
         /// <summary>

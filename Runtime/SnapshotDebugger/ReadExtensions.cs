@@ -83,7 +83,10 @@ namespace Unity.SnapshotDebugger
             extensionMethods = methods.ToArray();
         }
 
-        static byte[] sharedBuffer = new byte[4];
+        internal static Type ReadType(this Buffer buffer)
+        {
+            return Type.GetType(buffer.ReadString());
+        }
 
         internal static object TryReadObject(this Buffer buffer, Type type)
         {
@@ -147,9 +150,7 @@ namespace Unity.SnapshotDebugger
         /// <returns>The short that has been read from the buffer.</returns>
         public static short Read16(this Buffer buffer)
         {
-            buffer.ReadBytes(sharedBuffer, 0, sizeof(short));
-
-            return BitConverter.GetShort(sharedBuffer);
+            return buffer.ReadBlittable<short>();
         }
 
         /// <summary>
@@ -158,9 +159,7 @@ namespace Unity.SnapshotDebugger
         /// <returns>The integer that has been read from the buffer.</returns>
         public static int Read32(this Buffer buffer)
         {
-            buffer.ReadBytes(sharedBuffer, 0, sizeof(int));
-
-            return BitConverter.GetInt(sharedBuffer);
+            return buffer.ReadBlittable<int>();
         }
 
         /// <summary>
@@ -169,9 +168,7 @@ namespace Unity.SnapshotDebugger
         /// <returns>The floating point value that has been read from the buffer.</returns>
         public static float ReadSingle(this Buffer buffer)
         {
-            buffer.ReadBytes(sharedBuffer, 0, sizeof(float));
-
-            return BitConverter.GetFloat(sharedBuffer);
+            return buffer.ReadBlittable<float>();
         }
 
         /// <summary>
@@ -180,9 +177,7 @@ namespace Unity.SnapshotDebugger
         /// <returns>The boolean value that has been read from the buffer.</returns>
         public static bool ReadBoolean(this Buffer buffer)
         {
-            buffer.ReadBytes(sharedBuffer, 0, sizeof(bool));
-
-            return BitConverter.GetBool(sharedBuffer);
+            return buffer.ReadBlittable<bool>();
         }
 
         /// <summary>
@@ -200,15 +195,6 @@ namespace Unity.SnapshotDebugger
 #else
             return Encoding.Default.GetString(bytes);
 #endif
-        }
-
-        /// <summary>
-        /// Reads the specified number of bytes into a new buffer.
-        /// </summary>
-        /// <returns>The buffer containing the specified number of bytes that have been read.</returns>
-        public static Buffer ReadBuffer(this Buffer buffer, int bytes)
-        {
-            return Buffer.Create(buffer.ReadBytes(bytes));
         }
 
         /// <summary>
@@ -296,6 +282,15 @@ namespace Unity.SnapshotDebugger
             byte a = buffer.ReadByte();
 
             return new Color32(r, g, b, a);
+        }
+
+        public static NativeString64 ReadNativeString64(this Buffer buffer)
+        {
+            NativeString64 str = new NativeString64();
+            str.LengthInBytes = buffer.ReadBlittable<ushort>();
+            str.buffer = buffer.ReadBlittable<Bytes62>();
+
+            return str;
         }
 
         /// <summary>
@@ -406,6 +401,55 @@ namespace Unity.SnapshotDebugger
             return null;
         }
 
+        public static NativeArray<T> ReadNativeArray<T>(this Buffer buffer, out Allocator allocator) where T : struct
+        {
+            allocator = (Allocator)buffer.Read32();
+            if (allocator == Allocator.Invalid)
+            {
+                return default(NativeArray<T>);
+            }
+
+            int length = buffer.Read32();
+
+            NativeArray<T> array = new NativeArray<T>(length, allocator);
+
+            int elemSize;
+            unsafe
+            {
+                elemSize = UnsafeUtility.SizeOf<T>();
+            }
+
+            NativeSlice<T> slice = buffer.ReadSlice(array.Length * elemSize).SliceConvert<T>();
+            slice.CopyTo(array);
+
+            return array;
+        }
+
+        public static NativeList<T> ReadNativeList<T>(this Buffer buffer, out Allocator allocator) where T : struct
+        {
+            allocator = (Allocator)buffer.Read32();
+            if (allocator == Allocator.Invalid)
+            {
+                return default(NativeList<T>);
+            }
+
+            int length = buffer.Read32();
+
+            NativeList<T> list = new NativeList<T>(length, allocator);
+            list.ResizeUninitialized(length);
+
+            int elemSize;
+            unsafe
+            {
+                elemSize = UnsafeUtility.SizeOf<T>();
+            }
+
+            NativeSlice<T> slice = buffer.ReadSlice(list.Length * elemSize).SliceConvert<T>();
+            slice.CopyTo(list.AsArray());
+
+            return list;
+        }
+
         /// <summary>
         /// Reads a native list from the buffer.
         /// </summary>
@@ -438,6 +482,14 @@ namespace Unity.SnapshotDebugger
                 UnsafeUtility.MemCpy(
                     NativeArrayUnsafeUtility.GetUnsafePtr(nativeArray),
                     src, byteArray.Length);
+            }
+        }
+
+        public static unsafe void ReadFromStream<T>(this NativeSlice<T> nativeSlice, Buffer buffer) where T : struct
+        {
+            for (int i = 0; i < nativeSlice.Length; ++i)
+            {
+                nativeSlice[i] = buffer.ReadBlittable<T>();
             }
         }
     }

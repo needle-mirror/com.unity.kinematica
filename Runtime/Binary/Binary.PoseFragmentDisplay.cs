@@ -45,8 +45,8 @@ namespace Unity.Kinematica
                 {
                     return new Options
                     {
-                        showTimeSpan = true,
-                        showDetails = true,
+                        showTimeSpan = false,
+                        showDetails = false,
                         timeOffset = 0.0f,
                         poseColor = Color.yellow,
                         detailsColor = new Color(0.75f, 0.0f, 0.15f, 0.75f)

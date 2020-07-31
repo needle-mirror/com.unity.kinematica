@@ -1,25 +1,38 @@
 using Unity.Mathematics;
 using Unity.Collections;
+using Unity.Jobs;
+using System;
 
 namespace Unity.Kinematica
 {
-    public partial struct MotionSynthesizer
+    public partial struct MotionSynthesizer : IDisposable
     {
-        private void Construct(ref MemoryBlock memoryBlock, BlobAssetReference<Binary> binary, AffineTransform worldRootTransform, float blendDuration)
+        MotionSynthesizer(BlobAssetReference<Binary> binary, AffineTransform worldRootTransform, float blendDuration, Allocator allocator)
         {
             m_binary = binary;
 
+            arrayMemory = ArrayMemory.Create();
+
+            ReserveTraitTypes(ref arrayMemory);
+            PoseGenerator.Reserve(ref arrayMemory, ref binary.Value);
+            TrajectoryModel.Reserve(ref arrayMemory, ref binary.Value);
+
+            arrayMemory.Allocate(allocator);
+
             // We basically copy statically available data into this instance
             // so that the burst compiler does not complain about accessing static data.
-            ConstructDataTypes(ref memoryBlock);
-            ConstructTraitTypes(ref memoryBlock);
+            traitTypes = ConstructTraitTypes(ref arrayMemory, ref binary.Value);
 
-            poseGenerator.Construct(ref memoryBlock, ref binary.Value, blendDuration);
+            poseGenerator = new PoseGenerator(ref arrayMemory, ref binary.Value, blendDuration);
 
-            trajectory.Construct(ref memoryBlock, ref binary.Value);
+            trajectory = new TrajectoryModel(ref arrayMemory, ref binary.Value);
 
             rootTransform = worldRootTransform;
             rootDeltaTransform = AffineTransform.identity;
+
+            updateInProgress = false;
+
+            _deltaTime = 0.0f;
 
             lastSamplingTime = TimeIndex.Invalid;
 
@@ -30,10 +43,30 @@ namespace Unity.Kinematica
             frameCount = -1;
 
             lastProcessedFrameCount = -1;
+
+            isValid = true;
+
+            isDebugging = false;
+            readDebugMemory = DebugMemory.Create(1024, allocator);
+            writeDebugMemory = DebugMemory.Create(1024, allocator);
+        }
+
+        public void Dispose()
+        {
+            if (isValid)
+            {
+                arrayMemory.Dispose();
+                readDebugMemory.Dispose();
+                writeDebugMemory.Dispose();
+
+                isValid = false;
+            }
         }
 
         [ReadOnly]
         private BlobAssetReference<Binary> m_binary;
+
+        ArrayMemory arrayMemory;
 
         /// <summary>
         /// The trajectory model maintains a representation of the simulated
@@ -50,27 +83,8 @@ namespace Unity.Kinematica
 
         internal AffineTransform rootDeltaTransform;
 
-        /// <summary>
-        /// Denotes a references to the motion synthesizer itself.
-        /// </summary>
-        public MemoryRef<MotionSynthesizer> self;
+        NativeSlice<TraitType> traitTypes;
 
-        internal MemoryRef<MemoryChunk> memoryChunk;
-
-#if UNITY_EDITOR
-        internal MemoryRef<MemoryChunk> memoryChunkShadow;
-#endif
-        MemoryArray<DataType> dataTypes;
-
-        MemoryArray<DataField> dataFields;
-
-        MemoryArray<int> sizeOfTable;
-
-        MemoryArray<TraitType> traitTypes;
-
-#if UNITY_EDITOR
-        internal BlittableBool immutable;
-#endif
         BlittableBool updateInProgress;
 
         PoseGenerator poseGenerator;
@@ -86,5 +100,11 @@ namespace Unity.Kinematica
         private int frameCount;
 
         private int lastProcessedFrameCount;
+
+        bool isValid;
+
+        bool isDebugging;
+        DebugMemory readDebugMemory;
+        DebugMemory writeDebugMemory;
     }
 }

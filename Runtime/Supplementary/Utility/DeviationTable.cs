@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Mathematics;
+using Unity.SnapshotDebugger;
+using Buffer = Unity.SnapshotDebugger.Buffer;
 using UnityEngine.Assertions;
 
 namespace Unity.Kinematica
@@ -18,37 +20,55 @@ namespace Unity.Kinematica
         public static DeviationScore CreateInvalid() => new DeviationScore() { poseDeviation = -1.0f, trajectoryDeviation = -1.0f };
     }
 
-    internal struct DeviationTable : IDisposable
+    internal struct DeviationTable : IDebugObject, Serializable, IDisposable
     {
-        internal static DeviationTable CreateInvalid()
+        internal struct PoseSequenceInfo
         {
-            return new DeviationTable();
+            public PoseSequence sequence;
+            public int firstDeviationIndex;
         }
 
-        internal static DeviationTable Create(MemoryArray<PoseSequence> sequences)
+        Allocator allocator;
+        NativeArray<PoseSequenceInfo> sequences;
+        NativeArray<DeviationScore> deviations;
+
+        public DebugIdentifier debugIdentifier { get; set; }
+
+        public bool IsValid => allocator != Allocator.Invalid;
+
+        internal static DeviationTable CreateInvalid()
+        {
+            return new DeviationTable()
+            {
+                allocator = Allocator.Invalid
+            };
+        }
+
+        internal static DeviationTable Create(PoseSet candidates)
         {
             int numDeviations = 0;
-            for (int i = 0; i < sequences.Length; ++i)
+            for (int i = 0; i < candidates.sequences.Length; ++i)
             {
-                numDeviations += sequences[i].numFrames;
+                numDeviations += candidates.sequences[i].numFrames;
             }
 
             DeviationTable table = new DeviationTable()
             {
-                sequences = new NativeArray<PoseSequenceInfo>(sequences.length, Allocator.Persistent),
-                deviations = new NativeArray<DeviationScore>(numDeviations, Allocator.Persistent)
+                allocator = Allocator.Temp,
+                sequences = new NativeArray<PoseSequenceInfo>(candidates.sequences.Length, Allocator.Temp),
+                deviations = new NativeArray<DeviationScore>(numDeviations, Allocator.Temp)
             };
 
             int deviationIndex = 0;
-            for (int i = 0; i < sequences.Length; ++i)
+            for (int i = 0; i < candidates.sequences.Length; ++i)
             {
                 table.sequences[i] = new PoseSequenceInfo()
                 {
-                    sequence = sequences[i],
+                    sequence = candidates.sequences[i],
                     firstDeviationIndex = deviationIndex
                 };
 
-                deviationIndex += sequences[i].numFrames;
+                deviationIndex += candidates.sequences[i].numFrames;
             }
 
             for (int i = 0; i < numDeviations; ++i)
@@ -57,6 +77,27 @@ namespace Unity.Kinematica
             }
 
             return table;
+        }
+
+        public void Dispose()
+        {
+            if (IsValid)
+            {
+                sequences.Dispose();
+                deviations.Dispose();
+            }
+        }
+
+        public void WriteToStream(Buffer buffer)
+        {
+            buffer.WriteNativeArray(sequences, allocator);
+            buffer.WriteNativeArray(deviations, allocator);
+        }
+
+        public void ReadFromStream(Buffer buffer)
+        {
+            sequences = buffer.ReadNativeArray<PoseSequenceInfo>(out allocator);
+            deviations = buffer.ReadNativeArray<DeviationScore>(out _);
         }
 
         internal void SetDeviation(int sequenceIndex, int frameIndex, float poseDeviation, float trajectoryDeviation)
@@ -116,20 +157,5 @@ namespace Unity.Kinematica
 
             return candidates;
         }
-
-        public void Dispose()
-        {
-            sequences.Dispose();
-            deviations.Dispose();
-        }
-
-        internal struct PoseSequenceInfo
-        {
-            public PoseSequence sequence;
-            public int firstDeviationIndex;
-        }
-
-        NativeArray<PoseSequenceInfo> sequences;
-        NativeArray<DeviationScore> deviations;
     }
 }

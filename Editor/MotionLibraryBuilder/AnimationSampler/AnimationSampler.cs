@@ -54,12 +54,12 @@ namespace Unity.Kinematica.Editor
             poseSamplePostProcess.Dispose();
         }
 
-        public MemoryHeader<TransformBuffer> SamplePose(float sampleTimeInSeconds)
+        public TransformBuffer.Memory SamplePose(float sampleTimeInSeconds)
         {
             int numJoints = editorAnimation.JointSamplers.Length;
 
-            MemoryHeader<TransformBuffer> transformBuffer = TransformBuffer.Create(numJoints, Allocator.Temp);
-            ref TransformBuffer pose = ref transformBuffer.Ref;
+            TransformBuffer.Memory buffer = TransformBuffer.Memory.Allocate(numJoints, Allocator.Temp);
+            ref TransformBuffer pose = ref buffer.Ref;
 
             for (int jointIndex = 0; jointIndex < numJoints; ++jointIndex)
             {
@@ -68,7 +68,7 @@ namespace Unity.Kinematica.Editor
 
             poseSamplePostProcess.Apply(pose.transforms);
 
-            return transformBuffer;
+            return buffer;
         }
 
         public AffineTransform SampleTrajectory(float sampleTimeInSeconds)

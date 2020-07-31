@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 
 namespace Unity.Kinematica.Editor
@@ -113,6 +114,26 @@ namespace Unity.Kinematica.Editor
             }
 
             return windows[0];
+        }
+
+        internal static object ReadObjectGeneric(this DebugMemory memory, DebugReference reference)
+        {
+            Type debugObjectType = DataTypes.GetTypeFromHashCode(reference.identifier.typeHashCode).Item1;
+
+            MethodInfo method = typeof(DebugMemory).GetMethod(nameof(DebugMemory.ReadObject), BindingFlags.Instance | BindingFlags.Public);
+            MethodInfo genericMethod = method.MakeGenericMethod(new Type[] { debugObjectType });
+
+            return genericMethod.Invoke(memory, new object[] { reference });
+        }
+
+        internal static bool CheckMultiSelectModifier(IMouseEvent evt)
+        {
+            return Application.platform == RuntimePlatform.OSXEditor ? evt.commandKey : evt.ctrlKey;
+        }
+
+        internal static EventModifiers GetMultiSelectModifier()
+        {
+            return Application.platform == RuntimePlatform.OSXEditor ? EventModifiers.Command : EventModifiers.Control;
         }
     }
 }

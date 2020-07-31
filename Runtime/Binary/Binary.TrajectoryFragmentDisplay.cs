@@ -33,9 +33,9 @@ namespace Unity.Kinematica
                 {
                     return new Options
                     {
-                        showDetails = true,
+                        showDetails = false,
                         showForward = true,
-                        showVelocity = true,
+                        showVelocity = false,
                         baseColor = new Color(0.0f, 1.0f, 0.5f, 0.75f),
                         velocityColor = new Color(0.25f, 0.5f, 1.0f, 0.75f),
                         forwardColor = new Color(0.75f, 0.6f, 0.0f, 0.75f),

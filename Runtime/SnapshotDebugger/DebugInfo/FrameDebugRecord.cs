@@ -18,7 +18,7 @@ namespace Unity.SnapshotDebugger
 
         public abstract void NotifyProviderRemoved();
 
-        public abstract void UpdateRecordEntries(float time, float frameEndTime, FrameDebugProvider provider);
+        public abstract void UpdateRecordEntries(float time, float frameEndTime, FrameDebugProviderInfo provider);
 
         public abstract void PruneFramesBeforeTimestamp(float startTimeInSeconds);
 

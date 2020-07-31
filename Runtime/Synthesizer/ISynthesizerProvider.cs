@@ -19,5 +19,7 @@ namespace Unity.Kinematica
         /// synthesizer for the moment.
         /// </summary>
         MemoryRef<MotionSynthesizer> Synthesizer { get; }
+
+        bool IsSynthesizerInitialized { get; }
     }
 }

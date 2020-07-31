@@ -25,7 +25,7 @@ namespace Unity.SnapshotDebugger.Editor
 
         int GetMemorySize()
         {
-            var buffer = Buffer.Create();
+            var buffer = Buffer.Create(Collections.Allocator.Temp);
 
             Target.WriteToStream(buffer);
 

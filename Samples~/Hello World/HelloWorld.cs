@@ -1,4 +1,4 @@
-﻿using Unity.Kinematica;
+using Unity.Kinematica;
 using UnityEngine;
 
 namespace HelloWorld
@@ -10,26 +10,31 @@ namespace HelloWorld
 
         void Update()
         {
+            var kinematica = GetComponent<Kinematica>();
+
+            ref var synthesizer = ref kinematica.Synthesizer.Ref;
+
             if (Input.anyKeyDown)
             {
                 idle ^= true;
 
-                var kinematica = GetComponent<Kinematica>();
-
-                ref var synthesizer = ref kinematica.Synthesizer.Ref;
-
                 if (idle)
                 {
-                    synthesizer.Root.Action().PlayFirstSequence(
-                        synthesizer.Query.Where(
+                    synthesizer.PlayFirstSequence(
+                        synthesizer.Query.Where("Idle",
                             Locomotion.Default).And(Idle.Default));
                 }
                 else
                 {
-                    synthesizer.Root.Action().PlayFirstSequence(
-                        synthesizer.Query.Where(
+                    synthesizer.PlayFirstSequence(
+                        synthesizer.Query.Where("Locomotion",
                             Locomotion.Default).Except(Idle.Default));
                 }
+            }
+
+            if (idle)
+            {
+                synthesizer.LoopSegmentIfEndReached(synthesizer.Time);
             }
         }
     }

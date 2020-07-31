@@ -120,22 +120,20 @@ namespace Unity.SnapshotDebugger
 
                     provider.aggregate = aggregate.identifier;
 
-                    if (currentSnapshot != null && !Debugger.instance.rewind)
+                    if (!Debugger.instance.rewind)
                     {
                         var prefab = provider.GetComponent<Prefab>();
 
-                        if (prefab == null)
+                        if (prefab != null)
                         {
-                            throw new MissingComponentException($"Recording the instantiation of '{provider.gameObject.name}' requires that a '{nameof(Prefab)}' component is attached to it.");
+                            var prefabReference = prefab.prefab.gameObject;
+
+                            _prefabReferences[provider.aggregate] = new PrefabReference
+                            {
+                                gameObject = prefabReference,
+                                identifier = provider.identifier
+                            };
                         }
-
-                        var prefabReference = prefab.prefab.gameObject;
-
-                        _prefabReferences[provider.aggregate] = new PrefabReference
-                        {
-                            gameObject = prefabReference,
-                            identifier = provider.identifier
-                        };
                     }
                 }
 
@@ -157,6 +155,15 @@ namespace Unity.SnapshotDebugger
 
             if (Application.isPlaying)
             {
+                if (Debugger.instance.IsState(Debugger.State.Record))
+                {
+                    var prefab = provider.GetComponent<Prefab>();
+                    if (prefab == null)
+                    {
+                        throw new MissingComponentException($"Missing '{nameof(Prefab)}' component on object '{provider.gameObject.name}' destroyed while recording. Recorder won't be able to spawn it back.");
+                    }
+                }
+
                 var aggregate = _aggregates[provider.gameObject];
 
                 aggregate._providers.Remove(provider);
@@ -209,19 +216,17 @@ namespace Unity.SnapshotDebugger
 
                     Assert.IsTrue(targetProvider != null);
 
-                    Assert.IsTrue(provider.payload != null);
-
                     provider.payload.PrepareForRead();
 
                     targetProvider.ReadFromStream(provider.payload);
 
                     if (provider.customPayload != null)
                     {
-                        provider.customPayload.PrepareForRead();
+                        provider.customPayload.Value.PrepareForRead();
 
                         Assert.IsTrue(targetProvider.RequirePostProcess);
 
-                        targetProvider.OnReadPostProcess(provider.customPayload);
+                        targetProvider.OnReadPostProcess(provider.customPayload.Value);
                     }
                 }
             }

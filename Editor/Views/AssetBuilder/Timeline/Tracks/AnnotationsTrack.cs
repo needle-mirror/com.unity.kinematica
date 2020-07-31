@@ -30,9 +30,8 @@ namespace Unity.Kinematica.Editor
             if (m_TaggedClip != null)
             {
                 var clipTags = m_TaggedClip.Tags;
-                var clipMarkers = m_TaggedClip.Markers;
                 var timelineElements = Children().OfType<ITimelineElement>().ToList();
-                if (clipTags.Count + clipMarkers.Count != timelineElements.Count)
+                if (clipTags.Count != timelineElements.Count)
                 {
                     ReloadElements();
                 }
@@ -43,14 +42,6 @@ namespace Unity.Kinematica.Editor
                         if (timelineElement is TagElement tagElement)
                         {
                             if (!clipTags.Contains(tagElement.m_Tag))
-                            {
-                                ReloadElements();
-                                return;
-                            }
-                        }
-                        else if (timelineElement is MarkerElement markerElement)
-                        {
-                            if (!clipMarkers.Contains(markerElement.marker))
                             {
                                 ReloadElements();
                                 return;
@@ -114,6 +105,7 @@ namespace Unity.Kinematica.Editor
                 return false;
             }
 
+            Undo.RecordObject(m_TaggedClip.Asset, "Reorder Tag");
             m_TaggedClip.Tags.Remove(tag);
             m_TaggedClip.Tags.Insert(newIndex, tag);
             Insert(newIndex, (element as VisualElement));

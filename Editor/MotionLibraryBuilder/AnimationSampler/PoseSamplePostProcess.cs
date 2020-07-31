@@ -76,7 +76,7 @@ namespace Unity.Kinematica.Editor
             return clone;
         }
 
-        public void Apply(MemoryArray<AffineTransform> localPose)
+        public void Apply(NativeSlice<AffineTransform> localPose)
         {
             if (applyRootImportOptions)
             {

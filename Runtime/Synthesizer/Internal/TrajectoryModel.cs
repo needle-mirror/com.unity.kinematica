@@ -18,7 +18,19 @@ namespace Unity.Kinematica
     /// </remarks>
     public struct TrajectoryModel
     {
-        internal void Construct(ref MemoryBlock memoryBlock, ref Binary binary)
+        internal static void Reserve(ref ArrayMemory memory, ref Binary binary)
+        {
+            float sampleRate = binary.SampleRate;
+            float timeHorizon = binary.TimeHorizon;
+
+            int trajectoryLength =
+                DurationToFrames(timeHorizon * 2.0f, sampleRate);
+
+            memory.Reserve<AffineTransform>(trajectoryLength);
+            memory.Reserve<AccumulatedTransform>(trajectoryLength * 2);
+        }
+
+        internal TrajectoryModel(ref ArrayMemory memory, ref Binary binary)
         {
             //
             // Initialize attributes
@@ -32,24 +44,28 @@ namespace Unity.Kinematica
             int trajectoryLength =
                 DurationToFrames(timeHorizon * 2.0f, sampleRate);
 
-            trajectory =
-                memoryBlock.CreateArray(
-                    trajectoryLength, AffineTransform.identity);
+            trajectory = memory.CreateSlice<AffineTransform>(trajectoryLength);
+            for (int i = 0; i < trajectoryLength; ++i)
+            {
+                trajectory[i] = AffineTransform.identity;
+            }
 
             var accumulatedIdentity =
                 AccumulatedTransform.Create(
                     AffineTransform.identity, math.rcp(binary.SampleRate));
 
-            deltaSpaceTrajectory =
-                memoryBlock.CreateArray(
-                    trajectoryLength * 2, accumulatedIdentity);
+            deltaSpaceTrajectory = memory.CreateSlice<AccumulatedTransform>(trajectoryLength * 2);
+            for (int i = 0; i < trajectoryLength * 2; ++i)
+            {
+                deltaSpaceTrajectory[i] = accumulatedIdentity;
+            }
 
             Assert.IsTrue(trajectoryLength == TrajectoryLength);
         }
 
         internal void Update(AffineTransform worldRootTransform, AffineTransform deltaTransform, float deltaTime)
         {
-            MemoryArray<AffineTransform> trajectory = Array;
+            NativeSlice<AffineTransform> trajectory = Array;
 
             int trajectoryLength = TrajectoryLength;
             int halfTrajectoryLength = trajectoryLength / 2;
@@ -79,7 +95,7 @@ namespace Unity.Kinematica
             // Update past trajectory
             //
 
-            for (int i = deltaSpaceTrajectory.Length - 1; i >= 0; --i)
+            for (int i = deltaSpaceTrajectory.Length - 1; i > 0; --i)
             {
                 deltaSpaceTrajectory[i] = deltaSpaceTrajectory[i - 1];
             }
@@ -132,8 +148,12 @@ namespace Unity.Kinematica
                 trajectory[i] = invDelta * trajectory[i];
             }
 
-            deltaSpaceTrajectory[0].transform *= rootDeltaTransform;
-            deltaSpaceTrajectory[0].transform.q = math.normalize(deltaSpaceTrajectory[0].transform.q);
+            var delta = deltaSpaceTrajectory[0];
+
+            delta.transform *= rootDeltaTransform;
+            delta.transform.q = math.normalize(delta.transform.q);
+
+            deltaSpaceTrajectory[0] = delta;
         }
 
         internal void WriteToStream(Buffer buffer)
@@ -152,19 +172,6 @@ namespace Unity.Kinematica
         {
             return Missing.truncToInt(
                 durationInSeconds * samplesPerSecond) + 1;
-        }
-
-        internal static MemoryRequirements GetMemoryRequirements(ref Binary binary)
-        {
-            int trajectoryLength = DurationToFrames(
-                binary.TimeHorizon * 2.0f,
-                binary.SampleRate);
-
-            var memoryRequirements = MemoryRequirements.Of<AffineTransform>() * trajectoryLength;
-
-            memoryRequirements += MemoryRequirements.Of<AccumulatedTransform>() * trajectoryLength * 2;
-
-            return memoryRequirements;
         }
 
         /// <summary>
@@ -202,7 +209,7 @@ namespace Unity.Kinematica
         /// Allows direct access to the trajectory array.
         /// </summary>
         /// <returns>Memory array that references the trajectory array.</returns>
-        public MemoryArray<AffineTransform> Array
+        public NativeSlice<AffineTransform> Array
         {
             get
             {
@@ -341,7 +348,7 @@ namespace Unity.Kinematica
         [ReadOnly]
         private MemoryRef<Binary> binary;
 
-        private MemoryArray<AffineTransform> trajectory;
+        private NativeSlice<AffineTransform> trajectory;
 
         struct SubSampler
         {
@@ -353,7 +360,7 @@ namespace Unity.Kinematica
                 return new SubSampler();
             }
 
-            public AffineTransform SampleAt(MemoryArray<AccumulatedTransform> trajectory, float sampleTimeInSeconds)
+            public AffineTransform SampleAt(NativeSlice<AccumulatedTransform> trajectory, float sampleTimeInSeconds)
             {
                 int numTransforms = trajectory.Length;
 
@@ -414,6 +421,6 @@ namespace Unity.Kinematica
             }
         }
 
-        private MemoryArray<AccumulatedTransform> deltaSpaceTrajectory;
+        private NativeSlice<AccumulatedTransform> deltaSpaceTrajectory;
     }
 }

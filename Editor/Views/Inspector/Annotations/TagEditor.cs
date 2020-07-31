@@ -4,9 +4,7 @@ using System.Collections.Generic;
 using Unity.Kinematica.Editor.GenericStruct;
 using Unity.Kinematica.UIElements;
 using UnityEngine.UIElements;
-
 using UnityEditor;
-using UnityEditor.UIElements;
 
 using Object = UnityEngine.Object;
 
@@ -72,31 +70,32 @@ namespace Unity.Kinematica.Editor
                 metricLabel.style.display = DisplayStyle.None;
             }
 
-            FloatField startTime = this.Q<FloatField>("startTime");
-            startTime.value = m_Tag.startTime;
-            startTime.RegisterCallback<ChangeEvent<float>>(evt =>
+            TimeField stf = this.Q<TimeField>("startTime");
+            stf.Init(m_Clip, m_Tag.startTime);
+            stf.TimeChanged += (newTime) =>
             {
-                if (!EqualityComparer<float>.Default.Equals(m_Tag.startTime, evt.newValue))
+                if (!EqualityComparer<float>.Default.Equals(m_Tag.startTime, newTime))
                 {
                     Undo.RecordObject(asset, "Change tag start time");
-                    m_Tag.startTime = evt.newValue;
+                    m_Tag.startTime = newTime;
                     m_Tag.NotifyChanged();
                     asset.MarkDirty();
                 }
-            });
+            };
 
-            FloatField duration = this.Q<FloatField>("duration");
-            duration.value = m_Tag.duration;
-            duration.RegisterCallback<ChangeEvent<float>>(evt =>
+
+            TimeField dtf = this.Q<TimeField>("durationTime");
+            dtf.Init(m_Clip, m_Tag.duration);
+            dtf.TimeChanged += (newTime) =>
             {
-                if (!EqualityComparer<float>.Default.Equals(m_Tag.duration, evt.newValue))
+                if (!EqualityComparer<float>.Default.Equals(m_Tag.duration, newTime))
                 {
                     Undo.RecordObject(asset, "Change tag duration");
-                    m_Tag.duration = evt.newValue;
+                    m_Tag.duration = newTime;
                     m_Tag.NotifyChanged();
                     asset.MarkDirty();
                 }
-            });
+            };
 
             var so = m_Tag.payload.ScriptableObject;
             if (so != null)
@@ -127,17 +126,10 @@ namespace Unity.Kinematica.Editor
 
         void Refresh()
         {
-            FloatField startTime = this.Q<FloatField>("startTime");
-            if (!EqualityComparer<float>.Default.Equals(startTime.value, m_Tag.startTime))
-            {
-                startTime.SetValueWithoutNotify(m_Tag.startTime);
-            }
-
-            FloatField duration = this.Q<FloatField>("duration");
-            if (!EqualityComparer<float>.Default.Equals(duration.value, m_Tag.duration))
-            {
-                duration.SetValueWithoutNotify(m_Tag.duration);
-            }
+            TimeField stf = this.Q<TimeField>("startTime");
+            stf.SetValueWithoutNotify(m_Tag.startTime);
+            TimeField dtf = this.Q<TimeField>("durationTime");
+            dtf.SetValueWithoutNotify(m_Tag.duration);
         }
 
         void OnDetachFromPanel(DetachFromPanelEvent evt)

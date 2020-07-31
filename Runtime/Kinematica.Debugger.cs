@@ -15,10 +15,8 @@ using System.Linq;
 
 namespace Unity.Kinematica
 {
-    public partial class Kinematica : SnapshotProvider, FrameDebugProvider<AnimationFrameDebugInfo>, IMotionSynthesizerProvider
+    public partial class Kinematica : SnapshotProvider, IFrameDebugProvider, IMotionSynthesizerProvider
     {
-        List<AnimationFrameDebugInfo> m_FrameDebugInfos = new List<AnimationFrameDebugInfo>();
-
         public int GetUniqueIdentifier()
         {
             return gameObject.GetInstanceID();
@@ -33,14 +31,10 @@ namespace Unity.Kinematica
         /// return the currently active animation frames
         /// </summary>
         /// <returns></returns>
-        public List<AnimationFrameDebugInfo> GetFrameDebugInfo()
+        public virtual void LateUpdate()
         {
-            if (!synthesizerHolder.IsValid)
-            {
-                return new List<AnimationFrameDebugInfo>();
-            }
-
-            return Synthesizer.Ref.GetFrameDebugInfo();
+            Debugger.frameDebugger.AddFrameRecords<AnimationDebugRecord>(this, synthesizer.GetFrameDebugInfo());
+            synthesizer.AddCostRecordsToFrameDebugger(this);
         }
 
         /// <summary>
@@ -52,7 +46,7 @@ namespace Unity.Kinematica
             buffer.Write(transform.position);
             buffer.Write(transform.rotation);
 
-            synthesizerHolder.WriteToStream(buffer);
+            synthesizer.WriteToStream(buffer);
         }
 
         /// <summary>
@@ -64,22 +58,7 @@ namespace Unity.Kinematica
             transform.position = buffer.ReadVector3();
             transform.rotation = buffer.ReadQuaternion();
 
-            synthesizerHolder.ReadFromStream(buffer);
+            synthesizer.ReadFromStream(buffer);
         }
-
-        /// <summary>
-        /// Informs the snapshot debugger that Kinematica require serialize/deserialize callback functions called
-        /// </summary>
-        public override bool RequirePostProcess => true;
-
-        /// <summary>
-        /// Post process callback called after all snapshot objects have been serialized, can be use to serialize additional data
-        /// </summary>
-        public override void OnWritePostProcess(Buffer buffer) => synthesizerHolder.OnWritePostProcess(buffer);
-
-        /// <summary>
-        /// Post process callback called after all snapshot objects have been deserialized, can be use to deserialize additional data.
-        /// </summary>
-        public override void OnReadPostProcess(Buffer buffer) => synthesizerHolder.OnReadPostProcess(buffer);
     }
 }

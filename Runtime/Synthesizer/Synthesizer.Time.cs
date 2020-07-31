@@ -39,6 +39,15 @@ namespace Unity.Kinematica
         /// <param name="samplingTime">New sampling time for the pose generation.</param>
         public void PlayAtTime(SamplingTime samplingTime)
         {
+            DebugWriteBlittableObject(ref samplingTime);
+            PlayAtTimeDebug playAtTimeDebug = new PlayAtTimeDebug()
+            {
+                playTime = samplingTime.debugIdentifier
+            };
+            DebugWriteBlittableObject(ref playAtTimeDebug);
+
+            samplingTime.debugIdentifier = DebugIdentifier.Invalid;
+
             if (updateInProgress)
             {
                 delayedPushTime = samplingTime.timeIndex;

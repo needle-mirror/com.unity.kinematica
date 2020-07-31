@@ -8,7 +8,7 @@ using UnityEngine.UIElements;
 
 namespace Unity.Kinematica.Editor
 {
-    class MarkerElement : VisualElement, ITimelineElement, INotifyValueChanged<float>
+    class MarkerElement : SnappingElement, INotifyValueChanged<float>
     {
         const string k_MarkerStyleClass = "marker";
 
@@ -23,10 +23,9 @@ namespace Unity.Kinematica.Editor
         readonly Color m_BackgroundColor;
         const float k_BackgroundAlpha = .7f;
 
-        public MarkerElement(MarkerAnnotation marker, MarkerTrack track)
+        public MarkerElement(MarkerAnnotation marker, MarkerTrack track) : base(track)
         {
             m_Track = track;
-            Timeline = m_Track.m_Owner;
             this.marker = marker;
             focusable = true;
 
@@ -79,7 +78,7 @@ namespace Unity.Kinematica.Editor
 
         void SetupManipulators(VisualElement element)
         {
-            element.AddManipulator(new MarkerDragManipulator(this));
+            element.AddManipulator(new MarkerManipulator(this));
             var contextManipulator = new ContextualMenuManipulator((obj) =>
             {
                 SelectMarkerMenu(obj);
@@ -121,7 +120,7 @@ namespace Unity.Kinematica.Editor
             scrollableArea.Add(m_TimelineGuideline);
         }
 
-        void ShowManipulationLabel()
+        public override void ShowManipulationLabel()
         {
             m_TimelineGuideline.style.visibility = Visibility.Visible;
 
@@ -129,7 +128,7 @@ namespace Unity.Kinematica.Editor
             m_ManipulateLabel.text = TimelineUtility.GetTimeString(m_Track.m_Owner.ViewMode, marker.timeInSeconds, (int)m_Track.Clip.SampleRate);
         }
 
-        void HideManipulationLabel()
+        public override void HideManipulationLabel()
         {
             m_TimelineGuideline.style.visibility = Visibility.Hidden;
             m_ManipulateLabel.style.visibility = Visibility.Hidden;
@@ -158,7 +157,12 @@ namespace Unity.Kinematica.Editor
             }
         }
 
-        void OnDetachFromPanel(DetachFromPanelEvent evt)
+        public override void Resize()
+        {
+            Reposition();
+        }
+
+        protected override void OnDetachFromPanel(DetachFromPanelEvent evt)
         {
             marker.Changed -= Reposition;
             if (m_TimelineGuideline != null)
@@ -172,14 +176,14 @@ namespace Unity.Kinematica.Editor
 
         float m_PreviousTime;
 
-        public void Reposition()
+        public override void Reposition()
         {
             Reposition(true);
         }
 
         public void Reposition(bool notify)
         {
-            var clip = m_Track.Clip;
+            TaggedAnimationClip clip = m_Track.Clip;
             if (clip == null)
             {
                 return;
@@ -236,7 +240,7 @@ namespace Unity.Kinematica.Editor
             }
         }
 
-        public void Unselect()
+        public override void Unselect()
         {
             Color backgroundColor = m_BackgroundColor;
             backgroundColor.a = k_BackgroundAlpha;
@@ -250,14 +254,26 @@ namespace Unity.Kinematica.Editor
             m_Content.MarkDirtyRepaint();
         }
 
-        public System.Object Object
+        public override System.Object Object
         {
             get { return marker; }
         }
+        public override float StartTime
+        {
+            get { return marker.timeInSeconds; }
+        }
 
-        public Timeline Timeline { get; }
+        public override float EndTime
+        {
+            get { return marker.timeInSeconds; }
+        }
 
-        bool m_Selected = false;
+        public override float GetSnapPosition(float targetPosition)
+        {
+            return worldBound.x;
+        }
+
+        internal bool m_Selected = false;
 
         public event Action Selected;
 
@@ -307,110 +323,6 @@ namespace Unity.Kinematica.Editor
             if (evt.keyCode == KeyCode.Delete)
             {
                 m_Track.m_Owner.DeleteSelection();
-            }
-        }
-
-        class MarkerDragManipulator : MouseManipulator
-        {
-            bool m_Active;
-
-            MarkerElement m_Parent;
-
-            public MarkerDragManipulator(MarkerElement parent)
-            {
-                m_Parent = parent;
-                activators.Add(new ManipulatorActivationFilter { button = MouseButton.LeftMouse });
-                activators.Add(new ManipulatorActivationFilter { button = MouseButton.LeftMouse, modifiers = EventModifiers.Control });
-            }
-
-            protected override void RegisterCallbacksOnTarget()
-            {
-                target.RegisterCallback<MouseDownEvent>(OnMouseDownEvent);
-                target.RegisterCallback<MouseMoveEvent>(OnMouseMoveEvent);
-                target.RegisterCallback<MouseUpEvent>(OnMouseUpEvent);
-            }
-
-            protected override void UnregisterCallbacksFromTarget()
-            {
-                target.UnregisterCallback<MouseDownEvent>(OnMouseDownEvent);
-                target.UnregisterCallback<MouseMoveEvent>(OnMouseMoveEvent);
-                target.UnregisterCallback<MouseUpEvent>(OnMouseUpEvent);
-            }
-
-            bool m_StartingDrag = false;
-            bool m_MarkerDragged = false;
-
-            void OnMouseDownEvent(MouseDownEvent evt)
-            {
-                if (m_Active)
-                {
-                    return;
-                }
-
-                if (!CanStartManipulation(evt))
-                {
-                    return;
-                }
-
-                m_Active = true;
-                m_StartingDrag = true;
-                m_MarkerDragged = false;
-                m_Parent.ShowManipulationLabel();
-
-                if (!m_Parent.m_Selected)
-                {
-                    SelectMarkerElement(m_Parent, evt.ctrlKey);
-                }
-
-                target.CaptureMouse();
-                evt.StopPropagation();
-            }
-
-            void OnMouseMoveEvent(MouseMoveEvent evt)
-            {
-                if (!m_Active || !target.HasMouseCapture() || EditorApplication.isPlaying)
-                {
-                    return;
-                }
-
-                if (m_StartingDrag)
-                {
-                    Undo.RecordObject(m_Parent.m_Track.m_Owner.TargetAsset, "Moving marker");
-                    m_StartingDrag = false;
-                }
-
-                float framerate = m_Parent.m_Track.Clip.SampleRate;
-                var newTime = (float)TimelineUtility.RoundToFrame(m_Parent.m_Track.m_Owner.WorldPositionToTime(evt.mousePosition.x), framerate);
-
-                if (!FloatComparer.s_ComparerWithDefaultTolerance.Equals(m_Parent.value, newTime))
-                {
-                    m_MarkerDragged = true;
-                    m_Parent.value = newTime;
-                    m_Parent.ShowManipulationLabel();
-                    m_Parent.m_ManipulateLabel.text = TimelineUtility.GetTimeString(m_Parent.m_Track.m_Owner.ViewMode, newTime, (int)m_Parent.m_Track.Clip.SampleRate);
-                }
-
-                evt.StopPropagation();
-            }
-
-            void OnMouseUpEvent(MouseUpEvent evt)
-            {
-                if (!m_Active || !target.HasMouseCapture() || !CanStopManipulation(evt))
-                {
-                    return;
-                }
-
-                if (!m_MarkerDragged)
-                {
-                    SelectMarkerElement(m_Parent, evt.ctrlKey);
-                }
-
-                m_MarkerDragged = false;
-                m_Active = false;
-                m_StartingDrag = false;
-                m_Parent.HideManipulationLabel();
-                target.ReleaseMouse();
-                evt.StopPropagation();
             }
         }
     }

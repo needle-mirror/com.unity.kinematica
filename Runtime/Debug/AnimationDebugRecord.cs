@@ -7,14 +7,10 @@ using UnityEngine;
 
 namespace Unity.Kinematica
 {
-    internal class AnimationDebugRecord : FrameDebugRecord
+    internal class AnimationDebugRecord : IFrameAggregate
     {
-        public override void Init(int providerIdentifier, string displayName)
+        public AnimationDebugRecord()
         {
-            base.Init(providerIdentifier, displayName);
-
-            m_ProviderAlive = true;
-
             m_AnimationRecords = new CircularList<AnimationRecord>();
             m_NumActiveAnims = 0;
             m_LinesEndTimes = new List<float>();
@@ -24,11 +20,11 @@ namespace Unity.Kinematica
 
         public int NumLines => m_LinesEndTimes.Count;
 
-        public override bool IsObsolete => !m_ProviderAlive && m_AnimationRecords.Count == 0;
+        public bool IsEmpty => m_AnimationRecords.Count == 0;
 
-        public override void UpdateRecordEntries(float frameStartTime, float frameEndTime, FrameDebugProvider provider)
+        public void AddRecords(List<IFrameRecord> records, float frameStartTime, float frameEndTime)
         {
-            List<AnimationFrameDebugInfo> frameSnapshots  = ((FrameDebugProvider<AnimationFrameDebugInfo>)provider).GetFrameDebugInfo();
+            List<AnimationFrameDebugInfo> frameSnapshots = records.Select(r => (AnimationFrameDebugInfo)r).ToList();
 
             List<int> newSnapshots = new List<int>(); // snaphots from sequences that weren't already present in the records
 
@@ -117,7 +113,7 @@ namespace Unity.Kinematica
             m_NumActiveAnims = frameSnapshots.Count;
         }
 
-        public override void PruneFramesBeforeTimestamp(float timestamp)
+        public void PruneFramesBeforeTimestamp(float timestamp)
         {
             int i = 0;
             while (i < m_AnimationRecords.Count)
@@ -139,9 +135,33 @@ namespace Unity.Kinematica
             m_NumActiveAnims = Mathf.Min(m_NumActiveAnims, m_AnimationRecords.Count);
         }
 
-        public override void NotifyProviderRemoved()
+        public void PruneFramesStartingAfterTimestamp(float startTimeSeconds)
         {
-            m_ProviderAlive = false;
+            int i = m_AnimationRecords.Count - 1;
+            while (i >= 0)
+            {
+                AnimationRecord animRecord = m_AnimationRecords[i];
+                animRecord.PruneAnimationFramesStartingAfterTimestamp(startTimeSeconds);
+                if (animRecord.animFrames.Count == 0)
+                {
+                    // all frames from animation record have been removed, we can remove the record
+                    m_AnimationRecords.SwapElements(i, m_AnimationRecords.Count - 1);
+                    m_AnimationRecords.PopBack();
+                }
+
+                --i;
+            }
+
+            m_NumActiveAnims = 0;
+            for (i = 0; i < m_AnimationRecords.Count; ++i)
+            {
+                if (m_AnimationRecords[i].endTime >= startTimeSeconds)
+                {
+                    ++m_NumActiveAnims;
+                }
+            }
+
+            RecomputeRanks();
         }
 
         int GetNewAnimRank(float startTime, float endTime)
@@ -160,7 +180,20 @@ namespace Unity.Kinematica
             return m_LinesEndTimes.Count - 1;
         }
 
-        bool                                m_ProviderAlive;
+        void RecomputeRanks()
+        {
+            m_LinesEndTimes.Clear();
+            for (int i = 0; i < m_AnimationRecords.Count; ++i)
+            {
+                AnimationRecord animRecord = m_AnimationRecords[i];
+                for (int rank = m_LinesEndTimes.Count; rank <= animRecord.rank; ++rank)
+                {
+                    m_LinesEndTimes.Add(0.0f);
+                }
+
+                m_LinesEndTimes[animRecord.rank] = math.max(m_LinesEndTimes[animRecord.rank], animRecord.endTime);
+            }
+        }
 
         CircularList<AnimationRecord>       m_AnimationRecords;
         int                                 m_NumActiveAnims;

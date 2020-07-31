@@ -1,13 +1,23 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine.Assertions;
 
 namespace Unity.SnapshotDebugger
 {
-    internal class MemoryStorage : Storage
+    internal class MemoryStorage : Storage, IDisposable
     {
         public static MemoryStorage Create(float capacityInSeconds)
         {
             return new MemoryStorage(capacityInSeconds);
+        }
+
+        public void Dispose()
+        {
+            foreach (Snapshot snapshot in snapshots)
+            {
+                snapshot.Dispose();
+            }
+            snapshots.Clear();
         }
 
         public override float capacityInSeconds
@@ -66,6 +76,7 @@ namespace Unity.SnapshotDebugger
 
             while (durationInSeconds > capacityInSeconds)
             {
+                snapshots[0].Dispose();
                 snapshots.RemoveAt(0);
             }
         }
@@ -88,7 +99,20 @@ namespace Unity.SnapshotDebugger
 
         public override void Discard()
         {
+            foreach (Snapshot snapshot in snapshots)
+            {
+                snapshot.Dispose();
+            }
             snapshots.Clear();
+        }
+
+        public override void DiscardAfterTimeStamp(float timestamp)
+        {
+            while (snapshots.Count > 0 && snapshots[snapshots.Count - 1].startTimeInSeconds > timestamp)
+            {
+                snapshots[snapshots.Count - 1].Dispose();
+                snapshots.RemoveAt(snapshots.Count - 1);
+            }
         }
 
         public override void PrepareWrite()

@@ -1,8 +1,12 @@
+using System;
+using Unity.Collections;
 using Unity.Mathematics;
+using Unity.SnapshotDebugger;
+using Buffer = Unity.SnapshotDebugger.Buffer;
 
 namespace Unity.Kinematica
 {
-    internal struct SplinePoint
+    public struct SplinePoint
     {
         public float3 position;
         public float3 tangent;
@@ -17,9 +21,24 @@ namespace Unity.Kinematica
         }
     }
 
-    internal struct Spline
+    internal struct Spline : Serializable, IDisposable
     {
-        public void Initialize(float3 inPosition, float3 inTangent, float3[] controlPoints, float3 outTangent, float curvature)
+        public NativeArray<HermitCurve> segments;
+        public Allocator allocator;
+
+        public static Spline Create(int numControlPoints, Allocator allocator)
+        {
+            int pointCount = numControlPoints + 1;
+            int segmentCount = pointCount - 1;
+
+            return new Spline()
+            {
+                segments = new NativeArray<HermitCurve>(segmentCount, allocator),
+                allocator = allocator
+            };
+        }
+
+        public void BuildSpline(float3 inPosition, float3 inTangent, NativeArray<float3> controlPoints, float3 outTangent, float curvature)
         {
             int pointCount = controlPoints.Length + 1;
             int segmentCount = pointCount - 1;
@@ -45,6 +64,11 @@ namespace Unity.Kinematica
                     segmentOutTangent,
                     curvature);
             }
+        }
+
+        public void Dispose()
+        {
+            segments.Dispose();
         }
 
         public float ComputeCurveLength(int startSegment = 0)
@@ -80,6 +104,14 @@ namespace Unity.Kinematica
             };
         }
 
-        public MemoryArray<HermitCurve> segments;
+        public void WriteToStream(Unity.SnapshotDebugger.Buffer buffer)
+        {
+            buffer.WriteNativeArray(segments, allocator);
+        }
+
+        public void ReadFromStream(Unity.SnapshotDebugger.Buffer buffer)
+        {
+            segments = buffer.ReadNativeArray<HermitCurve>(out allocator);
+        }
     }
 }

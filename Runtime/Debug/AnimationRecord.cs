@@ -26,6 +26,10 @@ namespace Unity.Kinematica
 
         public CircularList<AnimationFrameInfo> animFrames;
 
+        float GetAnimFrameStartTime(int index)
+        {
+            return index == 0 ? startTime : animFrames[index - 1].endTime;
+        }
 
         public void AddAnimationFrame(float endTime, float weight, float animFrame, float blendOutDuration)
         {
@@ -52,6 +56,16 @@ namespace Unity.Kinematica
                 startTime = timestamp;
                 animFrames.PopFront();
             }
+        }
+
+        public void PruneAnimationFramesStartingAfterTimestamp(float startTimeInSeconds)
+        {
+            while (animFrames.Count > 0 && GetAnimFrameStartTime(animFrames.Count - 1) > startTimeInSeconds)
+            {
+                animFrames.PopBack();
+            }
+
+            endTime = animFrames.Count == 0 ? startTime : animFrames.Last.endTime;
         }
     }
 }

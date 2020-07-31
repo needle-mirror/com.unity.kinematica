@@ -2,7 +2,6 @@ using Unity.Mathematics;
 
 namespace Unity.Kinematica
 {
-    [Data("HermitCurve")]
     internal struct HermitCurve
     {
         public static HermitCurve Create(float3 inPos, float3 inTangent, float3 outPos, float3 outTangent, float curvature)

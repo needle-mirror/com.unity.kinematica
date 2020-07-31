@@ -10,11 +10,11 @@ The above image shows the Snapshot Debugger below the scene view. It can be acce
 
 The timeline section of the Snapshot Debugger displays the range of recorded frames in blue. The `Capacity in seconds` determines the size of the internal recording buffer. In the example shown above it is set to 10 seconds, which in turn means that the range of recorded frames won't exceed this amount of time. The corresponding memory size (shown below the capacity in seconds) shows the size of the recording buffer. The higher the recording capacity the more memory will be required for the recording buffer.
 
-The `Recorder` setting can be either set to `Record` or `Suspended`. The Snapshot Debugger does not record snapshot frames in suspended mode - only in record mode. Also, frames are only recorded during play mode.
+The recorder can only be used in playmode and is inactive by default (for performance reason). You start, pause/resume and stop recording at any time during playmode by clicking on the corresponding buttons in the Snapshot Debugger window.
 
-During record mode a left mouse-click in the blue area that indicates the section of frames that have been recorded will switch the Snapshot Debugger into rewind mode. A click to the right side (anywhere outside of the recording area) will switch it back into record mode and recording will resume at the last recorded frame. The currently selected time will always be indicated by the yellow playhead. During rewind mode the current time can be selected by "scrubbing" along the timeline area.
+During record mode a left mouse-click in the blue area that indicates the section of frames that have been recorded will switch the Snapshot Debugger into rewind mode. The currently selected time will always be indicated by the yellow playhead. During rewind mode the current time can be selected by "scrubbing" along the timeline area.
 
-Kinematica's Builder window and Task Graph window will automatically display the internal state of the motion synthesizer at the current rewind time.
+Kinematica's Builder window and Execution Graph window will automatically display the internal state of the motion synthesizer at the current rewind time.
 
 ## User defined Snapshot Debugging
 

@@ -1,5 +1,0 @@
-{
-    "displayName": "Simple Retargeting",
-    "description": "Describes how to use Humanoid retargeting to use Kinematica with AnimationClips coming from multiple rigs",
-    "createSeparatePackage": false
-}

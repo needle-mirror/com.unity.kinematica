@@ -217,7 +217,7 @@ namespace Unity.Kinematica
                     return factory.instance;
                 }
 
-                public static TrajectoryFragment Create(ref Binary binary, MetricIndex metricIndex, MemoryArray<AffineTransform> trajectory)
+                public static TrajectoryFragment Create(ref Binary binary, MetricIndex metricIndex, NativeSlice<AffineTransform> trajectory)
                 {
                     var factory = Create(ref binary, metricIndex);
 
@@ -291,7 +291,7 @@ namespace Unity.Kinematica
                     }
                 }
 
-                void GenerateTrajectoryFeatures(ref Binary binary, MemoryArray<AffineTransform> trajectory)
+                void GenerateTrajectoryFeatures(ref Binary binary, NativeSlice<AffineTransform> trajectory)
                 {
                     var timeHorizon = binary.TimeHorizon;
 
@@ -382,7 +382,7 @@ namespace Unity.Kinematica
                 return Factory.Create(ref binary, metricIndex, samplingTime);
             }
 
-            internal static TrajectoryFragment Create(ref Binary binary, MetricIndex metricIndex, MemoryArray<AffineTransform> trajectory)
+            internal static TrajectoryFragment Create(ref Binary binary, MetricIndex metricIndex, NativeSlice<AffineTransform> trajectory)
             {
                 return Factory.Create(ref binary, metricIndex, trajectory);
             }
@@ -473,7 +473,7 @@ namespace Unity.Kinematica
         /// <param name="metricIndex">The metric defining the trajectory fragment layout.</param>
         /// <param name="trajectory">Sequence of root transforms in character space.</param>
         /// <returns>The resulting trajectory fragment.</returns>
-        public TrajectoryFragment CreateTrajectoryFragment(MetricIndex metricIndex, MemoryArray<AffineTransform> trajectory)
+        public TrajectoryFragment CreateTrajectoryFragment(MetricIndex metricIndex, NativeSlice<AffineTransform> trajectory)
         {
             return TrajectoryFragment.Create(ref this, metricIndex, trajectory);
         }

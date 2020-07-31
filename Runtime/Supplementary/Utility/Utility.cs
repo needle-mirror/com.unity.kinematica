@@ -1,3 +1,4 @@
+using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -9,6 +10,32 @@ namespace Unity.Kinematica
     /// </summary>
     public static class Utility
     {
+        public static void GetInputMove(ref float3 movementDirection, ref float intensity)
+        {
+#if UNITY_EDITOR
+            if (Unity.SnapshotDebugger.Debugger.instance.rewind)
+            {
+                return;
+            }
+#endif
+
+            var horizontal = InputUtility.GetMoveHorizontalInput();
+            var vertical = InputUtility.GetMoveVerticalInput();
+
+            float3 analogInput = GetAnalogInput(horizontal, vertical);
+
+            intensity = math.length(analogInput);
+
+            if (intensity <= 0.1f)
+            {
+                intensity = 0.0f;
+            }
+            else
+            {
+                movementDirection = GetDesiredForwardDirection(analogInput, movementDirection);
+            }
+        }
+
         /// <summary>
         /// Converts a world space vector into a view-direction relative vector.
         /// </summary>
@@ -93,7 +120,7 @@ namespace Unity.Kinematica
             return analogInput;
         }
 
-        public static AffineTransform SampleTrajectoryAtTime(MemoryArray<AffineTransform> trajectory, float sampleTimeInSeconds, float timeHorizon)
+        public static AffineTransform SampleTrajectoryAtTime(NativeSlice<AffineTransform> trajectory, float sampleTimeInSeconds, float timeHorizon)
         {
             int trajectoryLength = trajectory.Length;
 

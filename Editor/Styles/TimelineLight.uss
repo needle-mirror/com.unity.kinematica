@@ -10,8 +10,12 @@
     border-color: #8A8A8A;
 }
 
-.timelineTimeRangeLabelContainer {
+.timelineTimeRangeLabel {
     color : white;
+}
+
+.tagElementBackground {
+    background-color: #B3B3B3;
 }
 
 .clipTag {
@@ -60,7 +64,7 @@
 }
 
 .clipArea {
-    background-color: #AAAAAA;
+    background-color: #C2C2C2;
 }
 
 .endOfClipHead {
@@ -94,7 +98,7 @@
 }
 
 #trackScrollView {
-    background-color: #C2C2C2;
+    background-color: #AAAAAA;
 }
 
 .timeRuler {
@@ -108,4 +112,12 @@
 
 .boundaryClip {
     background-color: rgba(94, 116, 154, .2);
+}
+
+.manipulationGuideline {
+    background-color: #4F4F4F;
+}
+
+.snapLine {
+    background-color: #FFFFFF;
 }

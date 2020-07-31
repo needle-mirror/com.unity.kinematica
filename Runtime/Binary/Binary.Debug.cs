@@ -1,11 +1,34 @@
 using System;
 using System.Text;
 using System.Xml;
+using Unity.Mathematics;
 
 namespace Unity.Kinematica
 {
     public partial struct Binary
     {
+        public string GetFragmentDebugText(SamplingTime samplingTime, string fragmentName, float speedTimeOffset = -1.0f)
+        {
+            AnimationSampleTimeIndex animSampleTime = GetAnimationSampleTimeIndex(samplingTime.timeIndex);
+            if (!animSampleTime.IsValid)
+            {
+                return $"<b>{fragmentName}:</b> Invalid fragment";
+            }
+
+            string speedText = speedTimeOffset >= 0.0f ? $", <b>Speed:</b> {GetAverageTrajectorySpeed(samplingTime, speedTimeOffset):0.000} m/s" : "";
+
+            return $"<b>{fragmentName}:</b> {animSampleTime.clipName}, <b>Frame:</b> {animSampleTime.animFrameIndex}{speedText}";
+        }
+
+        public float GetAverageTrajectorySpeed(SamplingTime samplingTime, float timeOffset)
+        {
+            float deltaTime = math.rcp(SampleRate);
+
+            float trajectoryTimeSpan = deltaTime * 2.0f;
+
+            return math.length(GetTrajectoryVelocity(samplingTime, timeHorizon * timeOffset, trajectoryTimeSpan));
+        }
+
         internal XmlDocument GenerateDebugDocument()
         {
             XmlDocument document = new XmlDocument();

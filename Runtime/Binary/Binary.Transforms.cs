@@ -1,6 +1,7 @@
 using UnityEngine;
 using Unity.Mathematics;
 using UnityEngine.Assertions;
+using Unity.Collections;
 
 namespace Unity.Kinematica
 {
@@ -551,6 +552,9 @@ namespace Unity.Kinematica
         /// <param name="color">The color that the trajectory should be drawn with.</param>
         public void DebugDrawTrajectory(AffineTransform anchorTransform, SamplingTime samplingTime, float timeHorizon, Color color)
         {
+            int size = (int)math.ceil(timeHorizon * SampleRate) * 2 + 1;
+            NativeArray<AffineTransform> trajectory = new NativeArray<AffineTransform>(size, Allocator.Temp);
+
             var offsetTime = -timeHorizon;
 
             float deltaTime = math.rcp(SampleRate);
@@ -563,6 +567,9 @@ namespace Unity.Kinematica
                     GetTrajectoryTransform(
                         Advance(samplingTime, offsetTime)));
 
+            int index = 0;
+            trajectory[index++] = previousRootTransform;
+
             while (offsetTime < timeHorizon)
             {
                 offsetTime =
@@ -574,12 +581,12 @@ namespace Unity.Kinematica
                         GetTrajectoryTransform(
                             Advance(samplingTime, offsetTime)));
 
-                DebugDraw.DrawLine(
-                    anchorTransform.transform(previousRootTransform.t),
-                    anchorTransform.transform(rootTransform.t), color);
-
-                previousRootTransform = rootTransform;
+                trajectory[index++] = rootTransform;
             }
+
+            DebugExtensions.DebugDrawTrajectory(anchorTransform, trajectory, SampleRate, color, color, true);
+
+            trajectory.Dispose();
         }
 
         internal void DebugDrawPyramid(AffineTransform transform, float3 scale, Color color)

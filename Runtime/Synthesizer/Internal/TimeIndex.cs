@@ -19,7 +19,6 @@ namespace Unity.Kinematica
     /// </para>
     /// </remarks>
     /// <seealso cref="Binary.Segment"/>
-    [Data("Time Index")]
     public struct TimeIndex
     {
         /// <summary>

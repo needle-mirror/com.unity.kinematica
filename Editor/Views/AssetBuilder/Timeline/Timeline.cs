@@ -19,7 +19,7 @@ namespace Unity.Kinematica.Editor
         public new class UxmlFactory : UxmlFactory<Timeline , UxmlTraits> {}
         public new class UxmlTraits : BindableElement.UxmlTraits {}
 
-        const string k_TimelineUnitsPreferenceKey = "Unity.Kinematica.Editor.Timeline.ViewMode";
+        public const string k_TimelineUnitsPreferenceKey = "Unity.Kinematica.Editor.Timeline.ViewMode";
         const float k_TimelineLengthMultiplier = 2f;
         internal const string k_TimelineWorkAreaName = "timelineWorkArea";
         internal const string k_ScrollableTimeAreaName = "scrollableTimeArea";
@@ -33,6 +33,7 @@ namespace Unity.Kinematica.Editor
 
         VisualElement m_StartGuideline;
         VisualElement m_EndGuideline;
+        VisualElement m_SnapGuideline;
 
         VisualElement StartGuideline
         {
@@ -61,6 +62,21 @@ namespace Unity.Kinematica.Editor
                 }
 
                 return m_EndGuideline;
+            }
+        }
+
+        VisualElement SnapGuideline
+        {
+            get
+            {
+                if (m_SnapGuideline == null)
+                {
+                    m_SnapGuideline      = new VisualElement();
+                    m_SnapGuideline.AddToClassList("snapLine");
+                    m_TimelineWorkArea.Add(m_SnapGuideline);
+                }
+
+                return m_SnapGuideline;
             }
         }
 
@@ -147,7 +163,6 @@ namespace Unity.Kinematica.Editor
             m_ScrollViewContainer = this.Q<VisualElement>("trackScrollViewContainer");
             m_ScrollViewContainer.AddManipulator(panManipulator);
             m_ScrollViewContainer.AddManipulator(zoomManipulator);
-            m_ScrollViewContainer.AddManipulator(new TagCreationManipulator(this));
             m_ScrollViewContainer.RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
 
             m_ActiveTimeField = parentElement.Q<FloatField>("frameField");
@@ -247,6 +262,8 @@ namespace Unity.Kinematica.Editor
 
             m_AnnotationsTrack = new AnnotationsTrack(this);
             AddTrack(m_AnnotationsTrack);
+
+            m_ScrollViewContainer.AddManipulator(new TagCreationManipulator(this, m_AnnotationsTrack));
 
             m_BoundaryClipTrack = new BoundaryClipTrack(this);
             AddGutterTrack(m_BoundaryClipTrack);
@@ -418,7 +435,7 @@ namespace Unity.Kinematica.Editor
 
         Asset m_Target;
 
-        float TimeToWorldPos(float t)
+        public float TimeToWorldPos(float t)
         {
             int horizontalResolution = Screen.currentResolution.width;
             return (((t + SecondsBeforeZero) * WidthMultiplier + m_TimelineScrollableArea.worldBound.x) * horizontalResolution + 0.5f) /
@@ -475,15 +492,25 @@ namespace Unity.Kinematica.Editor
             EndGuideline.style.visibility = Visibility.Hidden;
         }
 
+        internal void ShowSnap(float time)
+        {
+            float left = TimeToLocalPos(time);
+            SnapGuideline.style.left = left;
+            SnapGuideline.style.visibility = Visibility.Visible;
+            SnapGuideline.BringToFront();
+        }
+
+        internal void HideSnap()
+        {
+            SnapGuideline.style.visibility = Visibility.Hidden;
+        }
+
         public bool ReorderTimelineElements(ITimelineElement element, int direction)
         {
-            foreach (var tt in m_TrackElements.OfType<AnnotationsTrack>())
+            if (m_AnnotationsTrack.ReorderTagElement(element, direction))
             {
-                if (tt.ReorderTagElement(element, direction))
-                {
-                    SendTagModified();
-                    return true;
-                }
+                SendTagModified();
+                return true;
             }
 
             return false;
@@ -593,6 +620,15 @@ namespace Unity.Kinematica.Editor
         void ShowDebugPlayhead()
         {
             ActiveDebugTick.style.display = DisplayStyle.Flex;
+        }
+
+        internal IEnumerable<SnappingElement> TimelineElements()
+        {
+            List<SnappingElement> query = this.Query<SnappingElement>().Build().ToList();
+            foreach (SnappingElement child in query)
+            {
+                yield return child;
+            }
         }
     }
 }

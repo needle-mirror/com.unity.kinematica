@@ -3,15 +3,16 @@ using Unity.SnapshotDebugger.Editor;
 using UnityEngine;
 using UnityEditor;
 using ColorUtility = Unity.SnapshotDebugger.ColorUtility;
+using Unity.Mathematics;
 
-internal enum TimelineViewMode
+public enum TimelineViewMode
 {
     frames = 0,
     secondsFrames,
     seconds
 }
 
-internal class TimelineWidget
+public class TimelineWidget
 {
     public static readonly Color k_MajorTickColor;
     public static readonly Color k_MinorTickColor;
@@ -22,21 +23,58 @@ internal class TimelineWidget
         k_MinorTickColor = ColorUtility.FromHtmlString("#525252");
     }
 
+    public struct DrawRangeInfo
+    {
+        public Rect drawRect;
+        public float startTime;
+        public float endTime;
+
+        public float Duration => endTime - startTime;
+    }
+
     public struct DrawInfo
     {
-        public float rangeStart;
-        public float rangeWidth;
-        public float scale;
-        public float inverseScale;
+        public DrawRangeInfo layout;
+        public DrawRangeInfo timeline;
 
-        public float GetFractionalPosition(float time)
+        public static DrawInfo Create(Rect drawRect, float layoutStartTime, float layoutEndTime, float timelineStartTime, float timelineEndTime)
         {
-            return (time - rangeStart) * inverseScale;
+            DrawInfo drawInfo = new DrawInfo()
+            {
+                layout = new DrawRangeInfo()
+                {
+                    drawRect = drawRect,
+                    startTime = layoutStartTime,
+                    endTime = layoutEndTime
+                }
+            };
+
+            timelineStartTime = math.clamp(timelineStartTime, layoutStartTime, layoutEndTime);
+            timelineEndTime = math.clamp(timelineEndTime, layoutStartTime, layoutEndTime);
+
+            float timelineStartPos = drawInfo.GetPixelPosition(timelineStartTime);
+            float timelineEndPos = drawInfo.GetPixelPosition(timelineEndTime);
+
+            drawInfo.timeline = new DrawRangeInfo()
+            {
+                drawRect = new Rect(timelineStartPos, drawRect.y, timelineEndPos - timelineStartPos, drawRect.height),
+                startTime = timelineStartTime,
+                endTime = timelineEndTime
+            };
+
+            return drawInfo;
         }
 
-        public float GetPixelPosition(float time, float width)
+        public float GetPixelPosition(float time)
         {
-            return GetFractionalPosition(time) * width;
+            float normalizedPosition = (time - layout.startTime) / layout.Duration;
+            return layout.drawRect.x + normalizedPosition * layout.drawRect.width;
+        }
+
+        public float GetTime(float pixelPosition)
+        {
+            float normalizedPosition = (pixelPosition - layout.drawRect.x) / layout.drawRect.width;
+            return layout.startTime + normalizedPosition * layout.Duration;
         }
     }
 
@@ -51,7 +89,6 @@ internal class TimelineWidget
     }
 
     public static void DrawNotations(
-        Rect rect,
         DrawInfo drawInfo,
         int sampleRate = 60,
         float tickmarkHeight = 32f,
@@ -61,12 +98,12 @@ internal class TimelineWidget
         // first figure out what step I should use
         float majorStepSize = 200.0f;
 
-        float width = rect.width;
-        float height = rect.height;
+        float width = drawInfo.layout.drawRect.width;
+        float height = drawInfo.layout.drawRect.height;
 
         float numSteps = Mathf.Ceil(width / majorStepSize);
 
-        float scale = drawInfo.rangeWidth;
+        float scale = drawInfo.layout.Duration;
         float scaleStep = scale / numSteps;
 
         // Get the time step
@@ -104,10 +141,10 @@ internal class TimelineWidget
         modScale /= modScaleMult;
 
         // with fixed scale need to find our start point
-        float startOffset = drawInfo.rangeStart % modScale;
-        float start = drawInfo.rangeStart - startOffset;
+        float startOffset = drawInfo.layout.startTime % modScale;
+        float start = drawInfo.layout.startTime - startOffset;
 
-        float rangeEnd = drawInfo.rangeStart + scale;
+        float rangeEnd = drawInfo.layout.startTime + scale;
 
         float textLineHeight = GUI.skin.font.lineHeight;
 
@@ -129,7 +166,7 @@ internal class TimelineWidget
             {
                 float subPoint = point + (modScale / 5) * j;
 
-                float position = drawInfo.GetPixelPosition(subPoint, width);
+                float position = drawInfo.GetPixelPosition(subPoint);
 
                 float heightThis = (j == 2 ? tickmarkHeightSmall : tickmarkHeightMedium);
 
@@ -141,7 +178,7 @@ internal class TimelineWidget
 
             // draw major step
             {
-                float position = drawInfo.GetPixelPosition(point, width);
+                float position = drawInfo.GetPixelPosition(point);
 
                 Rect r = new Rect(position, verticalPosition - tickmarkHeight, 1, tickmarkHeight);
 
@@ -187,27 +224,20 @@ internal class TimelineWidget
         }
     }
 
-    public static void DrawRange(Rect rect, DrawInfo drawInfo, float startTime, float endTime, Color color)
+    public static void DrawRange(Rect r, Color color)
     {
-        float textLineHeight = GUI.skin.font.lineHeight;
-
-        float startPosition = drawInfo.GetPixelPosition(startTime, rect.width);
-        float endPosition = drawInfo.GetPixelPosition(endTime, rect.width);
-
-        Rect r = new Rect(startPosition, 0.0f, endPosition - startPosition, rect.height - textLineHeight);
-
         GUI.color = color;
         GUI.DrawTexture(r, EditorGUIUtility.whiteTexture);
         GUI.color = Color.white;
     }
 
-    public static void DrawLineAtTime(Rect rect, DrawInfo drawInfo, float timeInSeconds, Color color)
+    public static void DrawLineAtTime(DrawInfo drawInfo, float timeInSeconds, Color color)
     {
-        float position = drawInfo.GetPixelPosition(timeInSeconds, rect.width);
+        float position = drawInfo.GetPixelPosition(timeInSeconds);
 
         float textLineHeight = GUI.skin.font.lineHeight;
 
-        Rect r = new Rect(position, 0.0f, 1, rect.height - textLineHeight);
+        Rect r = new Rect(position, 0.0f, 1, drawInfo.layout.drawRect.height - textLineHeight);
 
         GUI.color = color;
         GUI.DrawTexture(r, EditorGUIUtility.whiteTexture);
@@ -225,6 +255,14 @@ internal class TimelineWidget
     {
         DrawRectangle(new Rect(rectangle.x - detourThickness, rectangle.y - detourThickness, rectangle.width + 2.0f * detourThickness, rectangle.height + 2.0f * detourThickness), detourColor);
         DrawRectangle(rectangle, fillColor);
+    }
+
+    public static void DrawRectangleDetour(Rect rectangle, Color detourColor, float thickness)
+    {
+        DrawRectangle(new Rect(rectangle.x, rectangle.y, rectangle.width, thickness), detourColor);
+        DrawRectangle(new Rect(rectangle.x, rectangle.yMax - thickness, rectangle.width, thickness), detourColor);
+        DrawRectangle(new Rect(rectangle.x, rectangle.y, thickness, rectangle.height), detourColor);
+        DrawRectangle(new Rect(rectangle.xMax - thickness, rectangle.y, thickness, rectangle.height), detourColor);
     }
 
     public static void DrawLabel(Rect labelRect, string label, Color textColor)
@@ -255,7 +293,7 @@ internal class TimelineWidget
         return new Vector2(labelWidth, labelHeight);
     }
 
-    public void Update(Rect rect)
+    public void Update(Rect rect, float maxEndTime)
     {
         willRepaint = false;
 
@@ -307,6 +345,13 @@ internal class TimelineWidget
                     e.Use();
                 }
             }
+        }
+
+        if (maxEndTime >= 0.0f && maxEndTime > RangeEnd)
+        {
+            float scrollTime = maxEndTime - RangeEnd;
+            RangeStart = RangeStart + scrollTime;
+            m_desiredRangeStart += scrollTime;
         }
 
         RangeStart = Mathf.Lerp(RangeStart, m_desiredRangeStart, 0.06f);

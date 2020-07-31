@@ -14,7 +14,7 @@ namespace Unity.Kinematica
     /// for retrieval of inidividual elements. This is a workaround
     /// for the inability to nest NativeArrays.
     /// </summary>
-    public unsafe struct MemoryArray<T> where T : struct
+    internal unsafe struct MemoryArray<T> where T : struct
     {
         [NativeDisableUnsafePtrRestriction]
         internal void* ptr;
@@ -67,6 +67,18 @@ namespace Unity.Kinematica
                 ptr = ptr,
                 length = bufferSize / sizeU
             };
+        }
+
+        public NativeArray<T> ToNativeArray(Allocator allocator)
+        {
+            NativeArray<T> array = new NativeArray<T>(Length, allocator);
+
+            for (int i = 0; i < Length; ++i)
+            {
+                array[i] = this[i];
+            }
+
+            return array;
         }
 
         /// <summary>
@@ -164,6 +176,24 @@ namespace Unity.Kinematica
 
             UnsafeUtility.MemCpy(
                 target.ptr, ptr, Length * UnsafeUtility.SizeOf<T>());
+        }
+
+        public static implicit operator NativeSlice<T>(MemoryArray<T> array)
+        {
+            int elemSize;
+
+            unsafe
+            {
+                elemSize = UnsafeUtility.SizeOf<T>();
+            }
+
+            NativeSlice<T> slice = NativeSliceUnsafeUtility.ConvertExistingDataToNativeSlice<T>(array.ptr, elemSize, array.length);
+
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            NativeSliceUnsafeUtility.SetAtomicSafetyHandle(ref slice, AtomicSafetyHandle.GetTempUnsafePtrSliceHandle());
+#endif
+
+            return slice;
         }
     }
 }

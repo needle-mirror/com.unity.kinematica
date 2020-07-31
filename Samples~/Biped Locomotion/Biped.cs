@@ -1,12 +1,42 @@
 using UnityEngine;
-
 using Unity.Kinematica;
 using Unity.Mathematics;
+using Unity.Burst;
+using Unity.Jobs;
+using Unity.Collections;
+using System;
+using Unity.SnapshotDebugger;
 
 namespace BipedLocomotion
 {
+    [BurstCompile(CompileSynchronously = true)]
+    public struct KinematicaJob : IJob
+    {
+        public MemoryRef<MotionSynthesizer> synthesizer;
+
+        public PoseSet idleCandidates;
+
+        public PoseSet locomotionCandidates;
+
+        public Trajectory trajectory;
+
+        public bool idle;
+
+        ref MotionSynthesizer Synthesizer => ref synthesizer.Ref;
+
+        public void Execute()
+        {
+            if (idle && Synthesizer.MatchPose(idleCandidates, Synthesizer.Time, MatchOptions.DontMatchIfCandidateIsPlaying | MatchOptions.LoopSegment, 0.01f))
+            {
+                return;
+            }
+
+            Synthesizer.MatchPoseAndTrajectory(locomotionCandidates, Synthesizer.Time, trajectory);
+        }
+    }
+
     [RequireComponent(typeof(Kinematica))]
-    public class Biped : MonoBehaviour
+    public class Biped : SnapshotProvider
     {
         [Header("Prediction settings")]
         [Tooltip("Desired speed in meters per second for slow movement.")]
@@ -25,84 +55,71 @@ namespace BipedLocomotion
         [Range(0.0f, 1.0f)]
         public float forwardPercentage = 1.0f;
 
-        Identifier<SelectorTask> locomotion;
+        Kinematica kinematica;
 
+        PoseSet idleCandidates;
+        PoseSet locomotionCandidates;
+        Trajectory trajectory;
+
+        [Snapshot]
         float3 movementDirection = Missing.forward;
+
+        [Snapshot]
+        float moveIntensity = 0.0f;
 
         float desiredLinearSpeed => InputUtility.IsPressingActionButton() ? desiredSpeedFast : desiredSpeedSlow;
 
-        void OnEnable()
+        public override void OnEnable()
         {
-            var kinematica = GetComponent<Kinematica>();
+            base.OnEnable();
 
+            kinematica = GetComponent<Kinematica>();
             ref var synthesizer = ref kinematica.Synthesizer.Ref;
 
-            synthesizer.PlayFirstSequence(
-                synthesizer.Query.Where(
-                    Locomotion.Default).And(Idle.Default));
+            idleCandidates = synthesizer.Query.Where("Idle", Locomotion.Default).And(Idle.Default);
+            locomotionCandidates = synthesizer.Query.Where("Locomotion", Locomotion.Default).Except(Idle.Default);
+            trajectory = synthesizer.CreateTrajectory(Allocator.Persistent);
 
-            var selector = synthesizer.Root.Selector();
+            synthesizer.PlayFirstSequence(idleCandidates);
+        }
 
-            {
-                var sequence = selector.Condition().Sequence();
+        public override void OnDisable()
+        {
+            base.OnDisable();
 
-                sequence.Action().MatchPose(
-                    synthesizer.Query.Where(
-                        Locomotion.Default).And(Idle.Default), 0.01f);
+            idleCandidates.Dispose();
+            locomotionCandidates.Dispose();
+            trajectory.Dispose();
+        }
 
-                sequence.Action().Timer();
-            }
+        public override void OnEarlyUpdate(bool rewind)
+        {
+            base.OnEarlyUpdate(rewind);
 
-            {
-                var action = selector.Action();
-
-                action.MatchPoseAndTrajectory(
-                    synthesizer.Query.Where(
-                        Locomotion.Default).Except(Idle.Default),
-                    action.TrajectoryPrediction().GetAs<TrajectoryPredictionTask>().trajectory);
-            }
-
-            locomotion = selector.GetAs<SelectorTask>();
+            Utility.GetInputMove(ref movementDirection, ref moveIntensity);
         }
 
         void Update()
         {
-            var kinematica = GetComponent<Kinematica>();
+            float desiredSpeed = moveIntensity * desiredLinearSpeed;
 
-            ref var synthesizer = ref kinematica.Synthesizer.Ref;
+            TrajectoryPrediction.CreateFromDirection(ref kinematica.Synthesizer.Ref,
+                movementDirection,
+                desiredSpeed,
+                trajectory,
+                velocityPercentage,
+                forwardPercentage).Generate();
 
-            synthesizer.Tick(locomotion);
-
-            ref var prediction = ref synthesizer.GetChildByType<TrajectoryPredictionTask>(locomotion).Ref;
-            ref var idle = ref synthesizer.GetChildByType<ConditionTask>(locomotion).Ref;
-
-            var horizontal = InputUtility.GetMoveHorizontalInput();
-            var vertical = InputUtility.GetMoveVerticalInput();
-
-            float3 analogInput = Utility.GetAnalogInput(horizontal, vertical);
-
-            prediction.velocityFactor = velocityPercentage;
-            prediction.rotationFactor = forwardPercentage;
-
-            idle.value = math.length(analogInput) <= 0.1f;
-
-            if (idle)
+            KinematicaJob job = new KinematicaJob()
             {
-                prediction.linearSpeed = 0.0f;
-            }
-            else
-            {
-                movementDirection =
-                    Utility.GetDesiredForwardDirection(
-                        analogInput, movementDirection);
+                synthesizer = kinematica.Synthesizer,
+                idleCandidates = idleCandidates,
+                locomotionCandidates = locomotionCandidates,
+                trajectory = trajectory,
+                idle = moveIntensity == 0.0f
+            };
 
-                prediction.linearSpeed =
-                    math.length(analogInput) *
-                    desiredLinearSpeed;
-
-                prediction.movementDirection = movementDirection;
-                prediction.forwardDirection = movementDirection;
-            }
+            kinematica.AddJobDependency(job.Schedule());
         }
 
         void OnGUI()

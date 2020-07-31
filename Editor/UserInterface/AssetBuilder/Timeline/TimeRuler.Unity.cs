@@ -44,13 +44,13 @@ namespace Unity.Kinematica.Editor
                 return;
             }
 
-            Rect shownArea = new Rect(m_DrawInfo.rangeStart, -90f, m_DrawInfo.rangeWidth, .05f);
+            Rect shownArea = new Rect(m_DrawInfo.layout.startTime, -90f, m_DrawInfo.layout.Duration, .05f);
             Color backupCol = GUI.color;
             GUI.BeginGroup(position);
 
             Color tempBackgroundColor = GUI.backgroundColor;
 
-            m_TickHandler.SetRanges(m_DrawInfo.rangeStart, m_DrawInfo.rangeStart + m_DrawInfo.rangeWidth, worldBound.x, worldBound.xMax);
+            m_TickHandler.SetRanges(m_DrawInfo.layout.startTime, m_DrawInfo.layout.endTime, worldBound.x, worldBound.xMax);
             m_TickHandler.SetTickStrengths(kTickRulerDistMin, kTickRulerDistFull, true);
 
             int labelLevel = m_TickHandler.GetLevelWithMinSeparation(kTickRulerDistLabel);

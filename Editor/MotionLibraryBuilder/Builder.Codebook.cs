@@ -459,7 +459,7 @@ namespace Unity.Kinematica.Editor
 
                     int numCodes = numFragments * numFeatures;
 
-                    int numCodeWords = numFeatures * 256;
+                    int numCodeWords = numFeatures * Binary.CodeBook.kNumCodeValues;
 
                     codes = new NativeArray<byte>(numCodes, Allocator.Persistent);
 

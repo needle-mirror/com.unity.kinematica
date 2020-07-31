@@ -4,6 +4,31 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/ )
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html ).
 
+## [0.8.0-preview] - 2020-07-31
+
+### Added
+- Experimental motion matching cost timeline added to the snapshot recorder
+
+### Changed
+- __Changes in 0.8.0-preview include breaking API changes.__ _Users of the Kinematica Demo project will also need to download the latest version if they wish to use Kinematica 0.8.0-preview_
+- Kinematica requires Unity 2019.4
+- Completely removed Kinematica task graph. Now, using Kinematica requires to call query functions, ideally inside jobs for performance, instead of instanciating graph in code.
+Execution graph window is still present (Window -> Analysis -> Kinematica Execution Window) and only shows debug graph related to motion matching queries.
+- Kinematica debug draw info is now mainly displayed in game & scene views, and can manipulated from the snapshot debugger. Execution graph nodes can still be selected to display specific information
+on screen, otherwise the first motion matching query happening during last frame is displayed on screen.
+- Snapshot recorder is now autoscrolled when recording
+- Execution graph and snapshot debugger UI layout and colors improved
+- Snapshot recorder can now be activated and deactivated in playmode by clicking on "Start/Stop recording" buttons.
+It's now possible to resume play from any point in the debugger timeline.
+- Kinematica doesn't requires a task graph anymore, query API is directly usable from code. Execution graph still exists for debugging
+- Added snapping to marker and tag manipulations in the timeline. Manipulating markers and tags will snap to other annotations in the timeline and to the start and end of the AnimationClip
+- Manipulating tags and markers in the timeline with previewing enabled will update the in-scene preview
+- Annotation inspectors will display start and duration times in seconds or frames depending on display setting of the timeline
+
+### Fixed
+- When switching asset while previewing, target rig wasn't updated resulting in garbage pose. Target rig is now updated.
+- Fixed command and ctrl modifiers when using macos
+
 ## [0.7.0-preview] - 2020-06-25
 
 ### Fixed

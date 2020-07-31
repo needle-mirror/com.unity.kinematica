@@ -224,8 +224,20 @@ namespace Unity.Kinematica
             }
         }
 
-        internal void Construct(ref MemoryBlock memoryBlock, ref Binary binary, float blendDuration)
+        public static void Reserve(ref ArrayMemory memory, ref Binary binary)
         {
+            var numJoints = binary.numJoints;
+
+            memory.Reserve<AffineTransform>(2 * numJoints);
+            memory.Reserve<TransformTransition>(numJoints);
+        }
+
+        public PoseGenerator(ref ArrayMemory memory, ref Binary binary, float blendDuration)
+        {
+            triggerTransition = false;
+
+            previousDeltaTime = 0.0f;
+
             this.blendDuration = blendDuration;
 
             m_binary = MemoryRef<Binary>.Create(ref binary);
@@ -235,15 +247,16 @@ namespace Unity.Kinematica
             currentPushIndex = -1;
             approximateTransitionProgression = 0;
 
-            previousPose.Construct(ref memoryBlock, numJoints);
-            currentPose.Construct(ref memoryBlock, numJoints);
+            previousPose = TransformBuffer.Create(ref memory, numJoints);
+            currentPose = TransformBuffer.Create(ref memory, numJoints);
 
-            transitions = memoryBlock.CreateArray(numJoints, TransformTransition.Identity);
+            transitions = memory.CreateSlice<TransformTransition>(numJoints);
 
             for (int i = 0; i < numJoints; ++i)
             {
-                currentPose.transforms[i] =
-                    binary.animationRig.bindPose[i].localTransform;
+                currentPose.transforms[i] = binary.animationRig.bindPose[i].localTransform;
+
+                transitions[i] = TransformTransition.Identity;
             }
         }
 
@@ -274,7 +287,9 @@ namespace Unity.Kinematica
 
             for (int i = 0; i < numJoints; ++i)
             {
-                transitions[i].Update(deltaTime);
+                var transition = transitions[i];
+                transition.Update(deltaTime);
+                transitions[i] = transition;
             }
 
             approximateTransitionProgression = transitions[0].Progression;
@@ -293,9 +308,12 @@ namespace Unity.Kinematica
 
             for (int i = 0; i < numJoints; ++i)
             {
+                var transition = transitions[i];
+                AffineTransform deltaTransform = transition.Evaluate();
+                transitions[i] = transition;
+
                 currentPose.transforms[i] =
-                    targetPose.Ref.transforms[i] *
-                    transitions[i].Evaluate();
+                    targetPose.Ref.transforms[i] * deltaTransform;
             }
 
             currentPose.transforms[0] = worldRootTransform;
@@ -314,6 +332,7 @@ namespace Unity.Kinematica
         {
             buffer.Write(previousDeltaTime);
             buffer.Write(triggerTransition);
+            buffer.Write(currentPushIndex);
 
             transitions.WriteToStream(buffer);
             previousPose.WriteToStream(buffer);
@@ -324,23 +343,11 @@ namespace Unity.Kinematica
         {
             previousDeltaTime = buffer.ReadSingle();
             triggerTransition = buffer.ReadBoolean();
+            currentPushIndex = buffer.Read32();
 
             transitions.ReadFromStream(buffer);
             previousPose.ReadFromStream(buffer);
             currentPose.ReadFromStream(buffer);
-        }
-
-        internal static MemoryRequirements GetMemoryRequirements(ref Binary binary, float blendDuration)
-        {
-            var numJoints = binary.numJoints;
-
-            var memoryRequirements = TransformBuffer.GetMemoryRequirements(numJoints);
-
-            memoryRequirements += TransformBuffer.GetMemoryRequirements(numJoints);
-
-            memoryRequirements += MemoryRequirements.Of<TransformTransition>() * numJoints;
-
-            return memoryRequirements;
         }
 
         void TriggerTransition(ref TransformBuffer targetPose, float deltaTime)
@@ -388,18 +395,17 @@ namespace Unity.Kinematica
             }
         }
 
-        MemoryHeader<TransformBuffer> SamplePoseAt(SamplingTime samplingTime)
+        TransformBuffer.Memory SamplePoseAt(SamplingTime samplingTime)
         {
             ref var binary = ref Binary;
 
             int numJoints = binary.numJoints;
 
-            MemoryHeader<TransformBuffer> transformBuffer =
-                TransformBuffer.Create(numJoints, Allocator.Temp);
+            TransformBuffer.Memory buffer = TransformBuffer.Memory.Allocate(binary.numJoints, Allocator.Temp);
 
-            binary.SamplePoseAt(samplingTime, ref transformBuffer.Ref);
+            binary.SamplePoseAt(samplingTime, ref buffer.Ref);
 
-            return transformBuffer;
+            return buffer;
         }
 
         ref Binary Binary => ref m_binary.Ref;
@@ -422,6 +428,6 @@ namespace Unity.Kinematica
 
         TransformBuffer currentPose;
 
-        MemoryArray<TransformTransition> transitions;
+        NativeSlice<TransformTransition> transitions;
     }
 }

@@ -40,26 +40,20 @@ namespace Unity.Kinematica
     [BurstCompile]
     public partial struct MotionSynthesizer
     {
-        internal static unsafe MemoryHeader<MotionSynthesizer> Create(BinaryReference binaryRef, AffineTransform worldRootTransform, float blendDuration)
+        internal static MotionSynthesizer CreateInvalid()
+        {
+            return new MotionSynthesizer()
+            {
+                isValid = false
+            };
+        }
+
+        internal static MotionSynthesizer Create(BinaryReference binaryRef, AffineTransform worldRootTransform, float blendDuration, Allocator allocator)
         {
             var blobAsset = binaryRef.LoadBinary();
 
-            var memoryRequirements = GetMemoryRequirements(ref blobAsset.Value, blendDuration);
-
-            MemoryHeader<MotionSynthesizer> synthesizer;
-
-            var memoryBlock = MemoryBlock.Create(
-                memoryRequirements, Allocator.Persistent, out synthesizer);
-
-            synthesizer.Ref.Construct(ref memoryBlock,
-                blobAsset, worldRootTransform, blendDuration);
-
-            Assert.IsTrue(memoryBlock.IsComplete);
-
-            return synthesizer;
+            return new MotionSynthesizer(blobAsset, worldRootTransform, blendDuration, allocator);
         }
-
-        internal MemoryRef<MemoryChunk> MemoryChunk => memoryChunk;
 
         /// <summary>
         /// Allows direct access to the underlying Kinematica runtime asset.
@@ -93,8 +87,6 @@ namespace Unity.Kinematica
 
             _deltaTime = deltaTime;
 
-            UpdateTaskGraph();
-
             SamplingTime prevSamplingTime = samplingTime;
             DeltaSamplingTime deltaSamplingTime = UpdateTime(deltaTime);
 
@@ -120,22 +112,13 @@ namespace Unity.Kinematica
                     deltaTime);
             }
 
+            // swap double buffer
+            var swapDebugMemory = readDebugMemory;
+            readDebugMemory = writeDebugMemory;
+            writeDebugMemory = swapDebugMemory;
+            writeDebugMemory.Reset();
+
             return Time.IsValid;
-        }
-
-        internal static MemoryRequirements GetMemoryRequirements(ref Binary binary, float blendDuration)
-        {
-            var memoryRequirements = MemoryRequirements.Of<MotionSynthesizer>();
-
-            memoryRequirements += DataType.GetMemoryRequirements();
-
-            memoryRequirements += TraitType.GetMemoryRequirements(ref binary);
-
-            memoryRequirements += PoseGenerator.GetMemoryRequirements(ref binary, blendDuration);
-
-            memoryRequirements += TrajectoryModel.GetMemoryRequirements(ref binary);
-
-            return memoryRequirements;
         }
     }
 }

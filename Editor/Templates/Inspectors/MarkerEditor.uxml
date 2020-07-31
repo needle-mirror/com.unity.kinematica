@@ -1,7 +1,7 @@
-<UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+<UXML xmlns:ui="UnityEngine.UIElements" xmlns:kinematica="Unity.Kinematica.Editor">
     <ui:VisualElement class="arrayEntryContents">
         <ui:TextField name="markerTypeLabel" label="Marker Type"/>
-        <uie:FloatField label="Time In Seconds" />
+        <kinematica:TimeField name="timeInSeconds" label="Time"/>
         <ui:VisualElement name="payloadInspector"/>
     </ui:VisualElement>
     <ui:VisualElement class="drawerButtonContainer">

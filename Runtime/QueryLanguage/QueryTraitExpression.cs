@@ -47,6 +47,8 @@ namespace Unity.Kinematica
         [DeallocateOnJobCompletion]
         NativeList<Constraint> constraints;
 
+        NativeString64 debugName;
+
         int chainIndex;
 
         /// <summary>
@@ -61,6 +63,11 @@ namespace Unity.Kinematica
         /// Implicit conversion from a marker expression to a pose sequence.
         /// </summary>
         public static implicit operator QueryResult(QueryTraitExpression expression)
+        {
+            return expression.Execute();
+        }
+
+        public static implicit operator PoseSet(QueryTraitExpression expression)
         {
             return expression.Execute();
         }
@@ -202,14 +209,15 @@ namespace Unity.Kinematica
             }
         }
 
-        internal static QueryTraitExpression Create(ref Binary binary)
+        internal static QueryTraitExpression Create(ref Binary binary, NativeString64 debugName = default(NativeString64))
         {
             var constraints = new NativeList<Constraint>(Allocator.Temp);
 
             return new QueryTraitExpression()
             {
                 binary = MemoryRef<Binary>.Create(ref binary),
-                constraints = constraints
+                constraints = constraints,
+                debugName = debugName
             };
         }
 
@@ -260,6 +268,7 @@ namespace Unity.Kinematica
         QueryResult Execute()
         {
             var queryResult = QueryResult.Create();
+            queryResult.debugName = debugName;
 
             ref Binary binary = ref Binary;
 

@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using UnityEngine.UIElements;
 
 namespace Unity.Kinematica.Editor

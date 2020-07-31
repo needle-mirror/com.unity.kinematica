@@ -358,7 +358,6 @@ MonoBehaviour:
   desiredSpeedFast: 5.5
   velocityPercentage: 0.1
   forwardPercentage: 0.1
-  responsiveness: 0.6
 --- !u!4 &1816855964 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1442290682266406171, guid: 05e4bf8de5058174f9e1baa229dc7266,

@@ -1,3 +1,8 @@
+.port
+{
+    --port-color: rgb(255, 255, 255);
+}
+
 GraphNodePort {
     height: 24px;
     align-items: center;

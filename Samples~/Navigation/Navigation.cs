@@ -1,62 +1,118 @@
-﻿using Unity.Kinematica;
-using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.AI;
+using Unity.Kinematica;
+using Unity.Mathematics;
+using Unity.Burst;
+using Unity.Jobs;
+using Unity.Collections;
 using System;
+using UnityEngine.AI;
+using Unity.SnapshotDebugger;
 
 namespace Navigation
 {
-    [RequireComponent(typeof(Kinematica))]
-    public class Navigation : MonoBehaviour
+    [BurstCompile(CompileSynchronously = true)]
+    public struct KinematicaJob : IJob
     {
+        public MemoryRef<MotionSynthesizer> synthesizer;
+
+        public PoseSet idleCandidates;
+
+        public PoseSet locomotionCandidates;
+
+        public Trajectory trajectory;
+
+        public MemoryRef<NavigationPath> navigationPath;
+
+        ref MotionSynthesizer Synthesizer => ref synthesizer.Ref;
+
+        ref NavigationPath NavPath => ref navigationPath.Ref;
+
+        public void Execute()
+        {
+            bool goalReached = true;
+
+            if (navigationPath.IsValid)
+            {
+                if (!NavPath.IsBuilt)
+                {
+                    NavPath.Build();
+                }
+
+                goalReached = NavPath.GoalReached || !NavPath.UpdateAgentTransform(Synthesizer.WorldRootTransform);
+            }
+            
+            if (goalReached)
+            {
+                Synthesizer.ClearTrajectory(trajectory);
+
+                if (Synthesizer.MatchPose(idleCandidates, Synthesizer.Time, MatchOptions.DontMatchIfCandidateIsPlaying | MatchOptions.LoopSegment, 0.01f))
+                {
+                    return;
+                }
+            }
+            else
+            {
+                NavPath.GenerateTrajectory(ref Synthesizer, ref trajectory);  
+            }
+
+            Synthesizer.MatchPoseAndTrajectory(locomotionCandidates, Synthesizer.Time, trajectory);
+        }
+    }
+
+    [RequireComponent(typeof(Kinematica))]
+    public class Navigation : SnapshotProvider
+    {
+        [Header("Prediction settings")]
+        [Tooltip("Desired speed in meters per second for slow movement.")]
+        [Range(0.0f, 10.0f)]
+        public float desiredSpeedSlow = 3.9f;
+
+        [Tooltip("Desired speed in meters per second for fast movement.")]
+        [Range(0.0f, 10.0f)]
+        public float desiredSpeedFast = 5.5f;
+
         public Transform targetMarker;
 
-        Identifier<SelectorTask> locomotion;
+        Kinematica kinematica;
 
-        void OnEnable()
+        PoseSet idleCandidates;
+        PoseSet locomotionCandidates;
+        Trajectory trajectory;
+
+        [Snapshot]
+        NavigationPath navigationPath;
+
+        float desiredLinearSpeed => InputUtility.IsPressingActionButton() ? desiredSpeedFast : desiredSpeedSlow;
+
+        public override void OnEnable()
         {
-            var kinematica = GetComponent<Kinematica>();
+            base.OnEnable();
 
+            kinematica = GetComponent<Kinematica>();
             ref var synthesizer = ref kinematica.Synthesizer.Ref;
 
-            synthesizer.PlayFirstSequence(
-                synthesizer.Query.Where(
-                    Locomotion.Default).And(Idle.Default));
+            idleCandidates = synthesizer.Query.Where("Idle", Locomotion.Default).And(Idle.Default);
+            locomotionCandidates = synthesizer.Query.Where("Locomotion", Locomotion.Default).Except(Idle.Default);
+            trajectory = synthesizer.CreateTrajectory(Allocator.Persistent);
 
-            var selector = synthesizer.Root.Selector();
+            navigationPath = NavigationPath.CreateInvalid();
 
-            {
-                var sequence = selector.Condition().Sequence();
-
-                sequence.Action().MatchPose(
-                    synthesizer.Query.Where(
-                        Locomotion.Default).And(Idle.Default), 0.01f);
-
-                sequence.Action().Timer();
-            }
-
-            {
-                var action = selector.Action();
-
-                action.MatchPoseAndTrajectory(
-                    synthesizer.Query.Where(
-                        Locomotion.Default).Except(Idle.Default),
-                            action.Navigation().GetAs<NavigationTask>().trajectory);
-            }
-
-            locomotion = selector.GetAs<SelectorTask>();
+            synthesizer.PlayFirstSequence(idleCandidates);
         }
 
-        void Update()
+        public override void OnDisable()
         {
-            var kinematica = GetComponent<Kinematica>();
+            base.OnDisable();
 
-            ref var synthesizer = ref kinematica.Synthesizer.Ref;
+            idleCandidates.Dispose();
+            locomotionCandidates.Dispose();
+            trajectory.Dispose();
+            navigationPath.Dispose();
+        }
 
-            synthesizer.Tick(locomotion);
-
-            ref var navigation = ref synthesizer.GetChildByType<NavigationTask>(locomotion).Ref;
-            ref var idle = ref synthesizer.GetChildByType<ConditionTask>(locomotion).Ref;
+        public override void OnEarlyUpdate(bool rewind)
+        {
+            base.OnEarlyUpdate(rewind);
 
             if (Input.GetMouseButtonDown(0))
             {
@@ -86,15 +142,28 @@ namespace Navigation
                         };
 
                         float3[] points = Array.ConvertAll(navMeshPath.corners, pos => new float3(pos));
-                        navigation.FollowPath(points, navParams);
+
+                        navigationPath.Dispose();
+                        navigationPath = NavigationPath.Create(points, AffineTransform.CreateGlobal(transform), navParams, Allocator.Persistent);
 
                         targetMarker.gameObject.SetActive(true);
                         targetMarker.position = targetPosition;
                     }
                 }
             }
+        }
 
-            idle.value = !navigation.IsPathValid || navigation.GoalReached;
+        void Update()
+        {
+            KinematicaJob job = new KinematicaJob()
+            {
+                synthesizer = kinematica.Synthesizer,
+                idleCandidates = idleCandidates,
+                locomotionCandidates = locomotionCandidates,
+                trajectory = trajectory,
+                navigationPath = navigationPath.IsValid ? new MemoryRef<NavigationPath>(ref navigationPath) : MemoryRef<NavigationPath>.Null,
+            };
+            kinematica.AddJobDependency(job.Schedule());
         }
 
         void OnGUI()

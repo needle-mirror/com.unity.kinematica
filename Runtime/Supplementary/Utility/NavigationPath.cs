@@ -1,44 +1,98 @@
+using System;
+using Unity.Collections;
 using Unity.Mathematics;
+using Unity.SnapshotDebugger;
 using UnityEngine;
 using UnityEngine.Assertions;
 
 namespace Unity.Kinematica
 {
-    internal struct NavigationPath
+    [Data("Navigation Path")]
+    public struct NavigationPath : IDisposable, IDebugObject, IDebugDrawable, Serializable
     {
-        public NavigationPath(int numControlPoints, ref NavigationParams navParams)
+        AffineTransform startTransform;
+        NativeArray<float3> controlPoints;
+        Allocator allocator;
+        NavigationParams navParams;
+
+        Spline pathSpline;
+        int nextControlPoint;
+        BlittableBool isBuilt;
+
+        public DebugIdentifier debugIdentifier { get; set; }
+
+        [Output("Trajectory", OutputFlags.OnlyAcceptSelfNode)]
+        public DebugIdentifier outputTrajectory;
+
+        public static NavigationPath CreateInvalid()
         {
-            nextControlPoint = 0;
-            this.numControlPoints = numControlPoints;
-            this.navParams = navParams;
+            return new NavigationPath()
+            {
+                allocator = Allocator.Invalid
+            };
         }
 
-        public bool GoalReached => nextControlPoint >= numControlPoints;
+        public static NavigationPath Create(float3[] controlPoints, AffineTransform startTransform, NavigationParams navParams, Allocator allocator)
+        {
+            return new NavigationPath()
+            {
+                startTransform = startTransform,
+                controlPoints = new NativeArray<float3>(controlPoints, allocator),
+                allocator = allocator,
+                navParams = navParams,
+                pathSpline = Spline.Create(controlPoints.Length, allocator),
+                nextControlPoint = 0,
+                isBuilt = false
+            };
+        }
+
+        public bool IsValid => allocator != Allocator.Invalid;
+
+        public void Build()
+        {
+            pathSpline.BuildSpline(startTransform.t, startTransform.Forward, controlPoints, float3.zero, navParams.pathCurvature);
+            isBuilt = true;
+        }
+
+        public void Dispose()
+        {
+            if (IsValid)
+            {
+                controlPoints.Dispose();
+                pathSpline.Dispose();
+            }
+        }
+
+        public bool IsBuilt => isBuilt;
+
+        public int NumControlPoints => controlPoints.Length;
+
+        public bool GoalReached => nextControlPoint >= NumControlPoints;
 
         public int NextControlPoint => nextControlPoint;
 
         public NavigationParams NavParams => navParams;
 
-        public void UpdateAgentTransform(AffineTransform agentTransform, ref Spline pathSpline)
+        public bool UpdateAgentTransform(AffineTransform agentTransform)
         {
             if (GoalReached)
             {
-                return;
+                return false;
             }
 
             float3 nextControlPointPos = pathSpline.segments[nextControlPoint].OutPosition;
-            float controlPointRadius = nextControlPoint >= numControlPoints - 1 ? navParams.finalControlPointRadius : navParams.intermediateControlPointRadius;
+            float controlPointRadius = nextControlPoint >= NumControlPoints - 1 ? navParams.finalControlPointRadius : navParams.intermediateControlPointRadius;
             if (math.distancesq(agentTransform.t, nextControlPointPos) <= controlPointRadius * controlPointRadius)
             {
                 ++nextControlPoint;
                 if (GoalReached)
                 {
-                    return;
+                    return false;
                 }
             }
 
             // use agent transform as first control point of the spline (starting from nextControlPoint, segments before are discarded)
-            ref HermitCurve segment = ref pathSpline.segments[nextControlPoint];
+            HermitCurve segment = pathSpline.segments[nextControlPoint];
 
             segment = HermitCurve.Create(
                 agentTransform.t,
@@ -46,15 +100,24 @@ namespace Unity.Kinematica
                 segment.OutPosition,
                 segment.OutTangent,
                 navParams.pathCurvature);
+
+            pathSpline.segments[nextControlPoint] = segment;
+
+            return true;
         }
 
-        public SplinePoint EvaluatePointAtDistance(float distance, ref Spline pathSpline)
+        public SplinePoint EvaluatePointAtDistance(float distance)
         {
             return pathSpline.EvaluatePointAtDistance(distance, nextControlPoint);
         }
 
-        public void GenerateTrajectory(ref MotionSynthesizer synthesizer, ref Spline pathSpline, ref MemoryArray<AffineTransform> trajectory)
+        public void GenerateTrajectory(ref MotionSynthesizer synthesizer, ref Trajectory trajectory)
         {
+            if (GoalReached)
+            {
+                return;
+            }
+
             Assert.IsTrue(trajectory.Length > 0);
             if (trajectory.Length == 0)
             {
@@ -121,12 +184,19 @@ namespace Unity.Kinematica
                 remainingDistOnSpline -= moveDist;
                 distance += moveDist;
 
-                AffineTransform point = EvaluatePointAtDistance(distance, ref pathSpline);
+                AffineTransform point = EvaluatePointAtDistance(distance);
                 trajectory[index] = rootTransform.inverseTimes(point);
             }
+
+            synthesizer.DebugPushGroup();
+
+            synthesizer.DebugWriteUnblittableObject(ref trajectory);
+            outputTrajectory = trajectory.debugIdentifier;
+
+            synthesizer.DebugWriteUnblittableObject(ref this);
         }
 
-        public void DrawPath(ref Spline pathSpline)
+        public void DrawPath()
         {
             if (GoalReached)
             {
@@ -160,8 +230,31 @@ namespace Unity.Kinematica
             }
         }
 
-        int nextControlPoint;
-        int numControlPoints;
-        NavigationParams navParams;
+        public void WriteToStream(Unity.SnapshotDebugger.Buffer buffer)
+        {
+            buffer.Write(startTransform);
+            buffer.WriteNativeArray(controlPoints, allocator);
+            buffer.WriteBlittable(navParams);
+            pathSpline.WriteToStream(buffer);
+            buffer.Write(nextControlPoint);
+            buffer.WriteBlittable(isBuilt);
+            buffer.WriteBlittable(outputTrajectory);
+        }
+
+        public void ReadFromStream(Unity.SnapshotDebugger.Buffer buffer)
+        {
+            startTransform = buffer.ReadAffineTransform();
+            controlPoints = buffer.ReadNativeArray<float3>(out allocator);
+            navParams = buffer.ReadBlittable<NavigationParams>();
+            pathSpline.ReadFromStream(buffer);
+            nextControlPoint = buffer.Read32();
+            isBuilt = buffer.ReadBlittable<BlittableBool>();
+            outputTrajectory = buffer.ReadBlittable<DebugIdentifier>();
+        }
+
+        public void Draw(Camera camera, ref MotionSynthesizer synthesizer, DebugMemory debugMemory, SamplingTime debugSamplingTime, ref DebugDrawOptions options)
+        {
+            DrawPath();
+        }
     }
 }

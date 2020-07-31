@@ -1,5 +1,5 @@
 using System;
-
+using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 
 using ManagedTraitType = Unity.Kinematica.TraitType;
@@ -35,23 +35,19 @@ namespace Unity.Kinematica
             {
                 get => new TraitType();
             }
-
-            public static MemoryRequirements GetMemoryRequirements(ref Binary binary)
-            {
-                var numTypes = ManagedTraitType.Types.Length;
-
-                return MemoryRequirements.Of<TraitType>() * numTypes;
-            }
         }
 
-        void ConstructTraitTypes(ref MemoryBlock memoryBlock)
+        static void ReserveTraitTypes(ref ArrayMemory memory)
+        {
+            int numTraitTypes = ManagedTraitType.Types.Length;
+            memory.Reserve<TraitType>(numTraitTypes);
+        }
+
+        static NativeSlice<TraitType> ConstructTraitTypes(ref ArrayMemory memory, ref Binary binary)
         {
             int numTraitTypes = ManagedTraitType.Types.Length;
 
-            traitTypes = memoryBlock.CreateArray(
-                numTraitTypes, TraitType.Default);
-
-            ref Binary binary = ref Binary;
+            NativeSlice<TraitType> traitTypes = memory.CreateSlice<TraitType>(numTraitTypes);
 
             for (int i = 0; i < numTraitTypes; ++i)
             {
@@ -75,6 +71,8 @@ namespace Unity.Kinematica
 
                 traitTypes[i] = traitType;
             }
+
+            return traitTypes;
         }
     }
 }

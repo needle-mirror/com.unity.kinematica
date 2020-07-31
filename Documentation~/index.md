@@ -37,7 +37,6 @@ This section covers the different aspects of Kinematica, its philosophy and the 
 * [Kinematica concepts and overview](Overview.md)
 * [Kinematica Builder Window](Builder.md)
 * [Kinematica Query Language](Query-Language.md) 
-* [Kinematica Task Graph](Task-Graph.md)
 * [Kinematica Snapshot Debugger](Debugger.md)
 
 For a complete sample project, see: [Kinematica demo](https://github.com/Unity-Technologies/Kinematica) 
